@@ -503,41 +503,55 @@ This improves accountability and traceability.
 
 # 🏗️ Proposed Architecture
 
-The system will initially follow a modular client-server architecture.
+The system follows a modular architecture where **Supabase provides infrastructure services** while **Express handles core business logic and workflow management**.
 
 ```text
                          CLIENT LAYER
-              ┌──────────────────────────┐
-              │                          │
-              │       Next.js Web        │
-              │   JavaScript + Tailwind  │
-              │                          │
-              │       Flutter App        │
-              │                          │
-              └────────────┬─────────────┘
-                           │
-                         HTTPS
-                           │
-                           ▼
-                    BACKEND API
-                  Node.js + Express
-                           │
-             ┌─────────────┼─────────────┐
-             │             │             │
-             ▼             ▼             ▼
-          Auth/RBAC     Workflow     Certificates
-             │             │             │
-             └─────────────┼─────────────┘
-                           │
-                           ▼
-                      PostgreSQL
-                           │
-                 ┌─────────┴─────────┐
-                 │                   │
-                 ▼                   ▼
-           Object Storage        Background Jobs
-           Photos/Documents      Notifications
+              ┌──────────────────────────────┐
+              │                              │
+              │       Next.js Web App        │
+              │    JavaScript + Tailwind     │
+              │                              │
+              │       Flutter Mobile App     │
+              │                              │
+              └──────────────┬───────────────┘
+                             │
+                           HTTPS
+                             │
+                             ▼
+                  EXPRESS BACKEND API
+                             │
+          ┌──────────────────┼──────────────────┐
+          │                  │                  │
+          ▼                  ▼                  ▼
+     Workflow Engine      RBAC Logic      Certificate Service
+          │                  │                  │
+          └──────────────────┼──────────────────┘
+                             │
+                             ▼
+                    SUPABASE PLATFORM
+          ┌──────────────────┼──────────────────┐
+          │                  │                  │
+          ▼                  ▼                  ▼
+     PostgreSQL DB       Supabase Auth     Supabase Storage
+                                             │
+                                       Photos/Documents
+          │
+          └──────────────────┬──────────────────┘
+                             ▼
+                    Supabase Realtime
+                      (Optional Updates)
 ```
+
+### Architecture Principle
+
+- **Next.js** → Web frontend
+- **Flutter** → Mobile application for LMOs
+- **Express.js** → Business logic, workflow validation and secure APIs
+- **Supabase PostgreSQL** → Central relational database
+- **Supabase Auth** → Authentication and user identity
+- **Supabase Storage** → Inspection photos, documents and certificates
+- **Supabase Realtime** → Optional live dashboard updates
 
 ---
 
@@ -562,13 +576,14 @@ The system will initially follow a modular client-server architecture.
 | QR Generation          | QR Code Library          |
 | Certificate Generation | Puppeteer                |
 | Maps                   | Leaflet + OpenStreetMap  |
+| Realtime Updates       | Supabase Realtime *(Optional)* |
 | Notifications          | Firebase Cloud Messaging |
-| Background Jobs        | Redis + BullMQ           |
+| Background Jobs        | BullMQ *(if required)*   |
 | API Documentation      | OpenAPI / Swagger        |
 | Containerization       | Docker                   |
 | Version Control        | Git + GitHub             |
 
-> **Note:** The technology stack is not considered final until the architecture and requirements are validated by the team. Avoid introducing additional technologies unless they solve a clearly identified problem.
+> **Note:** Supabase provides PostgreSQL, Authentication, Storage and optional Realtime services. Express.js remains responsible for core business workflows and secure server-side APIs.
 
 ---
 
@@ -645,8 +660,7 @@ sih-project/
 │
 ├── backend/
 │   ├── src/
-│   ├── prisma/
-│   └── tests/
+│   │   └── tests/
 │
 ├── mobile/
 │
@@ -765,7 +779,6 @@ The initial objective is to build a complete **end-to-end working workflow** bef
 - [ ] Next.js web application
 - [ ] Express backend
 - [ ] PostgreSQL database
-- [ ] Prisma setup
 - [ ] Authentication
 - [ ] RBAC
 - [ ] Basic UI design system
@@ -839,12 +852,12 @@ Potential future features include:
 
 | Member | Role                  | Responsibilities                    |
 | ------ | --------------------- | ----------------------------------- |
-| TBD    | Project Lead          | Architecture, coordination          |
-| TBD    | Backend Developer     | APIs, database, workflows           |
-| TBD    | Frontend Developer    | Web application                     |
-| TBD    | Mobile Developer      | Flutter application                 |
-| TBD    | Security              | Authentication, RBAC, certificates  |
-| TBD    | UI/UX & Documentation | Design, presentation, documentation |
+| Sahil    | Project Lead,          | Architecture, coordination          |
+| Puspy    | Frontend Developer     |    Web Applications        |
+| Garima    | Backend Developer    |  APIs, database, workflows                    |
+| Virangna   | Mobile Developer , Presentation              | Flutter application                 |
+| Appu          | Security , Presentation Creation            | Authentication, RBAC, certificates  |
+| Puspunder    | UI/UX & Documentation | Design, presentation, documentation |
 
 ---
 
