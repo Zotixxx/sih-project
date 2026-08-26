@@ -1,0 +1,497 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Instruments Management - MetriX</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed": "#0d1c2f",
+                      "surface-container-high": "#eae7e9",
+                      "tertiary": "#000000",
+                      "on-surface-variant": "#45464d",
+                      "surface-tint": "#565e74",
+                      "secondary-container": "#d5e3fd",
+                      "on-primary": "#ffffff",
+                      "outline-variant": "#c6c6cd",
+                      "on-tertiary-container": "#75859d",
+                      "secondary-fixed-dim": "#b9c7e0",
+                      "on-tertiary": "#ffffff",
+                      "primary-fixed-dim": "#bec6e0",
+                      "on-secondary": "#ffffff",
+                      "outline": "#76777d",
+                      "on-primary-fixed-variant": "#3f465c",
+                      "on-tertiary-fixed": "#0b1c30",
+                      "on-primary-container": "#7c839b",
+                      "on-primary-fixed": "#131b2e",
+                      "surface-container": "#f0edef",
+                      "surface-bright": "#fcf8fa",
+                      "surface-dim": "#dcd9db",
+                      "on-error": "#ffffff",
+                      "surface": "#fcf8fa",
+                      "inverse-primary": "#bec6e0",
+                      "error-container": "#ffdad6",
+                      "secondary-fixed": "#d5e3fd",
+                      "secondary": "#515f74",
+                      "surface-container-highest": "#e4e2e4",
+                      "tertiary-fixed": "#d3e4fe",
+                      "error": "#ba1a1a",
+                      "inverse-on-surface": "#f3f0f2",
+                      "on-surface": "#1b1b1d",
+                      "surface-container-lowest": "#ffffff",
+                      "primary": "#000000",
+                      "primary-container": "#131b2e",
+                      "on-secondary-container": "#57657b",
+                      "inverse-surface": "#303032",
+                      "background": "#fcf8fa",
+                      "on-background": "#1b1b1d",
+                      "on-tertiary-fixed-variant": "#38485d",
+                      "surface-container-low": "#f6f3f5",
+                      "tertiary-fixed-dim": "#b7c8e1",
+                      "on-error-container": "#93000a",
+                      "primary-fixed": "#dae2fd",
+                      "surface-variant": "#e4e2e4",
+                      "tertiary-container": "#0b1c30",
+                      "on-secondary-fixed-variant": "#3a485c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "sm": "8px",
+                      "sidebar-width": "260px",
+                      "xs": "4px",
+                      "lg": "24px",
+                      "xl": "32px",
+                      "xxl": "48px",
+                      "container-max": "1440px",
+                      "gutter": "24px",
+                      "unit": "4px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "mono-md": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "title-md": [
+                              "Inter"
+                      ],
+                      "title-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "11px",
+                              {
+                                      "lineHeight": "14px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "36px",
+                              {
+                                      "lineHeight": "44px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "mono-md": [
+                              "13px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "title-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "title-lg": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background h-full font-body-md flex">
+<!-- SideNavBar -->
+<nav class="bg-surface-container-lowest border-r border-outline-variant fixed left-0 top-0 h-full w-sidebar-width flex flex-col py-lg px-md z-50">
+<div class="mb-xl flex items-center px-sm gap-sm">
+<span class="material-symbols-outlined text-[32px] text-primary">scale</span>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">MetriX</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Legal Metrology System</p>
+</div>
+</div>
+<ul class="flex-1 space-y-unit">
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                    Dashboard
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm bg-secondary-container text-on-secondary-container font-bold rounded-lg font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">straighten</span>
+                    Instruments
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">description</span>
+                    Applications
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">assignment_turned_in</span>
+                    Inspections
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">verified</span>
+                    Certificates
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+                    Schedule
+                </a>
+</li>
+<li>
+
+</li>
+<li>
+
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">settings</span>
+                    Settings
+                </a>
+</li>
+</ul>
+<ul class="mt-auto pt-lg border-t border-outline-variant space-y-unit">
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+                    Profile
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">logout</span>
+                    Logout
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col ml-sidebar-width min-h-screen">
+<!-- TopAppBar -->
+<header class="bg-surface docked full-width top-0 sticky z-40 flex justify-between items-center h-16 px-lg border-b border-outline-variant">
+<div class="flex-1 flex items-center">
+<div class="relative w-96">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-[36px] pr-sm py-[6px] bg-surface-container-lowest border border-outline-variant rounded focus:border-primary focus:ring-2 focus:ring-primary/10 font-body-md text-body-md text-on-surface outline-none h-10" placeholder="Search instruments, IDs..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-highest text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="px-md h-10 flex items-center justify-center rounded hover:bg-surface-container-highest text-on-surface-variant font-body-md text-body-md transition-colors">
+                    Help
+                </button>
+<div class="h-8 w-px bg-outline-variant mx-sm"></div>
+<button class="flex items-center gap-sm px-sm py-1 rounded hover:bg-surface-container-highest transition-colors">
+<img alt="User Avatar" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCl7O23gD6oFeZauiwJHqN8gc_4chTuNOOmsQwDGEJPOBZr4GkH3eRyN-L1yuG8WN8jBNkeOzl1U5QrwvZNo8SW-QpQC_p8hDWrxMGcHwaAn0EUziKeXSjPqlh9qn4x8Otzsz_MlCaRmlB0Xc5a6QjlkIozNCt8_PJfvLGpfq_rbl-I3Y5995RNw0xz-UgAT_u0cs-MQNeZvMwwRP3865i-x_cvIoiIA03FZcLpVSbpgciKlYudmgbB">
+<span class="font-label-md text-label-md text-on-surface">Profile</span>
+</button>
+</div>
+</header>
+<!-- Worksurface -->
+<main class="flex-1 p-lg bg-surface-container-lowest max-w-[1440px] mx-auto w-full">
+<!-- Page Header & Actions -->
+<div class="flex justify-between items-end mb-lg">
+<div>
+<h2 class="font-display-lg text-display-lg text-on-surface mb-xs">Instruments Management</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Manage and monitor all registered measuring instruments across locations.</p>
+</div>
+<button class="bg-primary text-on-primary h-10 px-md rounded flex items-center gap-sm hover:bg-primary/90 transition-colors font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Add Instrument
+                </button>
+</div>
+<!-- Filters & Controls Slab -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-md mb-lg flex items-center gap-md">
+<div class="flex-1 flex gap-md">
+<div class="flex flex-col gap-[2px]">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Status</label>
+<select class="h-10 border border-outline-variant rounded bg-surface-container-lowest px-sm font-body-md text-body-md text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none w-48 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2376777d%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px_10px] bg-[right_12px_center]">
+<option>All Statuses</option>
+<option>Verified (Valid)</option>
+<option>Pending Verification</option>
+<option>Overdue</option>
+<option>Rejected</option>
+</select>
+</div>
+<div class="flex flex-col gap-[2px]">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Type</label>
+<select class="h-10 border border-outline-variant rounded bg-surface-container-lowest px-sm font-body-md text-body-md text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none w-48 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2376777d%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px_10px] bg-[right_12px_center]">
+<option>All Types</option>
+<option>Weighbridge</option>
+<option>Platform Scale</option>
+<option>Flow Meter</option>
+<option>Fuel Dispenser</option>
+</select>
+</div>
+<div class="flex flex-col gap-[2px]">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase">Location</label>
+<select class="h-10 border border-outline-variant rounded bg-surface-container-lowest px-sm font-body-md text-body-md text-on-surface focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none w-48 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2376777d%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:10px_10px] bg-[right_12px_center]">
+<option>All Locations</option>
+<option>North Region</option>
+<option>South Region</option>
+<option>Port Authority</option>
+</select>
+</div>
+</div>
+<div class="flex items-center gap-sm mt-4">
+<button class="h-10 px-md border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md text-label-md flex items-center gap-sm">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                        More Filters
+                    </button>
+<button class="h-10 w-10 border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-high transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">download</span>
+</button>
+</div>
+</div>
+<!-- Data Table Slab -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead class="bg-[#F1F5F9] border-b border-outline-variant">
+<tr>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Instrument ID</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Type &amp; Model</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Serial Number</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Location</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Verification Status</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Valid Until</th>
+<th class="py-sm px-md font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md">
+<!-- Row 1: Valid -->
+<tr class="border-b border-outline-variant hover:bg-[#F8FAFC] transition-colors h-[48px] group">
+<td class="py-sm px-md font-mono-md text-mono-md text-on-surface">WB-2023-0891</td>
+<td class="py-sm px-md">
+<div class="font-label-md text-label-md text-on-surface">Weighbridge</div>
+<div class="font-body-sm text-xs text-on-surface-variant">Mettler Toledo Titan</div>
+</td>
+<td class="py-sm px-md font-mono-md text-[12px] text-on-surface-variant">MT-882-991A</td>
+<td class="py-sm px-md text-on-surface">Port Authority Gate 4</td>
+<td class="py-sm px-md">
+<span class="inline-flex items-center px-2 py-1 rounded bg-[#D1FAE5] text-[#065F46] font-label-sm text-[10px] uppercase tracking-wider gap-1">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: &quot;FILL&quot; 1;">check_circle</span>
+                                    Verified
+                                </span>
+</td>
+<td class="py-sm px-md text-on-surface">12 Oct 2024</td>
+<td class="py-sm px-md text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: Warning/Amber -->
+<tr class="border-b border-outline-variant hover:bg-[#F8FAFC] transition-colors h-[48px] group">
+<td class="py-sm px-md font-mono-md text-mono-md text-on-surface">FM-2022-1102</td>
+<td class="py-sm px-md">
+<div class="font-label-md text-label-md text-on-surface">Flow Meter</div>
+<div class="font-body-sm text-xs text-on-surface-variant">Krohne OPTIMASS</div>
+</td>
+<td class="py-sm px-md font-mono-md text-[12px] text-on-surface-variant">KR-FM-7729</td>
+<td class="py-sm px-md text-on-surface">North Refinery Sec B</td>
+<td class="py-sm px-md">
+<span class="inline-flex items-center px-2 py-1 rounded bg-[#FEF3C7] text-[#92400E] font-label-sm text-[10px] uppercase tracking-wider gap-1">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: &quot;FILL&quot; 1;">warning</span>
+                                    Expiring Soon
+                                </span>
+</td>
+<td class="py-sm px-md text-on-surface">05 Nov 2023</td>
+<td class="py-sm px-md text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: Red/Overdue -->
+<tr class="border-b border-outline-variant hover:bg-[#F8FAFC] transition-colors h-[48px] group">
+<td class="py-sm px-md font-mono-md text-mono-md text-on-surface">PS-2021-0045</td>
+<td class="py-sm px-md">
+<div class="font-label-md text-label-md text-on-surface">Platform Scale</div>
+<div class="font-body-sm text-xs text-on-surface-variant">Avery Weigh-Tronix</div>
+</td>
+<td class="py-sm px-md font-mono-md text-[12px] text-on-surface-variant">AW-55-901</td>
+<td class="py-sm px-md text-on-surface">Central Market Stalls</td>
+<td class="py-sm px-md">
+<span class="inline-flex items-center px-2 py-1 rounded bg-[#FEE2E2] text-[#991B1B] font-label-sm text-[10px] uppercase tracking-wider gap-1">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: &quot;FILL&quot; 1;">error</span>
+                                    Overdue
+                                </span>
+</td>
+<td class="py-sm px-md text-[#991B1B] font-medium">15 Aug 2023</td>
+<td class="py-sm px-md text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4: Valid -->
+<tr class="border-b border-outline-variant hover:bg-[#F8FAFC] transition-colors h-[48px] group">
+<td class="py-sm px-md font-mono-md text-mono-md text-on-surface">FD-2023-3321</td>
+<td class="py-sm px-md">
+<div class="font-label-md text-label-md text-on-surface">Fuel Dispenser</div>
+<div class="font-body-sm text-xs text-on-surface-variant">Gilbarco Veeder-Root</div>
+</td>
+<td class="py-sm px-md font-mono-md text-[12px] text-on-surface-variant">GV-998-XX</td>
+<td class="py-sm px-md text-on-surface">Station 42, Highway 1</td>
+<td class="py-sm px-md">
+<span class="inline-flex items-center px-2 py-1 rounded bg-[#D1FAE5] text-[#065F46] font-label-sm text-[10px] uppercase tracking-wider gap-1">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: &quot;FILL&quot; 1;">check_circle</span>
+                                    Verified
+                                </span>
+</td>
+<td class="py-sm px-md text-on-surface">22 Jan 2025</td>
+<td class="py-sm px-md text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5: Pending -->
+<tr class="border-b border-outline-variant hover:bg-[#F8FAFC] transition-colors h-[48px] group">
+<td class="py-sm px-md font-mono-md text-mono-md text-on-surface">WB-2023-0905</td>
+<td class="py-sm px-md">
+<div class="font-label-md text-label-md text-on-surface">Weighbridge</div>
+<div class="font-body-sm text-xs text-on-surface-variant">Mettler Toledo Titan</div>
+</td>
+<td class="py-sm px-md font-mono-md text-[12px] text-on-surface-variant">MT-882-998B</td>
+<td class="py-sm px-md text-on-surface">Port Authority Gate 5</td>
+<td class="py-sm px-md">
+<span class="inline-flex items-center px-2 py-1 rounded bg-[#E0E7FF] text-[#3730A3] font-label-sm text-[10px] uppercase tracking-wider gap-1">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: &quot;FILL&quot; 1;">pending</span>
+                                    Pending Insp.
+                                </span>
+</td>
+<td class="py-sm px-md text-on-surface-variant italic">N/A</td>
+<td class="py-sm px-md text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination Footer -->
+<div class="px-md py-sm bg-surface-container-lowest flex items-center justify-between border-t border-outline-variant">
+<span class="font-body-md text-body-md text-on-surface-variant">Showing 1 to 5 of 248 entries</span>
+<div class="flex items-center gap-xs">
+<button class="w-8 h-8 flex items-center justify-center border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-high disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center border border-primary bg-primary text-on-primary rounded font-label-md text-label-md">1</button>
+<button class="w-8 h-8 flex items-center justify-center border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-high font-label-md text-label-md">2</button>
+<button class="w-8 h-8 flex items-center justify-center border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-high font-label-md text-label-md">3</button>
+<span class="px-1 text-on-surface-variant">...</span>
+<button class="w-8 h-8 flex items-center justify-center border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-high font-label-md text-label-md">50</button>
+<button class="w-8 h-8 flex items-center justify-center border border-outline-variant rounded text-on-surface-variant hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+
+</body></html>

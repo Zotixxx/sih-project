@@ -1,0 +1,427 @@
+<!DOCTYPE html><html class="h-full bg-background dark:bg-background" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Applications - MetriX</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "background": "#fcf8fa",
+                      "tertiary-fixed": "#d3e4fe",
+                      "tertiary": "#000000",
+                      "surface-tint": "#565e74",
+                      "outline-variant": "#c6c6cd",
+                      "outline": "#76777d",
+                      "on-primary-fixed": "#131b2e",
+                      "on-primary-container": "#7c839b",
+                      "on-tertiary": "#ffffff",
+                      "on-surface-variant": "#45464d",
+                      "error-container": "#ffdad6",
+                      "surface-bright": "#fcf8fa",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "on-error": "#ffffff",
+                      "primary-fixed": "#dae2fd",
+                      "on-secondary-fixed": "#0d1c2f",
+                      "surface-dim": "#dcd9db",
+                      "on-secondary-container": "#57657b",
+                      "inverse-on-surface": "#f3f0f2",
+                      "tertiary-container": "#0b1c30",
+                      "on-secondary-fixed-variant": "#3a485c",
+                      "primary-fixed-dim": "#bec6e0",
+                      "surface-container-lowest": "#ffffff",
+                      "primary": "#000000",
+                      "on-tertiary-fixed": "#0b1c30",
+                      "secondary": "#515f74",
+                      "primary-container": "#131b2e",
+                      "surface-container": "#f0edef",
+                      "tertiary-fixed-dim": "#b7c8e1",
+                      "error": "#ba1a1a",
+                      "inverse-primary": "#bec6e0",
+                      "on-error-container": "#93000a",
+                      "secondary-container": "#d5e3fd",
+                      "surface": "#fcf8fa",
+                      "inverse-surface": "#303032",
+                      "on-background": "#1b1b1d",
+                      "secondary-fixed-dim": "#b9c7e0",
+                      "secondary-fixed": "#d5e3fd",
+                      "on-tertiary-container": "#75859d",
+                      "surface-variant": "#e4e2e4",
+                      "on-primary-fixed-variant": "#3f465c",
+                      "surface-container-high": "#eae7e9",
+                      "on-tertiary-fixed-variant": "#38485d",
+                      "surface-container-highest": "#e4e2e4",
+                      "on-surface": "#1b1b1d",
+                      "surface-container-low": "#f6f3f5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "sidebar-width": "260px",
+                      "lg": "24px",
+                      "container-max": "1440px",
+                      "sm": "8px",
+                      "xxl": "48px",
+                      "xl": "32px",
+                      "unit": "4px",
+                      "gutter": "24px",
+                      "md": "16px",
+                      "xs": "4px"
+              },
+              "fontFamily": {
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "title-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "mono-md": [
+                              "JetBrains Mono"
+                      ],
+                      "title-md": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "display-lg": [
+                              "36px",
+                              {
+                                      "lineHeight": "44px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "11px",
+                              {
+                                      "lineHeight": "14px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "title-lg": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "mono-md": [
+                              "13px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "title-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased h-full flex overflow-hidden">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full flex flex-col z-40 bg-surface-container-lowest dark:bg-surface-container-low border-r border-outline-variant dark:border-outline docked left-0 h-screen w-sidebar-width">
+<!-- Header -->
+<div class="p-lg flex flex-col gap-xs">
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 bg-primary rounded flex items-center justify-center text-on-primary font-bold">M</div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">MetriX</h1>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Legal Metrology</span>
+</div>
+<!-- Primary CTA -->
+<div class="px-md mb-lg">
+<button class="w-full bg-primary text-on-primary rounded font-label-md text-label-md py-sm px-md flex items-center justify-center gap-sm hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined" data-icon="add" style="font-size: 18px;">add</span>
+                New Filing
+            </button>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex-1 overflow-y-auto px-sm flex flex-col gap-xs">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant font-label-md text-label-md hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant font-label-md text-label-md hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="straighten">straighten</span>
+                Instruments
+            </a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary font-bold font-label-md text-label-md scale 0.98x transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+                Applications
+            </a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant font-label-md text-label-md hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="assignment_turned_in">assignment_turned_in</span>
+                Inspections
+            </a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant font-label-md text-label-md hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+                Certificates
+            </a>
+</div>
+<!-- Footer Tabs -->
+<div class="mt-auto p-sm border-t border-outline-variant flex flex-col gap-xs">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant font-label-md text-label-md hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant font-label-md text-label-md hover:bg-surface-container dark:hover:bg-surface-container-high transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+                Support
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col ml-[260px] h-full overflow-hidden">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 h-16 flex items-center justify-between px-gutter z-30 bg-surface dark:bg-surface-dim docked top-0 right-0 w-[calc(100%-260px)] border-b border-outline-variant dark:border-outline">
+<div class="flex items-center gap-sm text-on-surface-variant font-body-md text-body-md">
+<span>MetriX</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="text-primary font-medium">Applications</span>
+</div>
+<div class="flex items-center gap-lg">
+<!-- Search Bar -->
+<div class="relative hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container rounded-full border-none text-sm w-64 focus:ring-1 focus:ring-primary focus:bg-surface transition-all" placeholder="Search..." type="text">
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-md text-on-surface-variant">
+<button class="hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container-highest rounded-full p-2">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:text-primary transition-colors hover:bg-surface-container-high dark:hover:bg-surface-container-highest rounded-full p-2">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-fixed border border-outline-variant overflow-hidden">
+<img alt="Inspector Profile" class="w-full h-full object-cover" data-alt="Professional headshot of a government inspector, professional attire, soft neutral background, high resolution, soft lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpLqZFZxk1nYtTfU9RGEXUuLgH7Qt5R5BwdATLTGPl9-zS8S6FK9_Ii3NJ1HLn8AyOAHJhuf_pgadfzTjtL5TWnBMWRzvbgdD47fgaXro7aXqKPuNDX0eLqivndzv6o18GMk8lD3mO3UAXql8alkJiLqByfngRhf2cvlNi4dUNh1kr7lNjVvXHUOmvXzk94LRIIRULeAo12wq-zZe8zDYJesPX7Z70cyq2q6Vh9ilktB3aKaEiRaWT">
+</div>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<main class="flex-1 overflow-y-auto mt-16 p-lg bg-background">
+<div class="max-w-container-max mx-auto flex flex-col gap-lg">
+<!-- Page Header & Filters -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-primary">Applications</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Manage and review all instrument verification filings.</p>
+</div>
+<button class="bg-primary text-on-primary rounded font-label-md text-label-md py-2 px-4 flex items-center justify-center gap-sm hover:opacity-90 transition-opacity self-start md:self-auto"><span class="material-symbols-outlined text-sm">add</span>New Verification</button>
+</div>
+<!-- Filter Bar Slab -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-md flex flex-col md:flex-row gap-md items-center shadow-sm">
+<div class="flex-1 w-full relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="w-full pl-10 pr-4 py-2 border border-outline-variant rounded bg-surface focus:border-primary focus:ring-1 focus:ring-primary text-sm transition-colors" placeholder="Search application ID, business..." type="text">
+</div>
+<div class="flex flex-wrap gap-sm w-full md:w-auto">
+<select class="border border-outline-variant rounded bg-surface py-2 px-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary appearance-none pr-8 relative">
+<option value="">Status: All</option>
+<option value="pending">Pending</option>
+<option value="approved">Approved</option>
+<option value="scheduled">Scheduled</option>
+</select>
+<select class="border border-outline-variant rounded bg-surface py-2 px-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary appearance-none pr-8">
+<option value="">Type: All</option>
+<option value="scale">Retail Scale</option>
+<option value="fuel">Fuel Dispenser</option>
+</select>
+<input class="border border-outline-variant rounded bg-surface py-2 px-3 text-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary" type="date">
+</div>
+</div>
+<!-- Data Table Slab -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg overflow-hidden shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container border-b border-outline-variant font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
+<th class="p-md font-semibold">Application ID</th>
+<th class="p-md font-semibold">Applicant Business</th>
+<th class="p-md font-semibold">Instrument Type</th>
+<th class="p-md font-semibold">Submission Date</th>
+<th class="p-md font-semibold">Status</th>
+<th class="p-md font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-surface transition-colors h-[48px] group">
+<td class="p-md font-mono-md text-mono-md text-primary font-medium">APP-24-001</td>
+<td class="p-md">Apex Logistics Corp</td>
+<td class="p-md text-on-surface-variant">Heavy Duty Scale (Class III)</td>
+<td class="p-md text-on-surface-variant">Oct 24, 2023</td>
+<td class="p-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#FFFBEB] text-[#92400E] border border-[#FEF3C7]">
+                                            Pending Review
+                                        </span>
+</td>
+<td class="p-md text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded hover:bg-surface-container">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface transition-colors h-[48px] group">
+<td class="p-md font-mono-md text-mono-md text-primary font-medium">APP-24-002</td>
+<td class="p-md">Fresh Mart Grocers</td>
+<td class="p-md text-on-surface-variant">Retail Deli Scale</td>
+<td class="p-md text-on-surface-variant">Oct 22, 2023</td>
+<td class="p-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]">
+                                            Approved
+                                        </span>
+</td>
+<td class="p-md text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded hover:bg-surface-container">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface transition-colors h-[48px] group">
+<td class="p-md font-mono-md text-mono-md text-primary font-medium">APP-24-003</td>
+<td class="p-md">Standard Fuel Co.</td>
+<td class="p-md text-on-surface-variant">Multi-Product Dispenser</td>
+<td class="p-md text-on-surface-variant">Oct 20, 2023</td>
+<td class="p-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#DBEAFE] text-[#1E40AF] border border-[#BFDBFE]">
+                                            Scheduled
+                                        </span>
+</td>
+<td class="p-md text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded hover:bg-surface-container">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface transition-colors h-[48px] group">
+<td class="p-md font-mono-md text-mono-md text-primary font-medium">APP-24-004</td>
+<td class="p-md">City Pharmaceuticals</td>
+<td class="p-md text-on-surface-variant">Precision Balance (Class II)</td>
+<td class="p-md text-on-surface-variant">Oct 19, 2023</td>
+<td class="p-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#FEE2E2] text-[#991B1B] border border-[#FECACA]">
+                                            Rejected
+                                        </span>
+</td>
+<td class="p-md text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded hover:bg-surface-container">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface transition-colors h-[48px] group">
+<td class="p-md font-mono-md text-mono-md text-primary font-medium">APP-24-005</td>
+<td class="p-md">Metro Transit Authority</td>
+<td class="p-md text-on-surface-variant">Vehicle Scale</td>
+<td class="p-md text-on-surface-variant">Oct 15, 2023</td>
+<td class="p-md">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#DBEAFE] text-[#1E40AF] border border-[#BFDBFE]">
+                                            Scheduled
+                                        </span>
+</td>
+<td class="p-md text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded hover:bg-surface-container">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="p-md border-t border-outline-variant bg-surface flex items-center justify-between">
+<span class="font-body-md text-body-md text-on-surface-variant">Showing 1 to 5 of 24 entries</span>
+<div class="flex gap-1">
+<button class="px-3 py-1 border border-outline-variant rounded bg-surface hover:bg-surface-container transition-colors disabled:opacity-50" disabled="">Prev</button>
+<button class="px-3 py-1 border border-primary rounded bg-primary text-on-primary font-medium">1</button>
+<button class="px-3 py-1 border border-outline-variant rounded bg-surface hover:bg-surface-container transition-colors">2</button>
+<button class="px-3 py-1 border border-outline-variant rounded bg-surface hover:bg-surface-container transition-colors">3</button>
+<button class="px-3 py-1 border border-outline-variant rounded bg-surface hover:bg-surface-container transition-colors">Next</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+
+</body></html>

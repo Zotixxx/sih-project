@@ -1,0 +1,387 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>MetriX - Legal Metrology Verification Platform</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-background": "#1b1b1d",
+                    "secondary-container": "#d5e3fd",
+                    "on-tertiary": "#ffffff",
+                    "surface-container": "#f0edef",
+                    "on-surface": "#1b1b1d",
+                    "surface-tint": "#565e74",
+                    "surface-container-lowest": "#ffffff",
+                    "on-surface-variant": "#45464d",
+                    "background": "#fcf8fa",
+                    "on-tertiary-fixed": "#0b1c30",
+                    "surface-variant": "#e4e2e4",
+                    "surface-dim": "#dcd9db",
+                    "surface-bright": "#fcf8fa",
+                    "surface-container-high": "#eae7e9",
+                    "on-secondary-container": "#57657b",
+                    "surface-container-highest": "#e4e2e4",
+                    "secondary": "#515f74",
+                    "primary-container": "#131b2e",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed-variant": "#3a485c",
+                    "primary": "#000000",
+                    "error-container": "#ffdad6",
+                    "inverse-on-surface": "#f3f0f2",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed": "#d3e4fe",
+                    "inverse-surface": "#303032",
+                    "on-tertiary-container": "#75859d",
+                    "on-primary-fixed": "#131b2e",
+                    "on-secondary-fixed": "#0d1c2f",
+                    "tertiary-fixed-dim": "#b7c8e1",
+                    "surface-container-low": "#f6f3f5",
+                    "on-tertiary-fixed-variant": "#38485d",
+                    "error": "#ba1a1a",
+                    "outline": "#76777d",
+                    "on-secondary": "#ffffff",
+                    "surface": "#fcf8fa",
+                    "outline-variant": "#c6c6cd",
+                    "tertiary": "#000000",
+                    "primary-fixed-dim": "#bec6e0",
+                    "secondary-fixed": "#d5e3fd",
+                    "tertiary-container": "#0b1c30",
+                    "inverse-primary": "#bec6e0",
+                    "primary-fixed": "#dae2fd",
+                    "secondary-fixed-dim": "#b9c7e0",
+                    "on-primary-container": "#7c839b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "xxl": "48px",
+                    "container-max": "1440px",
+                    "md": "16px",
+                    "gutter": "24px",
+                    "unit": "4px",
+                    "sidebar-width": "260px",
+                    "xs": "4px",
+                    "sm": "8px",
+                    "xl": "32px",
+                    "lg": "24px"
+            },
+            "fontFamily": {
+                    "title-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "title-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "mono-md": ["JetBrains Mono"],
+                    "headline-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "display-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "600"}],
+                    "title-md": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "mono-md": ["13px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            box-sizing: border-box;
+            position: relative;
+        }
+        .ticker {
+            display: inline-flex;
+            white-space: nowrap;
+            padding-right: 100%;
+            box-sizing: content-box;
+            animation-iteration-count: infinite;
+            animation-timing-function: linear;
+            animation-name: ticker;
+            animation-duration: 30s;
+        }
+        .ticker__item {
+            display: inline-block;
+            padding: 0 2rem;
+            color: #ffffff;
+        }
+        @keyframes ticker {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased font-body-md text-body-md selection:bg-secondary-container selection:text-on-surface">
+<!-- Header / TopNavBar from Shared Components -->
+<header class="sticky top-0 w-full z-50 flex justify-between items-center px-lg py-sm max-w-container-max mx-auto bg-surface border-b border-outline-variant flat no shadows">
+<div class="flex items-center gap-xl">
+<a class="text-headline-md font-headline-md font-extrabold text-primary" href="#">MetriX</a>
+<nav class="hidden md:flex gap-lg">
+<a class="font-title-md text-title-md text-primary border-b-2 border-primary pb-1 hover:text-primary transition-colors opacity-80 transition-opacity duration-200" href="#">Platform</a>
+<a class="font-title-md text-title-md text-on-surface-variant hover:text-primary transition-colors" href="#">Services</a>
+<a class="font-title-md text-title-md text-on-surface-variant hover:text-primary transition-colors" href="#">Compliance</a>
+<a class="font-title-md text-title-md text-on-surface-variant hover:text-primary transition-colors" href="#">Updates</a>
+<a class="font-title-md text-title-md text-on-surface-variant hover:text-primary transition-colors" href="#">Support</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden lg:flex items-center bg-surface-container-high rounded border border-outline-variant px-sm py-unit w-64 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] mr-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-full p-0" placeholder="Search certifications..." type="text">
+</div>
+<button class="font-label-md text-label-md px-md py-sm rounded border border-outline-variant text-on-surface-variant hover:bg-surface-container-low transition-colors">Verify Certificate</button>
+<button class="font-label-md text-label-md px-md py-sm rounded bg-primary-container text-on-primary hover:opacity-90 transition-opacity">Sign In</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="w-full max-w-container-max mx-auto">
+<!-- Hero Section -->
+<section class="relative pt-xxl pb-xxl px-lg overflow-hidden">
+<div class="absolute inset-0 z-0 opacity-10">
+<div class="bg-cover bg-center w-full h-full" data-alt="Abstract visualization of digital scales of justice and geometric grid patterns representing precision, measurement, and law. Dark navy blue monochromatic palette with subtle glowing white lines intersecting. Clean, corporate, high-tech government institutional feel. Crisp contrast, ultra-sharp resolution, modern light-mode context despite the dark subject matter." style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuAIMl00vFpyo3Kuh11K-7uJ3NtiWyjdaxliiDPkOnAS7nMAMVcUQ9FfkenLd6V8HOoWK4TdVwjnjfjSlZIDqKlq9HUOdae4JAdfVTmcgii3bhpSg65fVJH4GHW9fHEgcVRLJUy_j3c2yp-Z-SxycZKdPYgN49qUz1SKcsGzSq19u1fsM9Iv-phuk4Pie8eazrkh9bVbkwMlGD4sRG1s724c3m0pha_wetTb9wKgLmh9ZKGUpG2JEoJu&quot;);"></div>
+</div>
+<div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-gutter items-center">
+<div class="lg:col-span-7 flex flex-col gap-lg pr-lg">
+<div class="inline-flex items-center gap-sm bg-surface-container rounded-full px-sm py-unit w-fit border border-outline-variant">
+<span class="flex h-2 w-2 rounded-full bg-[#065F46]"></span>
+
+</div>
+<h1 class="font-display-lg text-display-lg text-primary text-[48px] leading-[56px] tracking-tight max-w-2xl">
+                        MetriX: Ensuring Precision in Commerce
+                    </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl text-lg">
+                        The official digital platform for Legal Metrology Verification and Certification. Modernizing the standards of measurement for a fair marketplace.
+                    </p>
+<div class="flex flex-wrap gap-md mt-sm">
+<button class="font-title-md text-title-md px-xl py-sm rounded bg-primary-container text-on-primary shadow-sm hover:opacity-90 transition-opacity flex items-center gap-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">verified</span>
+                            Verify Certificate
+                        </button>
+<button class="font-title-md text-title-md px-xl py-sm rounded border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors flex items-center gap-sm">
+                            Platform Overview
+                            <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+<div class="lg:col-span-5 mt-xl lg:mt-0 relative hidden md:block">
+<!-- Stylized Certificate / QR Graphic -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-20 transform rotate-1 hover:rotate-0 transition-transform duration-500">
+<div class="flex justify-between items-start mb-xl border-b border-outline-variant pb-md">
+<div>
+<h3 class="font-title-md text-title-md text-primary">Certificate of Verification</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-unit">ID: MET-2024-9982</p>
+</div>
+<span class="material-symbols-outlined text-primary text-3xl">qr_code_scanner</span>
+</div>
+<div class="space-y-md mb-xl">
+<div class="flex justify-between items-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Instrument Type</span>
+<span class="font-body-md text-body-md font-medium text-primary">Class II Balance</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Status</span>
+<span class="inline-flex items-center px-2 py-1 rounded bg-[#D1FAE5] text-[#065F46] font-label-sm text-label-sm">Valid</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Expiry Date</span>
+<span class="font-body-md text-body-md text-primary">Oct 24, 2025</span>
+</div>
+</div>
+<div class="w-full bg-surface-container-low h-32 rounded flex items-center justify-center border border-outline-variant border-dashed">
+<img class="h-24 w-24 object-cover opacity-80" data-alt="High contrast stylized black and white QR code centered on a very light gray background, representing secure digital verification and modern cryptographic validation in a legal metrology context. Minimalist corporate design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBascMZhMqzIra0t2eIgf8SpiTYdjTG3xmAl48hnjiifA-3PkzAeiGsTTX6xaBXsdWPWrTqVe2gIW-XbAWZ6GPJ30gyQQEgNIIY3PKQrQehp_1NPN-RTRcxnGol7qsBA1pTaoKwXbr10306BTsT4LVQpOiggHjqat0KXo4q45w2JkTs5XWhUHdnK8Eri1EeBQCIwwAWMwGeECGprGuMvnYGqJaYHeq0qHPLz3Q1ipHUTroV9TYHe6Ll">
+</div>
+</div>
+<!-- Background decorative slab -->
+<div class="absolute -bottom-md -right-md w-full h-full bg-surface-container-high rounded-lg border border-outline-variant -z-10 transform -rotate-2"></div>
+</div>
+</div>
+</section>
+<!-- Department Notifications Ticker (Scrolling Feed alternative) -->
+<div class="bg-primary-container text-on-primary py-sm border-y border-primary-fixed-dim">
+<div class="max-w-container-max mx-auto flex items-center px-lg">
+<div class="flex items-center gap-sm pr-md border-r border-on-primary/20 shrink-0">
+<span class="material-symbols-outlined animate-pulse text-error-container" style="font-variation-settings: &quot;FILL&quot; 1;">notifications_active</span>
+<span class="font-title-md text-title-md">Live Updates</span>
+</div>
+<div class="ticker-wrap w-full">
+<div class="ticker font-body-md text-body-md">
+<div class="ticker__item"><span class="font-bold mr-xs">New Regulation:</span> Re-verification period for Fuel Dispensers updated to 12 months.</div>
+<div class="ticker__item"><span class="font-bold mr-xs">Scheduled Maintenance:</span> Portal will be offline on Oct 30th for system upgrades.</div>
+<div class="ticker__item"><span class="font-bold mr-xs">Digital Certificate Rollout:</span> All GATCs now issuing digitally signed QR certificates.</div>
+<div class="ticker__item"><span class="font-bold mr-xs">Policy Update:</span> Revised verification fees effective from Nov 1st, 2024.</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Access Hub (Bento-style layout) -->
+<section class="py-xxl px-lg bg-surface-container-lowest">
+<div class="mb-xl text-center max-w-2xl mx-auto">
+<h2 class="font-headline-lg text-headline-lg text-primary mb-sm">How can we help you today?</h2>
+
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+<!-- Business Card -->
+<div class="group bg-surface border border-outline-variant rounded-lg p-lg hover:border-primary hover:shadow-[0_4px_6px_-1px_rgb(0,0,0,0.1),0_2px_4px_-2px_rgb(0,0,0,0.1)] transition-all duration-300 flex flex-col justify-between min-h-[280px]">
+<div>
+<div class="w-12 h-12 bg-secondary-container text-primary rounded flex items-center justify-center mb-md group-hover:bg-primary-container group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: &quot;FILL&quot; 1;">storefront</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-sm">Business Services</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">Register weighing &amp; measuring instruments, schedule inspections, and manage your verification lifecycle.</p>
+</div>
+<button class="font-title-md text-title-md w-full py-sm rounded border border-outline-variant text-primary group-hover:bg-primary-container group-hover:text-on-primary group-hover:border-primary-container transition-all flex justify-center items-center gap-sm">Go to Business Portal <span class="material-symbols-outlined text-sm transition-transform group-hover:translate-x-1">arrow_forward</span></button>
+</div>
+<!-- Officers Card -->
+<div class="group bg-surface-container-low border border-outline-variant rounded-lg p-lg hover:border-primary hover:shadow-[0_4px_6px_-1px_rgb(0,0,0,0.1),0_2px_4px_-2px_rgb(0,0,0,0.1)] transition-all duration-300 flex flex-col justify-between min-h-[280px]">
+<div>
+<div class="w-12 h-12 bg-surface-variant text-primary rounded flex items-center justify-center mb-md group-hover:bg-primary-container group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: &quot;FILL&quot; 1;">badge</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-sm">Official Access</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">Access field verification tools, submit inspection reports, and issue digital certificates securely.</p>
+</div>
+<button class="font-title-md text-title-md w-full py-sm rounded bg-surface border border-outline-variant text-primary group-hover:bg-primary-container group-hover:text-on-primary group-hover:border-primary-container transition-all flex justify-center items-center gap-sm">
+                        Officer Login
+                        <span class="material-symbols-outlined text-sm transition-transform group-hover:translate-x-1">arrow_forward</span>
+</button>
+</div>
+<!-- Public Card -->
+<div class="group bg-surface border border-outline-variant rounded-lg p-lg hover:border-primary hover:shadow-[0_4px_6px_-1px_rgb(0,0,0,0.1),0_2px_4px_-2px_rgb(0,0,0,0.1)] transition-all duration-300 flex flex-col justify-between min-h-[280px]">
+<div>
+<div class="w-12 h-12 bg-tertiary-fixed text-primary rounded flex items-center justify-center mb-md group-hover:bg-primary-container group-hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: &quot;FILL&quot; 1;">public</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-sm">Public Services</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mb-lg">Verify digital certificates via QR code or ID to ensure the accuracy of commercial instruments.</p>
+</div>
+<button class="font-title-md text-title-md w-full py-sm rounded border border-outline-variant text-primary group-hover:bg-primary-container group-hover:text-on-primary group-hover:border-primary-container transition-all flex justify-center items-center gap-sm">Verify a Certificate <span class="material-symbols-outlined text-sm transition-transform group-hover:translate-x-1">arrow_forward</span></button>
+</div>
+</div>
+</section>
+<!-- Mission & Impact / Notification Hub Split Section -->
+<section class="py-xxl px-lg border-t border-outline-variant bg-surface">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-xl">
+<!-- Mission Statement -->
+<div class="lg:col-span-7 flex flex-col justify-center pr-0 lg:pr-lg">
+<h2 class="font-headline-lg text-headline-lg text-primary mb-md">Our Mission &amp; Impact</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-lg">
+                        MetriX stands at the intersection of consumer protection and fair trade. By digitizing the legal metrology ecosystem, we eliminate ambiguities in measurement standards, ensuring that every transaction across the marketplace is based on certified, verifiable accuracy.
+                    </p>
+<div class="grid grid-cols-2 gap-md mt-sm">
+<div class="border-l-2 border-primary pl-md py-sm">
+<div class="font-display-lg text-display-lg text-primary">450k+</div>
+<div class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mt-xs">Instruments Verified</div>
+</div>
+<div class="border-l-2 border-primary pl-md py-sm">
+<div class="font-display-lg text-display-lg text-primary">100%</div>
+<div class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wide mt-xs">Cryptographic Security</div>
+</div>
+</div>
+</div>
+<!-- Detailed Notification Hub -->
+<div class="lg:col-span-5">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg flex flex-col h-full shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant bg-surface-container-low rounded-t-lg flex justify-between items-center">
+<h3 class="font-title-lg text-title-lg text-primary flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">history</span>
+                                Department Updates
+                            </h3>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-primary" href="#">View All</a>
+</div>
+<div class="flex-1 overflow-y-auto p-0">
+<!-- Notification Item -->
+<div class="px-lg py-md border-b border-outline-variant/50 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-start gap-md">
+<div class="mt-1">
+<span class="flex h-2 w-2 rounded-full bg-error"></span>
+</div>
+<div>
+<div class="flex justify-between items-baseline mb-unit">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant group-hover:text-primary transition-colors">Regulation</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Today</span>
+</div>
+<h4 class="font-title-md text-title-md text-primary mb-xs">Re-verification period for Fuel Dispensers updated</h4>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">Effective immediately, the mandatory re-verification cycle for all commercial fuel dispensing units has been standardized to 12 months.</p>
+</div>
+</div>
+</div>
+<!-- Notification Item -->
+<div class="px-lg py-md border-b border-outline-variant/50 hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-start gap-md">
+<div class="mt-1">
+<span class="flex h-2 w-2 rounded-full bg-[#D97706]"></span>
+</div>
+<div>
+<div class="flex justify-between items-baseline mb-unit">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant group-hover:text-primary transition-colors">System</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Yesterday</span>
+</div>
+<h4 class="font-title-md text-title-md text-primary mb-xs">Scheduled Maintenance Alert</h4>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">The MetriX portal will be offline on Oct 30th from 02:00 to 04:00 UTC for scheduled database optimization and security patching.</p>
+</div>
+</div>
+</div>
+<!-- Notification Item -->
+<div class="px-lg py-md hover:bg-surface-container-low transition-colors cursor-pointer group">
+<div class="flex items-start gap-md">
+<div class="mt-1">
+<span class="flex h-2 w-2 rounded-full bg-surface-variant"></span>
+</div>
+<div>
+<div class="flex justify-between items-baseline mb-unit">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant group-hover:text-primary transition-colors">Feature Release</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Oct 15</span>
+</div>
+<h4 class="font-title-md text-title-md text-primary mb-xs">Digital Certificate Rollout Complete</h4>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">All Government Approved Test Centres (GATCs) are now mandatorily issuing digitally signed QR certificates for new verifications.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer from Shared Components -->
+<footer class="bg-primary-container text-on-primary font-body-md text-body-md w-full bottom border-t-0">
+<div class="w-full py-xxl px-lg flex flex-col md:flex-row justify-between items-center gap-md max-w-container-max mx-auto">
+<div class="flex flex-col items-center md:items-start gap-sm">
+<span class="text-title-lg font-title-lg font-bold text-on-primary">MetriX</span>
+<span class="text-on-primary-container text-sm">© 2024 MetriX Legal Metrology Department. All rights reserved.</span>
+</div>
+<nav class="flex flex-wrap justify-center gap-md mt-md md:mt-0">
+<a class="text-on-primary-container hover:text-on-primary transition-colors" href="#">Privacy Policy</a>
+<a class="text-on-primary-container hover:text-on-primary transition-colors" href="#">Terms of Service</a>
+<a class="text-on-primary-container hover:text-on-primary transition-colors" href="#">Accessibility</a>
+<a class="text-on-primary-container hover:text-on-primary transition-colors" href="#">Contact Us</a>
+<a class="text-on-primary-container hover:text-on-primary transition-colors" href="#">Sitemap</a>
+</nav>
+</div>
+</footer>
+
+
+</body></html>

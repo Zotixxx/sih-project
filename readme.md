@@ -1,3 +1,7 @@
+# Team Name - MetriX
+Legal Metrology Digital Verification & Certification Platform
+
+
 # SIH 2026 — Legal Metrology Digital Verification & Certification Platform
 
 > A secure, unified digital platform for the registration, verification, certification, and lifecycle management of weighing and measuring instruments under Legal Metrology regulations.

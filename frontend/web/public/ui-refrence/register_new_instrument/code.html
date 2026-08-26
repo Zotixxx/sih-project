@@ -1,0 +1,393 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Register Instrument - MetriX</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary": "#000000",
+                      "on-secondary-container": "#57657b",
+                      "tertiary-fixed-dim": "#b7c8e1",
+                      "on-tertiary-fixed-variant": "#38485d",
+                      "on-secondary-fixed-variant": "#3a485c",
+                      "surface-container": "#f0edef",
+                      "on-primary-container": "#7c839b",
+                      "outline-variant": "#c6c6cd",
+                      "surface-container-highest": "#e4e2e4",
+                      "error": "#ba1a1a",
+                      "on-primary": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "surface-container-high": "#eae7e9",
+                      "inverse-surface": "#303032",
+                      "primary-fixed": "#dae2fd",
+                      "outline": "#76777d",
+                      "on-surface": "#1b1b1d",
+                      "surface-tint": "#565e74",
+                      "tertiary-fixed": "#d3e4fe",
+                      "tertiary-container": "#0b1c30",
+                      "on-background": "#1b1b1d",
+                      "on-secondary": "#ffffff",
+                      "on-secondary-fixed": "#0d1c2f",
+                      "primary-container": "#131b2e",
+                      "secondary-fixed": "#d5e3fd",
+                      "error-container": "#ffdad6",
+                      "background": "#fcf8fa",
+                      "surface-bright": "#fcf8fa",
+                      "on-tertiary-container": "#75859d",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary-fixed": "#131b2e",
+                      "on-primary-fixed-variant": "#3f465c",
+                      "inverse-primary": "#bec6e0",
+                      "secondary-fixed-dim": "#b9c7e0",
+                      "on-surface-variant": "#45464d",
+                      "surface-variant": "#e4e2e4",
+                      "on-error": "#ffffff",
+                      "inverse-on-surface": "#f3f0f2",
+                      "secondary": "#515f74",
+                      "on-tertiary-fixed": "#0b1c30",
+                      "primary-fixed-dim": "#bec6e0",
+                      "surface-dim": "#dcd9db",
+                      "secondary-container": "#d5e3fd",
+                      "on-tertiary": "#ffffff",
+                      "primary": "#000000",
+                      "surface": "#fcf8fa",
+                      "surface-container-low": "#f6f3f5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "xxl": "48px",
+                      "sidebar-width": "260px",
+                      "md": "16px",
+                      "gutter": "24px",
+                      "lg": "24px",
+                      "xl": "32px",
+                      "sm": "8px",
+                      "xs": "4px",
+                      "unit": "4px",
+                      "container-max": "1440px"
+              },
+              "fontFamily": {
+                      "title-md": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "mono-md": [
+                              "JetBrains Mono"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "title-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "title-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "mono-md": [
+                              "13px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "title-lg": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "label-sm": [
+                              "11px",
+                              {
+                                      "lineHeight": "14px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "36px",
+                              {
+                                      "lineHeight": "44px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .form-input-ring:focus {
+            outline: none;
+            border-color: #131b2e;
+            box-shadow: 0 0 0 2px rgba(19, 27, 46, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex antialiased">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full flex flex-col z-40 bg-surface-container-lowest border-r border-outline-variant docked left-0 h-screen w-sidebar-width">
+<!-- Header -->
+<div class="p-gutter border-b border-outline-variant flex items-center gap-md">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center text-on-primary-container font-bold font-title-md">
+                M
+            </div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">MetriX</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Legal Metrology</p>
+</div>
+</div>
+<!-- CTA -->
+<div class="p-md">
+<button class="w-full bg-primary-container text-on-primary-container font-title-md text-title-md rounded-lg py-sm px-md flex items-center justify-center gap-sm hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                New Filing
+            </button>
+</div>
+<!-- Main Tabs -->
+<div class="flex-1 overflow-y-auto py-sm px-sm flex flex-col gap-xs">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg bg-secondary-container text-on-secondary-container font-bold font-label-md text-label-md scale-98 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="straighten" data-weight="fill">straighten</span>
+                Instruments
+            </a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+                Applications
+            </a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="assignment_turned_in">assignment_turned_in</span>
+                Inspections
+            </a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+                Certificates
+            </a>
+</div>
+<!-- Footer Tabs -->
+<div class="p-sm border-t border-outline-variant flex flex-col gap-xs mt-auto">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+                Support
+            </a>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 ml-[260px] flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 h-16 flex items-center justify-between px-gutter z-30 bg-surface docked top-0 right-0 w-[calc(100%-260px)] border-b border-outline-variant">
+<div class="flex-1"></div>
+<div class="flex items-center gap-md">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-tertiary-fixed-dim overflow-hidden border border-outline-variant cursor-pointer ml-sm">
+<img alt="Inspector Profile" class="w-full h-full object-cover" data-alt="A professional headshot of an inspector in a modern, brightly lit office environment. The lighting is soft and neutral, conveying competence and trustworthiness. The individual is wearing subtle, formal attire suitable for a government or corporate setting, photographed with a shallow depth of field against a clean, off-white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsWwpPxFKqPVPOa-dzfbbtt01RfcnZ1l2JmqjDhjTOHufaV8ZdaSWaykGpqVaih95DxQDHA-P3NSdeT0V7XpAITl2wDcOxlywzoPmPpumfnbc327C6fmOUB-Btucoqq12lXu9Axq1Pp9QeDtWhaD7v5mhvLarjkY0mGEJuKiP1yicbEV4Oq_7qXQ-jx0Jw0egFuU-fyF0l0-77RPvWgWzPXOJ0sEviAkVMoStT21U9R4GGjgLmfPOr">
+</div>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 mt-16 p-gutter pb-xxl overflow-y-auto">
+<div class="max-w-[800px] mx-auto w-full">
+<!-- Page Header -->
+<div class="mb-xl">
+<h2 class="font-headline-lg text-headline-lg font-semibold text-on-surface mb-xs">Register Instrument</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Complete the following details to register a new legal measuring instrument into the MetriX system.</p>
+</div>
+<!-- Stepper -->
+<div class="mb-xl">
+<div class="flex items-center justify-between relative">
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-px bg-surface-variant z-0"></div>
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-[25%] h-px bg-primary-container z-0"></div>
+<!-- Step 1 (Completed) -->
+<div class="relative z-10 flex flex-col items-center gap-sm bg-background px-xs">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center border-2 border-primary-container">
+<span class="material-symbols-outlined text-[16px]" data-icon="check">check</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Basic Details</span>
+</div>
+<!-- Step 2 (Current) -->
+<div class="relative z-10 flex flex-col items-center gap-sm bg-background px-xs">
+<div class="w-8 h-8 rounded-full bg-background text-primary-container flex items-center justify-center border-2 border-primary-container font-title-md text-title-md">
+                                2
+                            </div>
+<span class="font-label-sm text-label-sm text-primary-container font-bold uppercase tracking-wider">Technical Specs</span>
+</div>
+<!-- Step 3 (Pending) -->
+<div class="relative z-10 flex flex-col items-center gap-sm bg-background px-xs">
+<div class="w-8 h-8 rounded-full bg-background text-outline border-2 border-outline-variant flex items-center justify-center font-title-md text-title-md">
+                                3
+                            </div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Manufacturer</span>
+</div>
+<!-- Step 4 (Pending) -->
+<div class="relative z-10 flex flex-col items-center gap-sm bg-background px-xs">
+<div class="w-8 h-8 rounded-full bg-background text-outline border-2 border-outline-variant flex items-center justify-center font-title-md text-title-md">
+                                4
+                            </div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Location</span>
+</div>
+<!-- Step 5 (Pending) -->
+<div class="relative z-10 flex flex-col items-center gap-sm bg-background px-xs">
+<div class="w-8 h-8 rounded-full bg-background text-outline border-2 border-outline-variant flex items-center justify-center font-title-md text-title-md">
+                                5
+                            </div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Review</span>
+</div>
+</div>
+</div>
+<!-- Form Slab -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant p-lg shadow-sm">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-lg">Technical Specifications</h3>
+<form class="flex flex-col gap-lg">
+<!-- Grid Layout for Inputs -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+<!-- Capacity (Max) -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface" for="max-capacity">Maximum Capacity</label>
+<div class="relative">
+<input class="w-full h-10 px-md py-sm border border-outline-variant rounded bg-surface-container-lowest text-on-surface font-body-md text-body-md form-input-ring transition-colors" id="max-capacity" placeholder="e.g. 5000" type="text">
+<span class="absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant font-label-md text-label-md">kg</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Maximum measurable limit.</p>
+</div>
+<!-- Capacity (Min) -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface" for="min-capacity">Minimum Capacity</label>
+<div class="relative">
+<input class="w-full h-10 px-md py-sm border border-outline-variant rounded bg-surface-container-lowest text-on-surface font-body-md text-body-md form-input-ring transition-colors" id="min-capacity" placeholder="e.g. 10" type="text">
+<span class="absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant font-label-md text-label-md">kg</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Minimum measurable limit.</p>
+</div>
+<!-- Accuracy Class -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface" for="accuracy-class">Accuracy Class</label>
+<select class="w-full h-10 px-md py-sm border border-outline-variant rounded bg-surface-container-lowest text-on-surface font-body-md text-body-md form-input-ring transition-colors appearance-none" id="accuracy-class">
+<option disabled="" selected="" value="">Select class</option>
+<option value="I">Class I (Special Accuracy)</option>
+<option value="II">Class II (High Accuracy)</option>
+<option value="III">Class III (Medium Accuracy)</option>
+<option value="IIII">Class IIII (Ordinary Accuracy)</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-md text-on-surface-variant pt-7">
+<span class="material-symbols-outlined text-[20px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+</div>
+</div>
+<!-- Serial Number -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface" for="serial-number">Serial Number <span class="text-error">*</span></label>
+<input class="w-full h-10 px-md py-sm border border-outline-variant rounded bg-surface-container-lowest text-on-surface font-body-md text-body-md form-input-ring transition-colors" id="serial-number" placeholder="Enter alphanumeric serial" required="" type="text">
+</div>
+<!-- Manufacturing Date -->
+<div class="flex flex-col gap-xs md:col-span-2">
+<label class="font-label-md text-label-md text-on-surface" for="mfg-date">Manufacturing Date</label>
+<input class="w-full h-10 px-md py-sm border border-outline-variant rounded bg-surface-container-lowest text-on-surface font-body-md text-body-md form-input-ring transition-colors max-w-[300px]" id="mfg-date" type="date">
+</div>
+</div>
+<!-- Action Bar -->
+<div class="mt-lg pt-lg border-t border-outline-variant flex items-center justify-between">
+<button class="h-10 px-md border border-outline-variant rounded font-title-md text-title-md text-on-surface-variant hover:bg-surface-container-low transition-colors flex items-center gap-sm" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="arrow_back">arrow_back</span>
+                                Back
+                            </button>
+<button class="h-10 px-lg bg-primary-container text-on-primary-container rounded font-title-md text-title-md hover:opacity-90 transition-opacity flex items-center gap-sm" type="button">
+                                Next Step
+                                <span class="material-symbols-outlined text-[20px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</form>
+</div>
+<div class="mt-lg text-center">
+<p class="font-label-md text-label-md text-on-surface-variant flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="info">info</span>
+                        Your progress is automatically saved as draft.
+                   </p>
+</div>
+</div>
+</main>
+</div>
+</body></html>

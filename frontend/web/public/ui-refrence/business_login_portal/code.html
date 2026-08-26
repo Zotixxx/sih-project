@@ -1,0 +1,194 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>MetriX Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#fcf8fa",
+                        "surface-variant": "#e4e2e4",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary": "#515f74",
+                        "surface-dim": "#dcd9db",
+                        "primary-container": "#131b2e",
+                        "outline-variant": "#c6c6cd",
+                        "surface-container-low": "#f6f3f5",
+                        "on-primary-container": "#7c839b",
+                        "on-secondary-container": "#57657b",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed-dim": "#b9c7e0",
+                        "on-primary": "#ffffff",
+                        "surface-container-high": "#eae7e9",
+                        "on-background": "#1b1b1d",
+                        "secondary-container": "#d5e3fd",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-surface": "#1b1b1d",
+                        "surface-container-highest": "#e4e2e4",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#000000",
+                        "tertiary-container": "#0b1c30",
+                        "on-secondary-fixed": "#0d1c2f",
+                        "surface-bright": "#fcf8fa",
+                        "surface-container": "#f0edef",
+                        "on-secondary-fixed-variant": "#3a485c",
+                        "error": "#ba1a1a",
+                        "background": "#fcf8fa",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed": "#d5e3fd",
+                        "on-primary-fixed": "#131b2e",
+                        "inverse-primary": "#bec6e0",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "inverse-on-surface": "#f3f0f2",
+                        "primary-fixed": "#dae2fd",
+                        "primary": "#000000",
+                        "on-surface-variant": "#45464d",
+                        "outline": "#76777d",
+                        "inverse-surface": "#303032",
+                        "surface-tint": "#565e74",
+                        "on-tertiary-container": "#75859d",
+                        "tertiary-fixed": "#d3e4fe",
+                        "on-primary-fixed-variant": "#3f465c"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sidebar-width": "260px",
+                        "xs": "4px",
+                        "md": "16px",
+                        "sm": "8px",
+                        "lg": "24px",
+                        "unit": "4px",
+                        "xxl": "48px",
+                        "gutter": "24px",
+                        "xl": "32px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "title-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "mono-md": ["JetBrains Mono"],
+                        "label-sm": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "title-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "mono-md": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] min-h-screen flex flex-col font-body-md text-body-md text-on-surface">
+<!-- TopAppBar -->
+<header class="bg-surface text-primary border-b border-outline-variant flex justify-between items-center w-full px-gutter max-w-container-max mx-auto h-16 shrink-0 z-50 sticky top-0">
+<div class="flex items-center gap-md">
+<span class="text-title-lg font-title-lg font-bold text-on-primary-container">MetriX</span>
+</div>
+<div class="flex items-center gap-md">
+<button class="text-secondary hover:text-primary transition-colors flex items-center justify-center p-sm rounded hover:bg-surface-variant">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+<button class="text-secondary hover:text-primary transition-colors flex items-center justify-center p-sm rounded hover:bg-surface-variant">
+<span class="material-symbols-outlined" data-icon="language">language</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex items-center justify-center p-lg md:p-xxl relative">
+<!-- Abstract Background Element for subtle depth -->
+<div class="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+<div class="absolute -top-40 -right-40 w-96 h-96 bg-primary-fixed rounded-full blur-3xl"></div>
+<div class="absolute bottom-0 left-20 w-72 h-72 bg-secondary-fixed rounded-full blur-3xl"></div>
+</div>
+<!-- Login Card -->
+<div class="bg-surface-container-lowest border border-[#E2E8F0] rounded shadow-sm w-full max-w-[420px] p-lg md:p-xl relative z-10 flex flex-col gap-lg">
+<div class="flex flex-col items-center text-center gap-sm mb-sm">
+<div class="w-12 h-12 bg-primary-container text-on-primary rounded flex items-center justify-center mb-sm">
+<span class="material-symbols-outlined text-[24px]" data-icon="shield_lock">shield_lock</span>
+</div>
+<h1 class="text-headline-md font-headline-md text-on-surface">Sign In</h1>
+<p class="text-body-md font-body-md text-on-surface-variant">Access your MetriX platform account.</p>
+</div>
+<form class="flex flex-col gap-md">
+<!-- Role Selector -->
+<!-- Email Input -->
+<div class="flex flex-col gap-xs">
+<label class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider" for="email">Email / Username</label>
+<input class="w-full h-10 px-sm border border-[#E2E8F0] rounded bg-surface-container-lowest text-body-md font-body-md text-on-surface focus:border-primary-container focus:ring-2 focus:ring-primary-container/10 transition-shadow placeholder-on-surface-variant/50" id="email" placeholder="Enter your email or username" type="text">
+</div>
+<!-- Password Input -->
+<div class="flex flex-col gap-xs">
+<div class="flex justify-between items-center">
+<label class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider" for="password">Password</label>
+<a class="text-label-md font-label-md text-primary hover:underline focus:outline-none focus:ring-1 focus:ring-primary-container rounded" href="#">Forgot Password?</a>
+</div>
+<div class="relative">
+<input class="w-full h-10 px-sm pr-10 border border-[#E2E8F0] rounded bg-surface-container-lowest text-body-md font-body-md text-on-surface focus:border-primary-container focus:ring-2 focus:ring-primary-container/10 transition-shadow" id="password" placeholder="••••••••" type="password">
+<button class="absolute right-sm top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface focus:outline-none p-xs rounded" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="visibility_off">visibility_off</span>
+</button>
+</div>
+</div>
+<!-- Submit Button -->
+<button class="w-full h-10 mt-sm bg-[#0F172A] hover:bg-[#1E293B] text-on-primary text-body-md font-body-md font-semibold rounded transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0F172A] active:scale-[0.98]" type="submit">
+                    Sign In
+                </button><button class="w-full h-10 mt-xs border border-outline-variant text-on-surface-variant hover:bg-surface-variant hover:text-on-surface text-body-md font-body-md font-semibold rounded transition-all focus:outline-none focus:ring-2 focus:ring-primary-container/10 flex items-center justify-center gap-xs" type="button">
+<span class="material-symbols-outlined text-[20px]">account_balance</span>
+Authority Login
+</button>
+</form>
+<div class="mt-md pt-md border-t border-[#E2E8F0] flex justify-center">
+<button class="text-label-sm font-label-sm text-on-surface-variant border border-transparent hover:border-[#E2E8F0] hover:bg-surface px-md py-sm rounded transition-all flex items-center gap-xs" type="button">
+<span class="material-symbols-outlined text-[16px]" data-icon="admin_panel_settings">admin_panel_settings</span>
+                     Admin Login
+                 </button>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface text-secondary border-t border-outline-variant w-full py-md px-gutter flex flex-col md:flex-row justify-between items-center gap-md shrink-0">
+<div class="text-label-sm font-label-sm">
+            © 2024 MetriX Legal Metrology System. All rights reserved.
+        </div>
+<div class="flex flex-wrap items-center justify-center gap-md text-label-sm font-label-sm">
+<a class="text-on-surface-variant hover:text-primary transition-colors focus:outline-none focus:underline rounded px-xs py-unit" href="#">Privacy Policy</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors focus:outline-none focus:underline rounded px-xs py-unit" href="#">Terms of Service</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors focus:outline-none focus:underline rounded px-xs py-unit" href="#">Security Disclosure</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors focus:outline-none focus:underline rounded px-xs py-unit" href="#">Contact Support</a>
+</div>
+</footer>
+</body></html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>MetriX - Certificates</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#fcf8fa",
+                        "tertiary-fixed": "#d3e4fe",
+                        "tertiary": "#000000",
+                        "surface-tint": "#565e74",
+                        "outline-variant": "#c6c6cd",
+                        "outline": "#76777d",
+                        "on-primary-fixed": "#131b2e",
+                        "on-primary-container": "#7c839b",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#45464d",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#fcf8fa",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#dae2fd",
+                        "on-secondary-fixed": "#0d1c2f",
+                        "surface-dim": "#dcd9db",
+                        "on-secondary-container": "#57657b",
+                        "inverse-on-surface": "#f3f0f2",
+                        "tertiary-container": "#0b1c30",
+                        "on-secondary-fixed-variant": "#3a485c",
+                        "primary-fixed-dim": "#bec6e0",
+                        "surface-container-lowest": "#ffffff",
+                        "primary": "#000000",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "secondary": "#515f74",
+                        "primary-container": "#131b2e",
+                        "surface-container": "#f0edef",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "error": "#ba1a1a",
+                        "inverse-primary": "#bec6e0",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#d5e3fd",
+                        "surface": "#fcf8fa",
+                        "inverse-surface": "#303032",
+                        "on-background": "#1b1b1d",
+                        "secondary-fixed-dim": "#b9c7e0",
+                        "secondary-fixed": "#d5e3fd",
+                        "on-tertiary-container": "#75859d",
+                        "surface-variant": "#e4e2e4",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "surface-container-high": "#eae7e9",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "surface-container-highest": "#e4e2e4",
+                        "on-surface": "#1b1b1d",
+                        "surface-container-low": "#f6f3f5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "sidebar-width": "260px",
+                        "lg": "24px",
+                        "container-max": "1440px",
+                        "sm": "8px",
+                        "xxl": "48px",
+                        "xl": "32px",
+                        "unit": "4px",
+                        "gutter": "24px",
+                        "md": "16px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "mono-md": ["JetBrains Mono"],
+                        "title-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "600" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "mono-md": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "title-md": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full flex flex-col z-40 w-sidebar-width bg-surface-container-lowest border-r border-outline-variant transition-all hidden md:flex">
+<!-- Header -->
+<div class="h-16 flex items-center px-lg border-b border-outline-variant shrink-0">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary text-[28px]">token</span>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary tracking-tight">MetriX</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Legal Metrology</p>
+</div>
+</div>
+</div>
+<!-- Main Tabs -->
+<div class="flex-1 overflow-y-auto py-md px-sm flex flex-col gap-unit">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">straighten</span>
+<span class="font-label-md text-label-md">Instruments</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">description</span>
+<span class="font-label-md text-label-md">Applications</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors group" href="#">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">assignment_turned_in</span>
+<span class="font-label-md text-label-md">Inspections</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm bg-secondary-container text-on-secondary-container rounded-lg font-bold scale-[0.98] transition-all duration-200" href="#">
+<span class="material-symbols-outlined fill-icon">verified</span>
+<span class="font-label-md text-label-md">Certificates</span>
+</a>
+</div>
+<!-- Footer Actions -->
+<div class="p-md border-t border-outline-variant flex flex-col gap-sm shrink-0">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md py-sm rounded flex items-center justify-center gap-xs hover:bg-on-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Filing
+            </button>
+<div class="flex flex-col gap-unit mt-sm">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col md:ml-sidebar-width min-w-0">
+<!-- TopNavBar -->
+<header class="h-16 flex items-center justify-between px-gutter bg-surface z-30 sticky top-0 border-b border-outline-variant">
+<div class="flex items-center gap-md flex-1">
+<button class="md:hidden p-xs text-on-surface hover:bg-surface-container rounded-full">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="relative w-full max-w-md hidden sm:block">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-full py-xs pl-[36px] pr-sm font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-on-surface-variant" placeholder="Search Certificate ID or Serial Number..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-md shrink-0"><button class="hidden sm:flex bg-primary text-on-primary font-label-md text-label-md px-md py-sm rounded items-center justify-center gap-xs hover:bg-on-primary-fixed transition-colors mr-sm"><span class="material-symbols-outlined text-[18px]">add_moderator</span>New Verification</button>
+<button class="p-xs text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="p-xs text-on-surface-variant hover:bg-surface-container-high rounded-full transition-colors hidden sm:block">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant ml-xs">
+<img alt="Inspector Profile" class="w-full h-full object-cover" data-alt="A small circular avatar image showing a professional, modern inspector profile portrait in a high-key lighting environment, minimalist corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBz7_juzfSif6ps0YIBQSjGpkQitfdAe7B3a5kkmUGDm4NcnDnXUlYWPw76oE9Nl3YMLzhJXRFnw9qqZbjmidav22XH3VPOqUBDxhQaARHuFDr2fJ0AmUffTXzrYCoK1GLkmKS0Bwb6-HypTdBgDNPNgff7TJlhibLuiGcysToE-fnQLV5_FvuzjBhsrTEKnTODbsvZW-e35uKFamd-fEeZ3FCAoRgaFeMEtrysE69TKZ_jyQH2vjD4">
+</div>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 p-lg overflow-x-hidden">
+<div class="max-w-container-max mx-auto space-y-lg">
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg font-semibold text-primary tracking-tight">Certificates Vault</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-unit">Manage and verify issued digital certificates.</p>
+</div>
+<div class="flex items-center gap-sm">
+<button class="px-sm py-xs bg-surface-container-lowest border border-outline-variant rounded flex items-center gap-xs font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                            Filter
+                        </button>
+<button class="px-sm py-xs bg-surface-container-lowest border border-outline-variant rounded flex items-center gap-xs font-label-md text-label-md text-on-surface hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-[18px]">grid_view</span>
+                            View
+                        </button>
+</div>
+</div>
+<!-- Certificates Grid (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-md">
+<!-- Card 1: Valid -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col gap-md relative overflow-hidden group hover:border-primary/30 transition-colors">
+<div class="absolute top-0 left-0 w-full h-1 bg-[#D1FAE5]"></div>
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-[#ECFDF5] flex items-center justify-center text-[#065F46]">
+<span class="material-symbols-outlined fill-icon">verified</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Status</p>
+<p class="font-label-md text-label-md text-[#065F46] font-bold">Valid</p>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="space-y-sm">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Certificate ID</p>
+<p class="font-mono-md text-mono-md text-primary font-medium tracking-tight">CERT-2023-A8F9</p>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Instrument Serial</p>
+<p class="font-body-md text-body-md text-on-surface">SN-992-BX4</p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Expiry Date</p>
+<p class="font-body-md text-body-md text-on-surface">Oct 12, 2025</p>
+</div>
+</div>
+</div>
+<div class="pt-sm mt-auto border-t border-outline-variant flex gap-sm">
+<button class="flex-1 bg-surface-container border border-outline-variant text-on-surface font-label-md text-label-md py-xs rounded hover:bg-surface-container-high transition-colors flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                                View
+                            </button>
+<button class="flex-1 bg-surface-container border border-outline-variant text-on-surface font-label-md text-label-md py-xs rounded hover:bg-surface-container-high transition-colors flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">download</span>
+                                Download
+                            </button>
+</div>
+</div>
+<!-- Card 2: Expiring Soon -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col gap-md relative overflow-hidden group hover:border-primary/30 transition-colors">
+<div class="absolute top-0 left-0 w-full h-1 bg-[#FEF3C7]"></div>
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-[#FFFBEB] flex items-center justify-center text-[#92400E]">
+<span class="material-symbols-outlined fill-icon">warning</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Status</p>
+<p class="font-label-md text-label-md text-[#92400E] font-bold">Expiring Soon</p>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="space-y-sm">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Certificate ID</p>
+<p class="font-mono-md text-mono-md text-primary font-medium tracking-tight">CERT-2022-C4B2</p>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Instrument Serial</p>
+<p class="font-body-md text-body-md text-on-surface">WT-105-XQ</p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Expiry Date</p>
+<p class="font-body-md text-body-md text-[#92400E] font-medium">Dec 01, 2023</p>
+</div>
+</div>
+</div>
+<div class="pt-sm mt-auto border-t border-outline-variant flex gap-sm">
+<button class="flex-1 bg-surface-container border border-outline-variant text-on-surface font-label-md text-label-md py-xs rounded hover:bg-surface-container-high transition-colors flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                                View
+                            </button>
+<button class="flex-1 bg-primary text-on-primary font-label-md text-label-md py-xs rounded hover:bg-on-primary-fixed transition-colors flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">autorenew</span>
+                                Renew
+                            </button>
+</div>
+</div>
+<!-- Card 3: Expired -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col gap-md relative overflow-hidden group hover:border-primary/30 transition-colors opacity-75">
+<div class="absolute top-0 left-0 w-full h-1 bg-[#FEE2E2]"></div>
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-[#FEF2F2] flex items-center justify-center text-[#991B1B]">
+<span class="material-symbols-outlined fill-icon">error</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Status</p>
+<p class="font-label-md text-label-md text-[#991B1B] font-bold">Expired</p>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="space-y-sm">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Certificate ID</p>
+<p class="font-mono-md text-mono-md text-primary font-medium tracking-tight">CERT-2021-M9T1</p>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Instrument Serial</p>
+<p class="font-body-md text-body-md text-on-surface">FL-440-YZ</p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Expiry Date</p>
+<p class="font-body-md text-body-md text-on-surface">Aug 15, 2023</p>
+</div>
+</div>
+</div>
+<div class="pt-sm mt-auto border-t border-outline-variant flex gap-sm">
+<button class="w-full bg-surface-container border border-outline-variant text-on-surface font-label-md text-label-md py-xs rounded hover:bg-surface-container-high transition-colors flex items-center justify-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">info</span>
+                                View Details
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+
+</body></html>
