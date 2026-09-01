@@ -1,459 +1,923 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import SideNavBar from "@/components/layout/SideNavBar";
 import TopNavBar from "@/components/layout/TopNavBar";
 import StepProgress from "@/components/ui/StepProgress";
-import Badge from "@/components/ui/Badge";
 import { useMetrixStore } from "@/lib/store";
-import { formatDate } from "@/lib/utils";
 
 function ApplyFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedInstrumentId = searchParams.get("instrumentId") || "";
+  const resumeDraft = searchParams.get("resumeDraft") === "true";
 
-  const { instruments, submitApplication } = useMetrixStore();
+  const {
+    instruments,
+    currentUser,
+    userRole,
+    businessProfile,
+    currentDraft,
+    saveDraft,
+    submitApplication,
+  } = useMetrixStore();
 
+  const isBusiness = userRole === "business" || currentUser?.role === "BUSINESS";
+
+  // Filter business's instruments
+  const businessInstruments = useMemo(() => {
+    return (instruments || []).filter((inst) => {
+      if (isBusiness) {
+        return (
+          inst.businessId === currentUser?.id ||
+          inst.business_id === currentUser?.id ||
+          inst.businessName?.toLowerCase().includes(currentUser?.name?.toLowerCase()) ||
+          inst.businessName?.toLowerCase().includes(currentUser?.businessName?.toLowerCase())
+        );
+      }
+      return true;
+    });
+  }, [instruments, isBusiness, currentUser]);
+
+  // Profile completeness check (Section 5, 72)
+  const isProfileComplete = useMemo(() => {
+    if (!businessProfile) return true; // optimistic during initial load
+    return businessProfile.isComplete !== false;
+  }, [businessProfile]);
+
+  // Multi-step form state (1 to 5)
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedInstrumentId, setSelectedInstrumentId] = useState(
-    preselectedInstrumentId || (instruments[0]?.id ?? "")
+    preselectedInstrumentId || businessInstruments[0]?.id || ""
   );
 
-  const [verificationType, setVerificationType] = useState(
-    "Periodic Statutory Re-Verification"
-  );
-  const [preferredDate, setPreferredDate] = useState("2026-09-05");
-  const [preferredTime, setPreferredTime] = useState("Morning (10:00 AM - 01:00 PM)");
-  const [inspectionLocation, setInspectionLocation] = useState("");
-  const [notes, setNotes] = useState("");
-  const [uploadedFiles, setUploadedFiles] = useState([
-    { name: "Manufacturer_Test_Report.pdf", size: "2.4 MB" },
-    { name: "Previous_Verification_Certificate.pdf", size: "1.1 MB" },
-  ]);
+  const [verificationType, setVerificationType] = useState("Re-verification");
+  const [prevCertificateNo, setPrevCertificateNo] = useState("");
 
-  const [declared, setDeclared] = useState(false);
+  const [locationAddress, setLocationAddress] = useState("");
+  const [locationCity, setLocationCity] = useState("Ajmer");
+  const [locationDistrict, setLocationDistrict] = useState("Ajmer");
+  const [locationState, setLocationState] = useState("Rajasthan");
+  const [locationPincode, setLocationPincode] = useState("305001");
+  const [locationNotes, setLocationNotes] = useState("");
+
+  const [noteForLmo, setNoteForLmo] = useState("");
+  const [additionalDocs, setAdditionalDocs] = useState([]);
+
+  // Submission & modal states
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const selectedInst = instruments.find((i) => i.id === selectedInstrumentId);
-
+  // Resume Draft if requested
   useEffect(() => {
-    if (selectedInst) {
-      setInspectionLocation(selectedInst.location);
+    if (resumeDraft && currentDraft) {
+      if (currentDraft.step) setCurrentStep(currentDraft.step);
+      if (currentDraft.instrumentId) setSelectedInstrumentId(currentDraft.instrumentId);
+      if (currentDraft.verificationType) setVerificationType(currentDraft.verificationType);
+      if (currentDraft.prevCertificateNo) setPrevCertificateNo(currentDraft.prevCertificateNo);
+      if (currentDraft.locationAddress) setLocationAddress(currentDraft.locationAddress);
+      if (currentDraft.locationCity) setLocationCity(currentDraft.locationCity);
+      if (currentDraft.locationDistrict) setLocationDistrict(currentDraft.locationDistrict);
+      if (currentDraft.locationState) setLocationState(currentDraft.locationState);
+      if (currentDraft.locationPincode) setLocationPincode(currentDraft.locationPincode);
+      if (currentDraft.locationNotes) setLocationNotes(currentDraft.locationNotes);
+      if (currentDraft.noteForLmo) setNoteForLmo(currentDraft.noteForLmo);
+      if (currentDraft.additionalDocs) setAdditionalDocs(currentDraft.additionalDocs);
     }
-  }, [selectedInst]);
+  }, [resumeDraft, currentDraft]);
 
+  // Selected Instrument
+  const selectedInstrument = useMemo(() => {
+    return (
+      businessInstruments.find((i) => i.id === selectedInstrumentId) ||
+      instruments.find((i) => i.id === selectedInstrumentId) ||
+      businessInstruments[0] ||
+      null
+    );
+  }, [businessInstruments, instruments, selectedInstrumentId]);
+
+  // Auto-fill verification location from selected instrument if empty
+  useEffect(() => {
+    if (selectedInstrument && !locationAddress) {
+      setLocationAddress(selectedInstrument.location || selectedInstrument.installationLocation || "");
+      if (selectedInstrument.city) setLocationCity(selectedInstrument.city);
+      if (selectedInstrument.district) setLocationDistrict(selectedInstrument.district);
+    }
+  }, [selectedInstrument, locationAddress]);
+
+  // Steps definition (Section 13)
   const steps = [
-    { id: 1, label: "1. Select Instrument" },
-    { id: 2, label: "2. Filing Details" },
-    { id: 3, label: "3. Documents" },
-    { id: 4, label: "4. Inspection Schedule" },
+    { id: 1, label: "1. Instrument" },
+    { id: 2, label: "2. Verification Type" },
+    { id: 3, label: "3. Location & LMO Note" },
+    { id: 4, label: "4. Documents" },
     { id: 5, label: "5. Review & Submit" },
   ];
 
+  // Auto-save draft on step navigation (Section 36, 53)
+  const handleSaveStepDraft = (nextStep) => {
+    saveDraft({
+      step: nextStep,
+      instrumentId: selectedInstrumentId,
+      instrumentName: selectedInstrument?.name,
+      verificationType,
+      prevCertificateNo,
+      locationAddress,
+      locationCity,
+      locationDistrict,
+      locationState,
+      locationPincode,
+      locationNotes,
+      noteForLmo,
+      additionalDocs,
+    });
+  };
+
   const handleNext = () => {
-    if (currentStep < 5) setCurrentStep(currentStep + 1);
+    setErrorMessage("");
+
+    // Step 1 Validation
+    if (currentStep === 1) {
+      if (!selectedInstrument) {
+        setErrorMessage("Please select an instrument before proceeding.");
+        return;
+      }
+      if (!selectedInstrument.purchaseBill && !selectedInstrument.purchaseBill?.fileName) {
+        // Warning if purchase bill missing
+        setErrorMessage(
+          "Please add the purchase bill to this instrument before applying for verification."
+        );
+        return;
+      }
+    }
+
+    // Step 3 Validation
+    if (currentStep === 3) {
+      if (!locationAddress.trim()) {
+        setErrorMessage("Please enter the verification location address.");
+        return;
+      }
+    }
+
+    if (currentStep < 5) {
+      const next = currentStep + 1;
+      setCurrentStep(next);
+      handleSaveStepDraft(next);
+    }
   };
 
   const handleBack = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
+    setErrorMessage("");
+    if (currentStep > 1) {
+      const prev = currentStep - 1;
+      setCurrentStep(prev);
+      handleSaveStepDraft(prev);
+    }
   };
 
-  const handleFileUpload = (e) => {
+  const handleDocUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setUploadedFiles([
-        ...uploadedFiles,
-        { name: file.name, size: `${(file.size / 1024 / 1024).toFixed(1)} MB` },
+      setAdditionalDocs((prev) => [
+        ...prev,
+        {
+          name: file.name,
+          size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+          type: "Additional Supporting Document",
+        },
       ]);
     }
   };
 
-  const handleFinalSubmit = (e) => {
-    e.preventDefault();
-    if (!declared) {
-      alert("Please check the statutory declaration checkbox before submitting.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setTimeout(() => {
-      submitApplication({
-        instrumentId: selectedInst?.id || "INST-2024-001",
-        instrumentName: selectedInst?.name || "Weighing Instrument",
-        serialNumber: selectedInst?.serialNumber || "SN-2024-99",
-        applicationType: verificationType,
-        location: inspectionLocation || selectedInst?.location,
-        notes: notes,
-        documents: uploadedFiles,
-      });
-      setIsSubmitting(false);
-      router.push("/applications");
-    }, 500);
+  const handleRemoveDoc = (index) => {
+    setAdditionalDocs((prev) => prev.filter((_, i) => i !== index));
   };
+
+  // Submit Application
+  const handleFinalSubmit = async () => {
+    setIsSubmitting(true);
+    setErrorMessage("");
+    try {
+      const payload = {
+        instrumentId: selectedInstrument.id,
+        verificationType,
+        verificationLocation: {
+          address: locationAddress,
+          city: locationCity,
+          district: locationDistrict,
+          state: locationState,
+          pincode: locationPincode,
+          notes: locationNotes,
+        },
+        noteForLmo,
+        additionalDocuments: additionalDocs,
+      };
+
+      const res = await submitApplication(payload);
+      setShowConfirmModal(false);
+      setSubmissionResult(res);
+    } catch (err) {
+      setShowConfirmModal(false);
+      setErrorMessage(err.message || "Submission failed. Please verify your details.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // =========================================================================
+  // SUCCESS SCREEN (Section 31, 54)
+  // =========================================================================
+  if (submissionResult) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-6 shadow-2xs">
+        <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+          <span className="material-symbols-outlined text-[36px]">check_circle</span>
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-slate-900">
+            Application Submitted Successfully
+          </h3>
+          <p className="text-xs text-slate-500">
+            Your verification application has been filed and routed to the Office of the Assistant Controller.
+          </p>
+        </div>
+
+        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2 text-left max-w-md mx-auto">
+          <div className="flex justify-between py-1 border-b border-slate-200">
+            <span className="text-slate-500">Application ID</span>
+            <span className="font-mono-code font-bold text-slate-900">{submissionResult.id}</span>
+          </div>
+          <div className="flex justify-between py-1 border-b border-slate-200">
+            <span className="text-slate-500">Status</span>
+            <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold text-[11px]">
+              Submitted
+            </span>
+          </div>
+          <div className="flex justify-between py-1 border-b border-slate-200">
+            <span className="text-slate-500">Instrument</span>
+            <span className="font-semibold text-slate-800">{selectedInstrument?.name}</span>
+          </div>
+          <div className="flex justify-between py-1">
+            <span className="text-slate-500">Jurisdiction</span>
+            <span className="font-semibold text-slate-800">{submissionResult.district} District</span>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-500 max-w-md mx-auto">
+          We will update you when your application is reviewed by the Assistant Controller and scheduled for physical verification by a Legal Metrology Officer.
+        </p>
+
+        <div className="flex items-center justify-center gap-3 pt-4">
+          <Link
+            href={`/applications/${submissionResult.id}`}
+            className="px-5 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-2xs"
+          >
+            View Application
+          </Link>
+          <Link
+            href="/applications"
+            className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition-colors"
+          >
+            Back to Applications
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // PROFILE INCOMPLETE BLOCK (Section 5, 72)
+  // =========================================================================
+  if (!isProfileComplete) {
+    return (
+      <div className="bg-white border border-amber-200 rounded-xl p-8 sm:p-12 text-center max-w-2xl mx-auto space-y-6 shadow-2xs">
+        <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+          <span className="material-symbols-outlined text-[36px]">contact_mail</span>
+        </div>
+
+        <div className="space-y-2">
+          <h3 className="text-xl font-bold text-slate-900">
+            Complete your business details
+          </h3>
+          <p className="text-xs text-slate-600 max-w-md mx-auto">
+            Please complete your business profile before applying for verification. Legal Metrology statutory regulations require verified establishment and GST credentials.
+          </p>
+        </div>
+
+        <div className="pt-2">
+          <Link
+            href="/settings"
+            className="px-6 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs inline-flex items-center gap-2 transition-colors shadow-2xs"
+          >
+            Go to Settings
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Multi-Step Stepper Progress Bar */}
+      {/* Top Stepper Indicator (Section 13) */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-2xs">
-        <StepProgress
-          steps={steps}
-          currentStep={currentStep}
-          onStepClick={(s) => setCurrentStep(s)}
-        />
+        <StepProgress currentStep={currentStep} steps={steps} />
       </div>
 
-      {/* Step Forms */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-2xs">
-        {/* STEP 1: Instrument Selection */}
+      {/* Error Message Box */}
+      {errorMessage && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-900 rounded-xl text-xs font-semibold flex items-center gap-2">
+          <span className="material-symbols-outlined text-[20px] text-rose-600">error</span>
+          {errorMessage}
+        </div>
+      )}
+
+      {/* Main Step Form Container */}
+      <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-2xs space-y-6 text-xs">
+        {/* =========================================================================
+            STEP 1: INSTRUMENT SELECTION & LOCKED DETAILS (Section 14, 15)
+           ========================================================================= */}
         {currentStep === 1 && (
-          <div className="space-y-6 text-xs">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                Step 1: Choose Regulated Instrument
+          <div className="space-y-6">
+            <div className="border-b border-slate-200 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Step 1 — Selected Instrument
               </h3>
-              <p className="text-slate-500 mt-0.5">
-                Select an instrument from your registered inventory to undergo statutory verification.
+              <p className="text-slate-500 text-[11px] mt-0.5">
+                Verification applications are tied to registered instruments in your inventory.
               </p>
             </div>
 
-            <div className="space-y-3">
-              {instruments.map((inst) => {
-                const isSelected = inst.id === selectedInstrumentId;
-                return (
-                  <div
-                    key={inst.id}
-                    onClick={() => setSelectedInstrumentId(inst.id)}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all flex items-start justify-between gap-4 ${
-                      isSelected
-                        ? "border-slate-900 bg-slate-50 shadow-2xs"
-                        : "border-slate-200 hover:border-slate-300 bg-white"
-                    }`}
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-bold text-sm text-slate-900">
-                          {inst.name}
-                        </h4>
-                        <Badge status={inst.verificationStatus} />
+            {/* If started from Applications, allow switching instrument */}
+            {businessInstruments.length > 1 && (
+              <div className="space-y-2">
+                <label className="font-bold text-slate-700">Choose Instrument from Inventory</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {businessInstruments.map((inst) => (
+                    <label
+                      key={inst.id}
+                      className={`p-3.5 rounded-lg border cursor-pointer flex items-start gap-3 transition-colors ${
+                        selectedInstrumentId === inst.id
+                          ? "bg-slate-50 border-slate-900 ring-1 ring-slate-900"
+                          : "bg-white border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="instrumentSelect"
+                        value={inst.id}
+                        checked={selectedInstrumentId === inst.id}
+                        onChange={() => setSelectedInstrumentId(inst.id)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-900 truncate">{inst.name}</p>
+                        <p className="text-[11px] text-slate-500 font-mono-code mt-0.5">
+                          SN: {inst.serialNumber}
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Capacity: {inst.capacity} • {inst.location}
+                        </p>
                       </div>
-                      <p className="text-slate-600">
-                        {inst.category} • Class: {inst.accuracyClass}
-                      </p>
-                      <p className="text-slate-500 font-mono-code">
-                        S/N: <span className="font-bold text-slate-800">{inst.serialNumber}</span> • Max: {inst.maxCapacity}
-                      </p>
-                      <p className="text-[11px] text-slate-400">
-                        📍 {inst.location}
-                      </p>
-                    </div>
-
-                    <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 shrink-0">
-                      {isSelected && (
-                        <div className="w-2.5 h-2.5 rounded-full bg-slate-900" />
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2: Filing Details */}
-        {currentStep === 2 && (
-          <div className="space-y-6 text-xs">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                Step 2: Verification Application Type &amp; Purpose
-              </h3>
-              <p className="text-slate-500 mt-0.5">
-                Selected: <span className="font-bold text-slate-900">{selectedInst?.name}</span> (S/N: {selectedInst?.serialNumber})
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {[
-                {
-                  id: "Periodic Statutory Re-Verification",
-                  title: "Periodic Statutory Re-Verification (Annual / Biennial)",
-                  desc: "Mandatory statutory re-stamping for instruments currently in active commercial trade.",
-                },
-                {
-                  id: "Initial Verification (New Instrument)",
-                  title: "Initial Verification & First Stamping",
-                  desc: "First statutory stamping before putting a newly manufactured/imported instrument into commercial use.",
-                },
-                {
-                  id: "Post-Repair / Alteration Verification",
-                  title: "Post-Repair / Maintenance Verification",
-                  desc: "Required whenever broken seals or major mechanical/electronic calibration alterations occurred.",
-                },
-              ].map((item) => (
-                <label
-                  key={item.id}
-                  className={`block p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    verificationType === item.id
-                      ? "border-slate-900 bg-slate-50 font-semibold shadow-2xs"
-                      : "border-slate-200 hover:border-slate-300"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="radio"
-                      name="vType"
-                      checked={verificationType === item.id}
-                      onChange={() => setVerificationType(item.id)}
-                      className="mt-0.5 text-slate-900 focus:ring-slate-900"
-                    />
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">
-                        {item.title}
-                      </p>
-                      <p className="text-[11px] text-slate-500 mt-0.5 font-normal">
-                        {item.desc}
-                      </p>
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </div>
-
-            <div className="space-y-1.5 pt-2">
-              <label className="font-semibold text-slate-700">
-                Inspection Site / Premises Address
-              </label>
-              <input
-                type="text"
-                value={inspectionLocation}
-                onChange={(e) => setInspectionLocation(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3: Document Uploads */}
-        {currentStep === 3 && (
-          <div className="space-y-6 text-xs">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                Step 3: Upload Supporting Documents
-              </h3>
-              <p className="text-slate-500 mt-0.5">
-                Attach manufacturer test certificates, purchase invoices, or previous stamping certificates.
-              </p>
-            </div>
-
-            {/* Upload Zone */}
-            <label className="border-2 border-dashed border-slate-300 hover:border-slate-900 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors bg-slate-50/50 hover:bg-slate-50">
-              <span className="material-symbols-outlined text-[36px] text-slate-400 mb-2">
-                cloud_upload
-              </span>
-              <p className="font-bold text-slate-800 text-xs">
-                Click to browse or drag and drop supporting PDFs/images
-              </p>
-              <p className="text-[11px] text-slate-400 mt-1">
-                PDF, PNG, JPEG up to 10 MB per file
-              </p>
-              <input
-                type="file"
-                onChange={handleFileUpload}
-                className="hidden"
-                accept=".pdf,.png,.jpg,.jpeg"
-              />
-            </label>
-
-            {/* Uploaded File List */}
-            <div className="space-y-2">
-              <p className="font-bold text-slate-700 uppercase text-[10px] tracking-wider">
-                Attached Files ({uploadedFiles.length})
-              </p>
-              {uploadedFiles.map((file, idx) => (
-                <div
-                  key={idx}
-                  className="p-3 rounded-lg border border-slate-200 bg-white flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="material-symbols-outlined text-slate-400 text-[20px]">
-                      description
-                    </span>
-                    <div>
-                      <p className="font-bold text-slate-900">{file.name}</p>
-                      <p className="text-[10px] text-slate-400">{file.size}</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setUploadedFiles(
-                        uploadedFiles.filter((_, i) => i !== idx)
-                      )
-                    }
-                    className="text-slate-400 hover:text-rose-600 transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      delete
-                    </span>
-                  </button>
+                    </label>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {/* Locked Read-Only Instrument Specifications (Section 14, 15) */}
+            {selectedInstrument ? (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-slate-700 text-[20px]">
+                      straighten
+                    </span>
+                    <h4 className="font-bold text-slate-900 text-sm">
+                      {selectedInstrument.name}
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-mono-code font-bold px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded">
+                    {selectedInstrument.id}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Manufacturer</span>
+                    <p className="font-semibold text-slate-800">{selectedInstrument.manufacturer || "Essae"}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Model</span>
+                    <p className="font-semibold text-slate-800">{selectedInstrument.model || "DS-415"}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Serial Number</span>
+                    <p className="font-mono-code font-bold text-slate-900">
+                      {selectedInstrument.serialNumber}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Capacity</span>
+                    <p className="font-semibold text-slate-800">{selectedInstrument.capacity}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Accuracy Class</span>
+                    <p className="font-semibold text-slate-800">
+                      {selectedInstrument.accuracyClass || "Class III (Medium)"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Purchase Bill</span>
+                    <p className="text-emerald-700 font-bold flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                      Attached to Instrument
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Want to change instrument details?</span>
+                  <Link
+                    href="/instruments"
+                    className="text-slate-900 font-bold hover:underline flex items-center gap-1"
+                  >
+                    Edit Instrument
+                    <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-3">
+                <p className="text-slate-500">No instruments registered yet.</p>
+                <Link
+                  href="/instruments/new"
+                  className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-xs inline-block"
+                >
+                  + Add Instrument First
+                </Link>
+              </div>
+            )}
           </div>
         )}
 
-        {/* STEP 4: Preferred Schedule */}
-        {currentStep === 4 && (
-          <div className="space-y-6 text-xs">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                Step 4: Inspector Preferred Schedule
+        {/* =========================================================================
+            STEP 2: VERIFICATION TYPE (Section 16)
+           ========================================================================= */}
+        {currentStep === 2 && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-200 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Step 2 — Verification Type
               </h3>
-              <p className="text-slate-500 mt-0.5">
-                Propose convenient inspection dates for the assigned Legal Metrology Officer.
+              <p className="text-slate-500 text-[11px] mt-0.5">
+                Choose the type of statutory verification you need for this instrument.
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
+              <label
+                className={`p-5 rounded-xl border cursor-pointer flex flex-col justify-between space-y-3 transition-colors ${
+                  verificationType === "First Time Verification"
+                    ? "bg-slate-50 border-slate-900 ring-1 ring-slate-900"
+                    : "bg-white border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-sm">First Time Verification</h4>
+                    <p className="text-slate-500 text-[11px] mt-1 leading-relaxed">
+                      For newly acquired instruments entering commercial trade. Requires verification before initial usage.
+                    </p>
+                  </div>
+                  <input
+                    type="radio"
+                    name="verificationType"
+                    value="First Time Verification"
+                    checked={verificationType === "First Time Verification"}
+                    onChange={(e) => setVerificationType(e.target.value)}
+                    className="mt-0.5"
+                  />
+                </div>
+                <span className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-200 px-2 py-0.5 rounded self-start">
+                  Initial Stamping
+                </span>
+              </label>
+
+              <label
+                className={`p-5 rounded-xl border cursor-pointer flex flex-col justify-between space-y-3 transition-colors ${
+                  verificationType === "Re-verification"
+                    ? "bg-slate-50 border-slate-900 ring-1 ring-slate-900"
+                    : "bg-white border-slate-200 hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-sm">Re-verification</h4>
+                    <p className="text-slate-500 text-[11px] mt-1 leading-relaxed">
+                      Mandatory annual or periodic re-verification and re-stamping for instruments currently in commercial use.
+                    </p>
+                  </div>
+                  <input
+                    type="radio"
+                    name="verificationType"
+                    value="Re-verification"
+                    checked={verificationType === "Re-verification"}
+                    onChange={(e) => setVerificationType(e.target.value)}
+                    className="mt-0.5"
+                  />
+                </div>
+                <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded self-start">
+                  Periodic Stamping
+                </span>
+              </label>
+            </div>
+
+            {verificationType === "Re-verification" && (
+              <div className="space-y-2 pt-4 border-t border-slate-200">
                 <label className="font-semibold text-slate-700">
-                  Preferred Date
+                  Previous Certificate Number (Optional)
                 </label>
                 <input
-                  type="date"
-                  value={preferredDate}
-                  onChange={(e) => setPreferredDate(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                  type="text"
+                  value={prevCertificateNo}
+                  onChange={(e) => setPrevCertificateNo(e.target.value)}
+                  placeholder="e.g. LM-AJM-2025-008912"
+                  className="w-full sm:w-80 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 font-mono-code text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* =========================================================================
+            STEP 3: VERIFICATION LOCATION & NOTE FOR LMO (Section 17, 18, 19)
+           ========================================================================= */}
+        {currentStep === 3 && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-200 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Step 3 — Verification Location
+              </h3>
+              <p className="text-slate-500 text-[11px] mt-0.5">
+                Where should the physical inspection take place? (May differ from registered office).
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1 sm:col-span-2">
+                <label className="font-semibold text-slate-700">
+                  Inspection Address <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={locationAddress}
+                  onChange={(e) => setLocationAddress(e.target.value)}
+                  placeholder="e.g. Plot 88, Marble Industrial Area, Kishangarh"
+                  required
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-700">
-                  Preferred Time Window
-                </label>
-                <select
-                  value={preferredTime}
-                  onChange={(e) => setPreferredTime(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
-                >
-                  <option>Morning (10:00 AM - 01:00 PM)</option>
-                  <option>Afternoon (02:00 PM - 05:00 PM)</option>
-                  <option>Anytime during Working Hours</option>
-                </select>
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">City</label>
+                <input
+                  type="text"
+                  value={locationCity}
+                  onChange={(e) => setLocationCity(e.target.value)}
+                  placeholder="Ajmer"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">District</label>
+                <input
+                  type="text"
+                  value={locationDistrict}
+                  onChange={(e) => setLocationDistrict(e.target.value)}
+                  placeholder="Ajmer"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">State</label>
+                <input
+                  type="text"
+                  value={locationState}
+                  onChange={(e) => setLocationState(e.target.value)}
+                  placeholder="Rajasthan"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">PIN Code</label>
+                <input
+                  type="text"
+                  value={locationPincode}
+                  onChange={(e) => setLocationPincode(e.target.value)}
+                  placeholder="305001"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                />
+              </div>
+
+              <div className="space-y-1 sm:col-span-2">
+                <label className="font-semibold text-slate-700">Location Notes (Optional)</label>
+                <input
+                  type="text"
+                  value={locationNotes}
+                  onChange={(e) => setLocationNotes(e.target.value)}
+                  placeholder="e.g. Inside warehouse bay 2, near loading ramp"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">
-                Inspector Notes / Site Access Instructions
-              </label>
+            {/* Note for LMO (Section 19) */}
+            <div className="space-y-2 pt-4 border-t border-slate-200">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-slate-900">
+                  Note for LMO (Optional)
+                </label>
+                <span className="text-[11px] text-slate-400">Visible to assigned field officer</span>
+              </div>
               <textarea
                 rows={3}
-                placeholder="e.g. Please enter via Logistics Gate 2. Standard weights loading crane available on site."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                value={noteForLmo}
+                onChange={(e) => setNoteForLmo(e.target.value)}
+                placeholder="e.g. Please call before visiting. The weighbridge is inside the rear gate. Contact person: Ramesh (+91 98290 11223)."
+                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
               />
             </div>
           </div>
         )}
 
-        {/* STEP 5: Review & Submit */}
-        {currentStep === 5 && (
-          <div className="space-y-6 text-xs">
-            <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                Step 5: Review Filing Summary &amp; Statutory Declaration
+        {/* =========================================================================
+            STEP 4: DOCUMENTS (Section 20, 21, 22, 23)
+           ========================================================================= */}
+        {currentStep === 4 && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-200 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Step 4 — Documents
               </h3>
-              <p className="text-slate-500 mt-0.5">
-                Verify all parameters before transmitting filing to the Legal Metrology Department.
+              <p className="text-slate-500 text-[11px] mt-0.5">
+                The purchase bill is automatically attached from your instrument record. Additional documents are optional.
               </p>
             </div>
 
-            {/* Summary Box */}
-            <div className="bg-slate-50 rounded-xl p-5 border border-slate-200 space-y-3">
-              <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-200">
-                <div>
-                  <span className="text-slate-500">Target Instrument</span>
-                  <p className="font-bold text-slate-900 mt-0.5">
-                    {selectedInst?.name}
-                  </p>
+            {/* Automatic Purchase Bill Card (Section 20) */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-slate-900 text-xs">Required / Already Added</h4>
+              <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-emerald-600 text-[24px]">
+                    receipt_long
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-slate-900">
+                        {selectedInstrument?.purchaseBill?.fileName || "Purchase_Bill_OEM_Invoice.pdf"}
+                      </p>
+                      <span className="px-1.5 py-0.2 bg-emerald-200 text-emerald-900 text-[9px] font-bold rounded">
+                        ✓ Uploaded
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      Source: <strong>Instrument</strong> (Permanently linked • no re-upload needed)
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-500">Serial Number</span>
-                  <p className="font-mono-code font-bold text-slate-900 mt-0.5">
-                    {selectedInst?.serialNumber}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-200">
-                <div>
-                  <span className="text-slate-500">Application Type</span>
-                  <p className="font-bold text-slate-900 mt-0.5">
-                    {verificationType}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Requested Date</span>
-                  <p className="font-bold text-slate-900 mt-0.5">
-                    {formatDate(preferredDate)} ({preferredTime})
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <span className="text-slate-500">Inspection Address</span>
-                <p className="font-semibold text-slate-800 mt-0.5">
-                  {inspectionLocation || selectedInst?.location}
-                </p>
+                <span className="text-[10px] text-slate-400">Auto-Attached</span>
               </div>
             </div>
 
-            {/* Fee & Statutory Declaration */}
-            <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-blue-900">
-                  Standard Government Statutory Fee:
-                </span>
-                <span className="font-bold text-sm text-blue-950 font-mono-code">
-                  ₹ 3,500.00
-                </span>
+            {/* Optional Additional Documents (Section 21) */}
+            <div className="space-y-3 pt-4 border-t border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-slate-900 text-xs">Additional Supporting Documents</h4>
+                  <p className="text-slate-500 text-[10px]">Additional documents are optional.</p>
+                </div>
+                <label className="cursor-pointer px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors">
+                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  Add Document
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".pdf,.png,.jpg"
+                    onChange={handleDocUpload}
+                  />
+                </label>
               </div>
-              <label className="flex items-start gap-2.5 cursor-pointer pt-2 border-t border-blue-200">
-                <input
-                  type="checkbox"
-                  checked={declared}
-                  onChange={(e) => setDeclared(e.target.checked)}
-                  className="mt-0.5 text-slate-900 focus:ring-slate-900 rounded"
-                />
-                <span className="text-[11px] text-blue-900 leading-relaxed font-medium">
-                  I solemnly declare that the technical specifications provided are accurate and the instrument is maintained in operating condition as mandated by the Legal Metrology Act, 2009.
-                </span>
-              </label>
+
+              {additionalDocs.length === 0 ? (
+                <p className="text-slate-400 italic text-xs py-2">
+                  No additional documents attached. You can proceed without any.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {additionalDocs.map((doc, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="material-symbols-outlined text-slate-500 text-[18px]">
+                          description
+                        </span>
+                        <div>
+                          <p className="font-semibold text-slate-800 text-xs">{doc.name}</p>
+                          <p className="text-[10px] text-slate-500">{doc.size}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDoc(idx)}
+                        className="text-slate-400 hover:text-rose-600 text-xs font-semibold transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Stepper Navigation Buttons */}
-        <div className="mt-8 pt-4 border-t border-slate-200 flex items-center justify-between">
+        {/* =========================================================================
+            STEP 5: REVIEW (Section 24, 25)
+           ========================================================================= */}
+        {currentStep === 5 && (
+          <div className="space-y-6">
+            <div className="border-b border-slate-200 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Step 5 — Application Review
+              </h3>
+              <p className="text-slate-500 text-[11px] mt-0.5">
+                Please verify all details before submitting. After submission, these details form an immutable statutory filing.
+              </p>
+            </div>
+
+            {/* Summary Cards (Read-Only) */}
+            <div className="space-y-4">
+              {/* Business Summary */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                    Business Information
+                  </h4>
+                  <Link href="/settings" className="text-slate-500 hover:text-slate-900 text-[11px] font-semibold">
+                    Edit in Settings
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Business Name</span>
+                    <p className="font-semibold text-slate-800">
+                      {businessProfile?.businessName || businessProfile?.name || currentUser?.name}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">GSTIN</span>
+                    <p className="font-mono-code font-semibold text-slate-800">
+                      {businessProfile?.gstin || "08AAACB1234A1Z5"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Registered Office</span>
+                    <p className="text-slate-700">{businessProfile?.address || "Ajmer, Rajasthan"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instrument Summary */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                    Instrument Details
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="text-slate-500 hover:text-slate-900 text-[11px] font-semibold"
+                  >
+                    Change
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Instrument</span>
+                    <p className="font-bold text-slate-900">{selectedInstrument?.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Serial Number</span>
+                    <p className="font-mono-code font-bold text-slate-900">
+                      {selectedInstrument?.serialNumber}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Capacity</span>
+                    <p className="font-semibold text-slate-800">{selectedInstrument?.capacity}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Manufacturer</span>
+                    <p className="text-slate-700">{selectedInstrument?.manufacturer}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Verification Type</span>
+                    <p className="font-bold text-emerald-800">{verificationType}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location & LMO Note */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                    Verification Location &amp; Note
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(3)}
+                    className="text-slate-500 hover:text-slate-900 text-[11px] font-semibold"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <div className="text-xs space-y-2">
+                  <div>
+                    <span className="text-slate-400 text-[10px] uppercase font-bold">Inspection Location</span>
+                    <p className="font-semibold text-slate-800">
+                      {locationAddress}, {locationCity}, {locationDistrict}, {locationState} - {locationPincode}
+                    </p>
+                  </div>
+                  {noteForLmo && (
+                    <div>
+                      <span className="text-slate-400 text-[10px] uppercase font-bold">Note for LMO</span>
+                      <p className="text-slate-700 italic bg-white p-2.5 rounded border border-slate-200 mt-1">
+                        &ldquo;{noteForLmo}&rdquo;
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Documents Summary */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                    Attached Documents
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(4)}
+                    className="text-slate-500 hover:text-slate-900 text-[11px] font-semibold"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center gap-2 text-slate-800 font-medium">
+                    <span className="material-symbols-outlined text-[16px] text-emerald-600">check</span>
+                    <span>Purchase Bill ({selectedInstrument?.purchaseBill?.fileName || "Purchase_Bill.pdf"})</span>
+                    <span className="text-[10px] text-slate-400 font-normal">• Source: Instrument</span>
+                  </div>
+                  {additionalDocs.map((doc, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-slate-700">
+                      <span className="material-symbols-outlined text-[16px] text-blue-600">check</span>
+                      <span>{doc.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step Actions (Back / Continue / Submit) */}
+        <div className="pt-6 border-t border-slate-200 flex items-center justify-between">
           {currentStep > 1 ? (
             <button
               type="button"
               onClick={handleBack}
-              className="px-4 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1"
+              className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold transition-colors text-xs flex items-center gap-1"
             >
-              <span className="material-symbols-outlined text-[16px]">
-                arrow_back
-              </span>
-              Previous Step
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+              Back
             </button>
           ) : (
             <Link
               href="/applications"
-              className="px-4 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold transition-colors text-xs"
             >
               Cancel
             </Link>
@@ -463,33 +927,69 @@ function ApplyFormContent() {
             <button
               type="button"
               onClick={handleNext}
-              className="px-6 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors flex items-center gap-1 shadow-2xs"
+              className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center gap-1.5"
             >
-              Next Step
-              <span className="material-symbols-outlined text-[16px]">
-                arrow_forward
-              </span>
+              Continue
+              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
           ) : (
             <button
               type="button"
-              disabled={isSubmitting || !declared}
-              onClick={handleFinalSubmit}
-              className="px-6 py-2.5 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-2xs"
+              onClick={() => setShowConfirmModal(true)}
+              disabled={isSubmitting}
+              className="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-colors shadow-2xs flex items-center gap-2"
             >
-              <span className="material-symbols-outlined text-[18px]">
-                send
-              </span>
-              {isSubmitting ? "Submitting..." : "Submit Application"}
+              Submit Application
+              <span className="material-symbols-outlined text-[16px]">send</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Confirmation Dialog (Section 26) */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 text-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[24px]">verified</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">Submit Application?</h3>
+                <p className="text-slate-500 text-[11px]">Final statutory confirmation</p>
+              </div>
+            </div>
+
+            <p className="text-slate-600 leading-relaxed">
+              Please check your details before submitting. After submission, your verification filing will be received by the district Assistant Controller for review and LMO assignment.
+            </p>
+
+            <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                disabled={isSubmitting}
+                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleFinalSubmit}
+                disabled={isSubmitting}
+                className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold flex items-center gap-1.5"
+              >
+                {isSubmitting ? "Submitting..." : "Confirm & Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function ApplyForVerificationPage() {
+export default function ApplyPage() {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
       <SideNavBar />
@@ -497,16 +997,22 @@ export default function ApplyForVerificationPage() {
       <div className="flex-1 ml-[260px] flex flex-col min-w-0">
         <TopNavBar
           title="Apply for Verification"
-          subtitle="Submit formal verification or statutory re-verification application under Legal Metrology Rules."
+          subtitle="Submit an instrument verification application to the Legal Metrology Department."
           breadcrumbs={[
             { label: "MetriX", href: "/dashboard" },
             { label: "Applications", href: "/applications" },
-            { label: "New Filing" },
+            { label: "Apply" },
           ]}
         />
 
-        <main className="p-6 sm:p-8 max-w-4xl w-full mx-auto space-y-6">
-          <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading form...</div>}>
+        <main className="p-6 sm:p-8 max-w-4xl w-full mx-auto">
+          <Suspense
+            fallback={
+              <div className="p-8 text-center text-xs text-slate-500">
+                Loading application form...
+              </div>
+            }
+          >
             <ApplyFormContent />
           </Suspense>
         </main>

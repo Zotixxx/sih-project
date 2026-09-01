@@ -1,8 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import SideNavBar from "@/components/layout/SideNavBar";
 import TopNavBar from "@/components/layout/TopNavBar";
 import MetricCard from "@/components/ui/MetricCard";
@@ -11,400 +10,548 @@ import { useMetrixStore } from "@/lib/store";
 import { formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const { userProfile, instruments, applications, certificates, inspections } =
-    useMetrixStore();
+  const {
+    currentUser,
+    userRole,
+    district,
+    dashboardStats,
+    instruments,
+    applications,
+    inspections,
+    certificates,
+    lmos,
+    notifications,
+  } = useMetrixStore();
 
-  const totalInstruments = instruments.length;
-  const verifiedInstruments = instruments.filter(
-    (i) => i.verificationStatus === "VERIFIED"
-  ).length;
-  const expiringSoon = instruments.filter(
-    (i) => i.verificationStatus === "EXPIRING_SOON"
-  ).length;
-  const expiredCount = instruments.filter(
-    (i) => i.verificationStatus === "EXPIRED"
-  ).length;
+  const districtName = district?.name || currentUser?.districtName || "Ajmer";
+  const officerName = currentUser?.name || "Official";
+  const officerId = currentUser?.badge || currentUser?.id || "OFFICER";
 
-  const urgentInstruments = instruments.filter(
-    (i) =>
-      i.verificationStatus === "EXPIRING_SOON" ||
-      i.verificationStatus === "EXPIRED"
-  );
+  // ==========================================
+  // 1. BUSINESS DASHBOARD (Section 4)
+  // ==========================================
+  if (userRole === "business" || currentUser?.role === "BUSINESS") {
+    const myApps = (applications || []).filter((a) => {
+      return (
+        a.businessId === currentUser.id ||
+        a.business_id === currentUser.id ||
+        a.businessName?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
+        a.businessName?.toLowerCase().includes(currentUser.businessName?.toLowerCase())
+      );
+    });
 
-  const scheduledInspections = inspections.filter(
-    (i) => i.status === "SCHEDULED"
-  );
+    const myCerts = (certificates || []).filter((c) => {
+      return (
+        c.businessId === currentUser.id ||
+        c.business_id === currentUser.id ||
+        c.ownerName?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
+        c.ownerName?.toLowerCase().includes(currentUser.businessName?.toLowerCase())
+      );
+    });
 
-  return (
-    <div className="min-h-screen bg-[#f8fafc] flex">
-      {/* Side Navigation Bar */}
-      <SideNavBar />
+    const myInstruments = (instruments || []).filter((i) => {
+      return (
+        i.businessId === currentUser.id ||
+        i.business_id === currentUser.id ||
+        i.ownerName?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
+        i.ownerName?.toLowerCase().includes(currentUser.businessName?.toLowerCase())
+      );
+    });
 
-      {/* Main Content Area */}
-      <div className="flex-1 ml-[260px] flex flex-col min-w-0">
-        <TopNavBar
-          title="Business Dashboard"
-          subtitle="Overview of your regulated instruments, verification filings, and compliance status."
-          breadcrumbs={[{ label: "MetriX" }, { label: "Dashboard" }]}
-        />
+    const inProgressApps = myApps.filter(
+      (a) => a.status !== "CERTIFIED" && a.status !== "REJECTED"
+    );
+    const approvedApps = myApps.filter((a) => a.status === "CERTIFIED");
 
-        <main className="p-6 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
-          {/* Welcome Banner */}
-          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="space-y-1">
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex">
+        <SideNavBar />
+
+        <div className="flex-1 ml-[260px] flex flex-col min-w-0">
+          <TopNavBar
+            title="Dashboard"
+            subtitle={`${currentUser.businessName || currentUser.name} • Registered Commercial Establishment`}
+            breadcrumbs={[
+              { label: "Dashboard" },
+            ]}
+          />
+
+          <main className="p-6 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
+            {/* Welcome Banner */}
+            <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-white shrink-0">
+                  <span className="material-symbols-outlined text-[28px]">storefront</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                      Merchant Portal
+                    </span>
+                    <span className="text-slate-400 text-xs font-mono-code">{currentUser.id}</span>
+                  </div>
+                  <h1 className="text-lg font-bold text-white tracking-tight mt-0.5">
+                    {currentUser.businessName || currentUser.name}
+                  </h1>
+                  <p className="text-xs text-slate-300">
+                    Proprietor: <strong className="text-white">{currentUser.name}</strong> • District: <strong className="text-white">{districtName}</strong>
+                  </p>
+                </div>
+              </div>
+
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-                  Welcome, {userProfile.businessName}
-                </h1>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  Active Trade
-                </span>
-              </div>
-              <p className="text-xs text-slate-500">
-                Reg ID: <span className="font-mono-code font-bold text-slate-700">{userProfile.regNumber}</span> • {userProfile.district}, {userProfile.state}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              <Link
-                href="/instruments/new"
-                className="px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-800 bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-2xs"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  add
-                </span>
-                Add Instrument
-              </Link>
-              <Link
-                href="/applications/apply"
-                className="px-4 py-2 rounded-lg bg-slate-900 text-xs font-bold text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-2xs"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  assignment_turned_in
-                </span>
-                Apply for Verification
-              </Link>
-            </div>
-          </div>
-
-          {/* 4 Metric Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard
-              title="Total Regulated Instruments"
-              value={totalInstruments}
-              subtitle="Registered in system"
-              icon="straighten"
-              onClick={() => router.push("/instruments")}
-            />
-            <MetricCard
-              title="Active / Verified"
-              value={verifiedInstruments}
-              subtitle="Digitally certified"
-              icon="verified"
-              trend="+100% compliant"
-              trendPositive={true}
-              onClick={() => router.push("/instruments?status=VERIFIED")}
-            />
-            <MetricCard
-              title="Expiring Soon"
-              value={expiringSoon}
-              subtitle="Within next 30 days"
-              icon="schedule"
-              trend="Action required"
-              trendPositive={false}
-              onClick={() => router.push("/instruments?status=EXPIRING_SOON")}
-            />
-            <MetricCard
-              title="Expired Instruments"
-              value={expiredCount}
-              subtitle="Re-verification mandatory"
-              icon="error"
-              onClick={() => router.push("/instruments?status=EXPIRED")}
-            />
-          </div>
-
-          {/* Verification Pipeline Tracker */}
-          <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-                  Verification Lifecycle Pipeline
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Live status breakdown across all active applications
-                </p>
-              </div>
-              <Link
-                href="/applications"
-                className="text-xs font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-1"
-              >
-                View Applications ({applications.length}) →
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[
-                { label: "Draft", count: 0, status: "DRAFT" },
-                {
-                  label: "Submitted",
-                  count: applications.filter((a) => a.status === "SUBMITTED").length,
-                  status: "SUBMITTED",
-                },
-                {
-                  label: "Under Review",
-                  count: applications.filter((a) => a.status === "UNDER_REVIEW").length,
-                  status: "UNDER_REVIEW",
-                },
-                {
-                  label: "Scheduled",
-                  count: applications.filter((a) => a.status === "SCHEDULED").length,
-                  status: "SCHEDULED",
-                },
-                {
-                  label: "Under Inspection",
-                  count: applications.filter((a) => a.status === "UNDER_VERIFICATION").length,
-                  status: "UNDER_VERIFICATION",
-                },
-                {
-                  label: "Verified / Passed",
-                  count: applications.filter((a) => a.status === "PASSED").length,
-                  status: "PASSED",
-                },
-              ].map((stage, idx) => (
-                <div
-                  key={idx}
-                  className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center"
+                <Link
+                  href="/applications"
+                  className="px-4 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs transition-colors shadow-2xs"
                 >
-                  <p className="text-[11px] font-semibold text-slate-500 truncate">
-                    {stage.label}
-                  </p>
-                  <p className="text-xl font-bold text-slate-900 mt-1">
-                    {stage.count}
-                  </p>
-                  <div className="mt-1.5 flex justify-center">
-                    <Badge status={stage.status} showDot={false} customLabel={stage.label} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Main 2-Column Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Column (7 cols): Instruments Requiring Attention & Upcoming Inspections */}
-            <div className="lg:col-span-7 space-y-6">
-              {/* Urgent Attention Alert Box */}
-              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs">
-                <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-amber-600 text-[20px]">
-                      warning
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Instruments Requiring Statutory Attention
-                    </h3>
-                  </div>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
-                    {urgentInstruments.length} Items
-                  </span>
-                </div>
-
-                {urgentInstruments.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-slate-500">
-                    ✓ All registered instruments are currently valid and compliant.
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100">
-                    {urgentInstruments.map((inst) => (
-                      <div
-                        key={inst.id}
-                        className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 px-2 rounded-lg transition-colors"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-xs font-bold text-slate-900">
-                              {inst.name}
-                            </h4>
-                            <Badge status={inst.verificationStatus} />
-                          </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            S/N: <span className="font-mono-code font-medium text-slate-700">{inst.serialNumber}</span> • Expiry:{" "}
-                            <span className="font-semibold text-rose-700">
-                              {formatDate(inst.validUntil)}
-                            </span>
-                          </p>
-                        </div>
-
-                        <Link
-                          href={`/applications/apply?instrumentId=${inst.id}`}
-                          className="px-3 py-1.5 rounded bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors shrink-0"
-                        >
-                          Re-Verify Now
-                        </Link>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Upcoming Scheduled Inspections */}
-              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs">
-                <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-slate-700 text-[20px]">
-                      calendar_today
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Upcoming Scheduled Inspections
-                    </h3>
-                  </div>
-                  <Link
-                    href="/inspections"
-                    className="text-xs font-semibold text-slate-600 hover:text-slate-900"
-                  >
-                    View All →
-                  </Link>
-                </div>
-
-                {scheduledInspections.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-slate-500">
-                    No inspections scheduled for today.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {scheduledInspections.map((insp) => (
-                      <div
-                        key={insp.id}
-                        className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-slate-900">
-                              {insp.instrumentName}
-                            </span>
-                            <Badge status={insp.status} />
-                          </div>
-                          <p className="text-[11px] text-slate-600">
-                            Officer: <span className="font-semibold text-slate-800">{insp.officer}</span> ({insp.officerRole})
-                          </p>
-                          <p className="text-[11px] text-slate-500 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[14px]">
-                              pin_drop
-                            </span>
-                            {insp.location}
-                          </p>
-                        </div>
-
-                        <div className="text-left sm:text-right shrink-0">
-                          <p className="text-xs font-bold text-slate-900">
-                            {formatDate(insp.scheduledDate)}
-                          </p>
-                          <p className="text-[11px] text-slate-500">
-                            {insp.scheduledTime}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  View My Applications ({myApps.length})
+                </Link>
+                <Link
+                  href="/instruments"
+                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition-colors"
+                >
+                  + Add Instrument
+                </Link>
               </div>
             </div>
 
-            {/* Right Column (5 cols): Active Certificates & Audit Activity */}
-            <div className="lg:col-span-5 space-y-6">
-              {/* Quick Certificate Vault Preview */}
-              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs">
-                <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-emerald-600 text-[20px]">
-                      verified
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Digital Certificates Vault
-                    </h3>
-                  </div>
-                  <Link
-                    href="/certificates"
-                    className="text-xs font-semibold text-slate-600 hover:text-slate-900"
-                  >
-                    View All ({certificates.length}) →
-                  </Link>
-                </div>
+            {/* 3 Clickable Summary Metrics (Total Applications, Instruments, Certificates) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div
+                onClick={() => router.push("/applications")}
+                className="cursor-pointer group focus:outline-none"
+              >
+                <MetricCard
+                  title="Total Applications"
+                  value={myApps.length}
+                  icon="description"
+                  subtitle="Click to view all applications →"
+                  onClick={() => router.push("/applications")}
+                />
+              </div>
+              <div
+                onClick={() => router.push("/instruments")}
+                className="cursor-pointer group focus:outline-none"
+              >
+                <MetricCard
+                  title="Instruments"
+                  value={myInstruments.length}
+                  icon="straighten"
+                  subtitle="Click to view instruments →"
+                  onClick={() => router.push("/instruments")}
+                />
+              </div>
+              <div
+                onClick={() => router.push("/certificates")}
+                className="cursor-pointer group focus:outline-none"
+              >
+                <MetricCard
+                  title="Certificates"
+                  value={myCerts.length}
+                  icon="workspace_premium"
+                  subtitle="Click to view certificates →"
+                  onClick={() => router.push("/certificates")}
+                />
+              </div>
+            </div>
 
-                <div className="space-y-2.5">
-                  {certificates.slice(0, 3).map((cert) => (
-                    <div
-                      key={cert.id}
-                      className="p-3 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-between gap-2"
-                    >
-                      <div className="truncate">
-                        <p className="text-xs font-bold text-slate-900 truncate">
-                          {cert.instrumentName}
-                        </p>
-                        <p className="text-[10px] font-mono-code text-slate-500">
-                          {cert.certificateNumber}
-                        </p>
+            {/* Applications in Progress */}
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-blue-700 text-[18px]">timeline</span>
+                    Applications in Progress
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Track status and verification progress of your filings
+                  </p>
+                </div>
+                <Link href="/applications" className="text-xs text-blue-700 hover:underline font-bold">
+                  View All ({myApps.length}) →
+                </Link>
+              </div>
+
+              {myApps.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-lg">
+                  No verification applications filed yet.
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 text-xs">
+                  {myApps.slice(0, 5).map((app) => (
+                    <div key={app.id} className="py-3.5 flex items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono-code font-bold text-slate-900">{app.id}</span>
+                          <Badge status={app.status} className="text-[10px]" />
+                        </div>
+                        <p className="font-bold text-slate-800 mt-0.5">{app.instrumentName}</p>
+                        <p className="text-[11px] text-slate-500 font-mono-code">S/N: {app.serialNumber} • Submitted: {formatDate(app.applicationDate || app.submissionDate)}</p>
                       </div>
                       <Link
-                        href={`/verify/${cert.id}`}
-                        className="px-2.5 py-1 text-[11px] font-semibold rounded border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 shrink-0"
+                        href={`/applications/${app.id}`}
+                        className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-2xs shrink-0"
                       >
-                        Verify QR
+                        Track Status →
                       </Link>
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // 2. LMO WORK DASHBOARD (Section 6)
+  // ==========================================
+  if (userRole === "lmo" || currentUser?.role === "LMO") {
+    const myInspections = (inspections || []).filter((i) => {
+      return (
+        i.officerId === currentUser.id ||
+        i.officerId === currentUser.badge ||
+        i.officer?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
+        !i.officerId
+      );
+    });
+
+    const pendingToday = myInspections.filter(
+      (i) => i.status === "SCHEDULED" || i.status === "ASSIGNED" || i.status === "IN_PROGRESS"
+    );
+    const completedInspections = myInspections.filter(
+      (i) => i.status === "SUBMITTED" || i.status === "SUBMITTED_FOR_APPROVAL" || i.status === "APPROVED" || i.status === "COMPLETED"
+    );
+
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex">
+        <SideNavBar />
+
+        <div className="flex-1 ml-[260px] flex flex-col min-w-0">
+          <TopNavBar
+            title="Dashboard"
+            subtitle={`Good Day, ${officerName} • ${officerId} • ${districtName} District`}
+            breadcrumbs={[
+              { label: "Dashboard" },
+            ]}
+          />
+
+          <main className="p-6 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
+            {/* Simple Work Greeting Banner (Section 6) */}
+            <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-white shrink-0">
+                  <span className="material-symbols-outlined text-[28px]">verified_user</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    Field Duty Officer
+                  </span>
+                  <h1 className="text-xl font-black text-white tracking-tight mt-1">
+                    Good Morning, {officerName}
+                  </h1>
+                  <p className="text-xs text-slate-300">
+                    Officer ID: <strong className="text-white font-mono-code">{officerId}</strong> • Jurisdiction: <strong className="text-white">{districtName} District</strong>
+                  </p>
+                </div>
               </div>
 
-              {/* Recent System Audit Activity */}
+              <Link
+                href="/inspections"
+                className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-colors shadow-2xs self-start sm:self-auto"
+              >
+                Go to Today&apos;s Duty Queue →
+              </Link>
+            </div>
+
+            {/* 3 Simple LMO Work Metrics (Section 6) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs">
-                <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-slate-700 text-[20px]">
-                      history
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Recent Activity &amp; Audit Log
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="relative pl-5 space-y-4 border-l border-slate-200 text-xs">
-                  <div className="relative">
-                    <span className="absolute -left-[25px] top-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white ring-2 ring-emerald-100" />
-                    <p className="font-bold text-slate-900">
-                      Application APP-2026-00192 Assigned
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      Scheduled for inspection on 28 Aug 2026 by LMO Rajesh Sharma.
-                    </p>
-                    <span className="text-[10px] text-slate-400">2 days ago</span>
-                  </div>
-
-                  <div className="relative">
-                    <span className="absolute -left-[25px] top-0.5 w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-white ring-2 ring-blue-100" />
-                    <p className="font-bold text-slate-900">
-                      Certificate LM-DEL-2026-00445 Issued
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      Automated Checkweigher passed verification and certified.
-                    </p>
-                    <span className="text-[10px] text-slate-400">6 days ago</span>
-                  </div>
-
-                  <div className="relative">
-                    <span className="absolute -left-[25px] top-0.5 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-white ring-2 ring-amber-100" />
-                    <p className="font-bold text-slate-900">
-                      Re-Verification Alert (30 Days)
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      Industrial Pitless Weighbridge certificate expiring soon.
-                    </p>
-                    <span className="text-[10px] text-slate-400">1 week ago</span>
-                  </div>
-                </div>
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  Today&apos;s Total Assigned
+                </span>
+                <span className="font-mono-code font-black text-slate-900 text-3xl mt-1 block">
+                  {myInspections.length}
+                </span>
+                <span className="text-[11px] text-slate-500 mt-1 block">Assigned verification sites</span>
               </div>
+
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs">
+                <span className="text-xs font-bold text-amber-700 uppercase tracking-wider block">
+                  Pending Field Inspections
+                </span>
+                <span className="font-mono-code font-black text-amber-700 text-3xl mt-1 block">
+                  {pendingToday.length}
+                </span>
+                <span className="text-[11px] text-slate-500 mt-1 block">Ready for on-site testing</span>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs">
+                <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider block">
+                  Completed Inspections
+                </span>
+                <span className="font-mono-code font-black text-emerald-700 text-3xl mt-1 block">
+                  {completedInspections.length}
+                </span>
+                <span className="text-[11px] text-slate-500 mt-1 block">Submitted for approval</span>
+              </div>
+            </div>
+
+            {/* Today's Priority Inspections List */}
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-700 text-[20px]">assignment_late</span>
+                  Today&apos;s Inspections Needing Action
+                </h3>
+                <Link href="/inspections" className="text-xs text-blue-700 hover:underline font-bold">
+                  View All Inspections →
+                </Link>
+              </div>
+
+              {pendingToday.length === 0 ? (
+                <div className="p-10 text-center text-xs text-slate-500 bg-slate-50 rounded-xl space-y-2">
+                  <span className="material-symbols-outlined text-[36px] text-emerald-600 block">task_alt</span>
+                  <p className="font-bold text-slate-800 text-sm">All Current Field Duties Completed</p>
+                  <p className="text-slate-500">You have no pending inspections waiting in your queue today.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 text-xs">
+                  {pendingToday.map((insp) => (
+                    <div key={insp.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono-code font-bold text-slate-900">{insp.id}</span>
+                          <span className="text-[11px] text-slate-500 font-semibold">{insp.location}</span>
+                        </div>
+                        <p className="font-bold text-slate-900 text-sm mt-0.5">{insp.ownerName}</p>
+                        <p className="text-slate-600 text-[11px]">{insp.instrumentName} • S/N: {insp.serialNumber}</p>
+                      </div>
+                      <Link
+                        href={`/lmo/inspect/${insp.id}`}
+                        className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors self-start sm:self-auto shadow-2xs"
+                      >
+                        Start Inspection →
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // 3. ASSISTANT CONTROLLER DASHBOARD (Section 12)
+  // ==========================================
+  const freshCount =
+    dashboardStats?.counts?.newApplications ??
+    (applications || []).filter(
+      (a) => a.status === "SUBMITTED" || a.status === "UNDER_REVIEW"
+    ).length;
+
+  const inProgressCount =
+    dashboardStats?.counts?.scheduledVerifications ??
+    (applications || []).filter(
+      (a) => a.status === "ACCEPTED" || a.status === "SCHEDULED"
+    ).length;
+
+  const awaitingFinalCount =
+    dashboardStats?.counts?.awaitingFinalApproval ??
+    (applications || []).filter(
+      (a) => a.status === "AWAITING_APPROVAL"
+    ).length;
+
+  const completedCount =
+    dashboardStats?.counts?.completedVerifications ??
+    (certificates || []).filter(
+      (c) => c.status === "VALID"
+    ).length;
+
+  const activeLmoCount =
+    dashboardStats?.counts?.activeLmos ?? (lmos || []).length;
+
+  const freshApps = (applications || []).filter(
+    (a) => a.status === "SUBMITTED" || a.status === "UNDER_REVIEW"
+  );
+
+  const awaitingApps = (applications || []).filter(
+    (a) => a.status === "AWAITING_APPROVAL"
+  );
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] flex">
+      <SideNavBar />
+
+      <div className="flex-1 ml-[260px] flex flex-col min-w-0">
+        <TopNavBar
+          title="Dashboard"
+          subtitle={`Assistant Controller: ${officerName} (${officerId}) • District: ${districtName}, Rajasthan`}
+          breadcrumbs={[
+            { label: "Dashboard" },
+          ]}
+        />
+
+        <main className="p-6 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
+          {/* Authority Banner */}
+          <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-white shrink-0">
+                <span className="material-symbols-outlined text-[28px]">account_balance</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    District Authority
+                  </span>
+                  <span className="text-slate-400 text-xs font-mono-code">{officerId}</span>
+                </div>
+                <h1 className="text-lg font-bold text-white tracking-tight mt-0.5">
+                  Office of the Assistant Controller of Legal Metrology
+                </h1>
+                <p className="text-xs text-slate-300">
+                  Supervising Officer: <strong className="text-white">{officerName}</strong> • Jurisdiction: <strong className="text-white">{districtName} District</strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Link
+                href="/admin/fresh-applications"
+                className="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors shadow-2xs"
+              >
+                Fresh Applications ({freshCount})
+              </Link>
+              <Link
+                href="/admin/verify"
+                className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-2xs"
+              >
+                Verify ({awaitingFinalCount})
+              </Link>
+            </div>
+          </div>
+
+          {/* District 5 Key Metrics (Section 12) */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <MetricCard
+              title="Fresh Applications"
+              value={freshCount}
+              icon="inbox"
+              subtitle="Requires initial review"
+            />
+            <MetricCard
+              title="In Progress"
+              value={inProgressCount}
+              icon="schedule"
+              subtitle="LMO assigned & field testing"
+            />
+            <MetricCard
+              title="Waiting Final Review"
+              value={awaitingFinalCount}
+              icon="approval"
+              subtitle="LMO inspection submitted"
+            />
+            <MetricCard
+              title="Completed Verifications"
+              value={completedCount}
+              icon="verified"
+              subtitle="Certificates sanctioned"
+            />
+            <MetricCard
+              title="Active LMOs"
+              value={activeLmoCount}
+              icon="engineering"
+              subtitle={`Officers in ${districtName}`}
+            />
+          </div>
+
+          {/* Quick Work Queues */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Fresh Applications Queue */}
+            <div className="lg:col-span-6 bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-amber-600 text-[18px]">inbox</span>
+                  Fresh Applications Needing Review
+                </h3>
+                <Link href="/admin/fresh-applications" className="text-xs text-blue-700 hover:underline font-bold">
+                  View All ({freshCount}) →
+                </Link>
+              </div>
+
+              {freshApps.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-lg">
+                  ✓ No fresh applications waiting for review in {districtName}.
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 text-xs">
+                  {freshApps.slice(0, 3).map((app) => (
+                    <div key={app.id} className="py-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono-code font-bold text-slate-900">{app.id}</span>
+                          <Badge status={app.status} className="text-[10px]" />
+                        </div>
+                        <p className="font-bold text-slate-900 mt-0.5">{app.businessName}</p>
+                        <p className="text-slate-500 text-[11px]">{app.instrumentName} • S/N: {app.serialNumber}</p>
+                      </div>
+                      <Link
+                        href="/admin/fresh-applications"
+                        className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shrink-0"
+                      >
+                        Review →
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Waiting for Final Sanction Queue */}
+            <div className="lg:col-span-6 bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-emerald-700 text-[18px]">approval</span>
+                  Waiting for Final Approval
+                </h3>
+                <Link href="/admin/verify" className="text-xs text-blue-700 hover:underline font-bold">
+                  View All ({awaitingFinalCount}) →
+                </Link>
+              </div>
+
+              {awaitingApps.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-lg">
+                  ✓ All submitted field inspections have been sanctioned.
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 text-xs">
+                  {awaitingApps.slice(0, 3).map((app) => (
+                    <div key={app.id} className="py-3 flex items-center justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono-code font-bold text-slate-900">{app.id}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px]">
+                            Inspection Complete
+                          </span>
+                        </div>
+                        <p className="font-bold text-slate-900 mt-0.5">{app.businessName}</p>
+                        <p className="text-slate-500 text-[11px]">{app.instrumentName} • LMO: {app.assignedLmoName}</p>
+                      </div>
+                      <Link
+                        href="/admin/verify"
+                        className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shrink-0"
+                      >
+                        Sanction →
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </main>

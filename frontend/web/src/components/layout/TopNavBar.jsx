@@ -8,11 +8,13 @@ import { useMetrixStore } from "@/lib/store";
 
 export default function TopNavBar({ title, subtitle, breadcrumbs }) {
   const router = useRouter();
-  const { notifications, instruments, certificates } = useMetrixStore();
+  const { userRole, notifications, instruments, certificates } = useMetrixStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const unreadCount = notifications.filter(
+    (n) => n.unread && (!n.role || n.role === userRole)
+  ).length;
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -73,17 +75,6 @@ export default function TopNavBar({ title, subtitle, breadcrumbs }) {
             className="w-64 lg:w-72 bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900/10 transition-all"
           />
         </form>
-
-        {/* Verify Certificate Quick Link */}
-        <Link
-          href="/verify"
-          className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
-        >
-          <span className="material-symbols-outlined text-[16px] text-emerald-600">
-            qr_code_scanner
-          </span>
-          Public QR Portal
-        </Link>
 
         {/* Notifications Icon Button */}
         <Link

@@ -1,342 +1,437 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import {
-  initialUserProfile,
+  districtInfo,
+  initialBusinesses,
   initialInstruments,
   initialApplications,
-  initialCertificates,
+  initialLmos,
   initialInspections,
+  initialCertificates,
   initialNotifications,
+  initialAuditLogs,
 } from "./mockData";
-import { generateHash } from "./utils";
+import { metrixApi } from "./api";
 
 const MetrixStoreContext = createContext(null);
 
+export const DEFAULT_USERS = [
+  {
+    id: "AC-AJM-001",
+    name: "Dr. R. K. Sharma",
+    role: "ASSISTANT_CONTROLLER",
+    district_id: "AJM",
+    designation: "Assistant Controller of Legal Metrology",
+    districtName: "Ajmer",
+    badge: "AC-AJM-001",
+    subtitle: "District Regulatory Head (Ajmer)",
+  },
+  {
+    id: "AC-JPR-001",
+    name: "Dr. M. L. Gupta",
+    role: "ASSISTANT_CONTROLLER",
+    district_id: "JPR",
+    designation: "Assistant Controller of Legal Metrology",
+    districtName: "Jaipur",
+    badge: "AC-JPR-001",
+    subtitle: "District Regulatory Head (Jaipur)",
+  },
+  {
+    id: "LMO-AJM-021",
+    name: "Rajesh Kumar",
+    role: "LMO",
+    district_id: "AJM",
+    designation: "Legal Metrology Officer",
+    districtName: "Ajmer",
+    badge: "LMO-AJM-021",
+    subtitle: "Field Officer (Ajmer City)",
+  },
+  {
+    id: "LMO-JPR-001",
+    name: "Sanjay Verma",
+    role: "LMO",
+    district_id: "JPR",
+    designation: "Legal Metrology Officer",
+    districtName: "Jaipur",
+    badge: "LMO-JPR-001",
+    subtitle: "Field Officer (Jaipur North)",
+  },
+  {
+    id: "BIZ-AJM-001",
+    name: "Ramesh Kumar Agarwal",
+    businessName: "Shree Balaji Traders & Cold Storage",
+    role: "BUSINESS",
+    district_id: "AJM",
+    districtName: "Ajmer",
+    subtitle: "Merchant (Ajmer Commercial Yard)",
+  },
+  {
+    id: "BIZ-JPR-001",
+    name: "Naresh Sharma",
+    businessName: "Jaipur Agro & Pulse Processing Mills",
+    role: "BUSINESS",
+    district_id: "JPR",
+    districtName: "Jaipur",
+    subtitle: "Merchant (VKI Industrial Area, Jaipur)",
+  },
+  {
+    id: "SYS-ADMIN-001",
+    name: "System Administrator",
+    role: "SYSTEM_ADMIN",
+    district_id: "ALL",
+    districtName: "All Rajasthan Districts",
+    badge: "STATE-ADMIN",
+    subtitle: "Technical Platform Administration",
+  },
+];
+
 export function MetrixStoreProvider({ children }) {
   const [isHydrated, setIsHydrated] = useState(false);
-  const [userRole, setUserRoleState] = useState("business"); // 'business' | 'lmo' | 'admin'
-  const [userProfile, setUserProfileState] = useState(initialUserProfile);
-  const [instruments, setInstrumentsState] = useState(initialInstruments);
-  const [applications, setApplicationsState] = useState(initialApplications);
-  const [certificates, setCertificatesState] = useState(initialCertificates);
-  const [inspections, setInspectionsState] = useState(initialInspections);
-  const [notifications, setNotificationsState] = useState(initialNotifications);
+  const [currentUser, setCurrentUserState] = useState(DEFAULT_USERS[0]);
+  const [userRole, setUserRoleState] = useState("admin"); // 'admin' | 'lmo' | 'business'
+  const [district, setDistrict] = useState(districtInfo);
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [businesses, setBusinesses] = useState(initialBusinesses);
+  const [instruments, setInstruments] = useState(initialInstruments);
+  const [applications, setApplications] = useState(initialApplications);
+  const [lmos, setLmos] = useState(initialLmos);
+  const [inspections, setInspections] = useState(initialInspections);
+  const [certificates, setCertificates] = useState(initialCertificates);
+  const [notifications, setNotifications] = useState(initialNotifications);
+  const [auditLogs, setAuditLogs] = useState(initialAuditLogs);
+  const [businessProfile, setBusinessProfile] = useState(null);
+  const [currentDraft, setCurrentDraft] = useState(null);
+
+  // Sync with Backend API
+  const refreshData = useCallback(async (userToLoad = currentUser) => {
+    try {
+      metrixApi.setUserId(userToLoad.id);
+
+      const [dashRes, appsRes, lmosRes, inspsRes, certsRes, notifsRes, auditsRes, instsRes, bizRes, draftRes] =
+        await Promise.allSettled([
+          metrixApi.getDashboardStats(),
+          metrixApi.getApplications(),
+          metrixApi.getLmos(),
+          metrixApi.getInspections(),
+          metrixApi.getCertificates(),
+          metrixApi.getNotifications(),
+          metrixApi.getAuditLogs(),
+          metrixApi.getInstruments(),
+          metrixApi.getBusinessProfile(),
+          metrixApi.getDraft(),
+        ]);
+
+      if (dashRes.status === "fulfilled" && dashRes.value?.data) {
+        setDashboardStats(dashRes.value.data);
+        if (dashRes.value.data.district) {
+          setDistrict(dashRes.value.data.district);
+        }
+      }
+
+      if (appsRes.status === "fulfilled" && Array.isArray(appsRes.value?.data)) {
+        setApplications(appsRes.value.data);
+      }
+
+      if (lmosRes.status === "fulfilled" && Array.isArray(lmosRes.value?.data)) {
+        setLmos(lmosRes.value.data);
+      }
+
+      if (inspsRes.status === "fulfilled" && Array.isArray(inspsRes.value?.data)) {
+        setInspections(inspsRes.value.data);
+      }
+
+      if (certsRes.status === "fulfilled" && Array.isArray(certsRes.value?.data)) {
+        setCertificates(certsRes.value.data);
+      }
+
+      if (notifsRes.status === "fulfilled" && Array.isArray(notifsRes.value?.data)) {
+        setNotifications(notifsRes.value.data);
+      }
+
+      if (auditsRes.status === "fulfilled" && Array.isArray(auditsRes.value?.data)) {
+        setAuditLogs(auditsRes.value.data);
+      }
+
+      if (instsRes.status === "fulfilled" && Array.isArray(instsRes.value?.data)) {
+        setInstruments(instsRes.value.data);
+      }
+
+      if (bizRes.status === "fulfilled" && bizRes.value?.data) {
+        setBusinessProfile(bizRes.value.data);
+      }
+
+      if (draftRes.status === "fulfilled") {
+        setCurrentDraft(draftRes.value?.data || null);
+      }
+    } catch (err) {
+      console.warn("Backend API sync warning:", err);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    refreshData(currentUser);
+  }, [refreshData, currentUser]);
 
   // Hydrate from localStorage on client mount
   useEffect(() => {
     try {
-      const savedRole = localStorage.getItem("metrix_user_role");
-      const savedProfile = localStorage.getItem("metrix_user_profile");
-      const savedInstruments = localStorage.getItem("metrix_instruments");
-      const savedApplications = localStorage.getItem("metrix_applications");
-      const savedCertificates = localStorage.getItem("metrix_certificates");
-      const savedInspections = localStorage.getItem("metrix_inspections");
-      const savedNotifications = localStorage.getItem("metrix_notifications");
-
-      if (savedRole) setUserRoleState(savedRole);
-      if (savedProfile) setUserProfileState(JSON.parse(savedProfile));
-      if (savedInstruments) setInstrumentsState(JSON.parse(savedInstruments));
-      if (savedApplications) setApplicationsState(JSON.parse(savedApplications));
-      if (savedCertificates) setCertificatesState(JSON.parse(savedCertificates));
-      if (savedInspections) setInspectionsState(JSON.parse(savedInspections));
-      if (savedNotifications) setNotificationsState(JSON.parse(savedNotifications));
+      const savedUser = localStorage.getItem("metrix_active_user");
+      const savedRole = localStorage.getItem("metrix_active_role");
+      if (savedUser && savedRole) {
+        const parsed = JSON.parse(savedUser);
+        setCurrentUserState(parsed);
+        setUserRoleState(savedRole);
+        metrixApi.setUserId(parsed.id);
+      }
     } catch (e) {
-      console.warn("Could not load from localStorage:", e);
-    } finally {
-      setIsHydrated(true);
+      console.warn("Could not load persona from localStorage:", e);
     }
   }, []);
 
-  // Save changes to localStorage
-  const setUserRole = (role) => {
+  const switchUser = (user) => {
+    setCurrentUserState(user);
+    let role = "business";
+    if (user.role === "ASSISTANT_CONTROLLER" || user.role === "SYSTEM_ADMIN") {
+      role = "admin";
+    } else if (user.role === "LMO") {
+      role = "lmo";
+    }
     setUserRoleState(role);
-    localStorage.setItem("metrix_user_role", role);
+    try {
+      localStorage.setItem("metrix_active_user", JSON.stringify(user));
+      localStorage.setItem("metrix_active_role", role);
+    } catch (e) {}
+    metrixApi.setUserId(user.id);
+    refreshData(user);
   };
 
-  const setUserProfile = (profile) => {
-    setUserProfileState(profile);
-    localStorage.setItem("metrix_user_profile", JSON.stringify(profile));
+  const setUserRole = (roleKey) => {
+    setUserRoleState(roleKey);
+    const matched = DEFAULT_USERS.find((u) => {
+      if (roleKey === "admin") return u.role === "ASSISTANT_CONTROLLER";
+      if (roleKey === "lmo") return u.role === "LMO";
+      return u.role === "BUSINESS";
+    }) || DEFAULT_USERS[0];
+
+    setCurrentUserState(matched);
+    try {
+      localStorage.setItem("metrix_active_user", JSON.stringify(matched));
+      localStorage.setItem("metrix_active_role", roleKey);
+    } catch (e) {}
+    metrixApi.setUserId(matched.id);
+    refreshData(matched);
   };
 
-  const addInstrument = (instrumentData) => {
-    const newId = `INST-2026-${String(instruments.length + 1).padStart(3, "0")}`;
-    const newInstrument = {
-      id: newId,
-      verificationStatus: "DRAFT",
-      installationDate: new Date().toISOString().split("T")[0],
-      ...instrumentData,
-    };
-    const updated = [newInstrument, ...instruments];
-    setInstrumentsState(updated);
-    localStorage.setItem("metrix_instruments", JSON.stringify(updated));
-
-    // Add notification
-    addNotification({
-      title: "New Instrument Registered",
-      message: `${newInstrument.name} (S/N: ${newInstrument.serialNumber}) registered successfully.`,
-      category: "INSTRUMENT_REGISTERED",
-      actionUrl: `/instruments`,
-      priority: "LOW",
-    });
-
-    return newInstrument;
-  };
-
-  const submitApplication = (appData) => {
-    const newAppId = `APP-2026-${String(applications.length + 200).padStart(5, "0")}`;
-    const newApp = {
-      id: newAppId,
-      status: "SUBMITTED",
-      submissionDate: new Date().toISOString().split("T")[0],
-      scheduledDate: "Pending Assignment",
-      scheduledTime: "-",
-      assignedOfficer: "Pending Department Assignment",
-      feePaid: "₹ 3,500.00",
-      transactionId: `TXN-GOV-${Math.floor(10000000 + Math.random() * 90000000)}`,
-      ...appData,
-    };
-
-    const updatedApps = [newApp, ...applications];
-    setApplicationsState(updatedApps);
-    localStorage.setItem("metrix_applications", JSON.stringify(updatedApps));
-
-    // Update target instrument verification status
-    if (appData.instrumentId) {
-      const updatedInst = instruments.map((inst) =>
-        inst.id === appData.instrumentId
-          ? { ...inst, verificationStatus: "PENDING" }
-          : inst
-      );
-      setInstrumentsState(updatedInst);
-      localStorage.setItem("metrix_instruments", JSON.stringify(updatedInst));
-    }
-
-    addNotification({
-      title: "Verification Application Submitted",
-      message: `Application ${newAppId} for ${appData.instrumentName} filed with Legal Metrology Dept.`,
-      category: "APPLICATION_SUBMITTED",
-      actionUrl: `/applications`,
-      priority: "MEDIUM",
-    });
-
-    return newApp;
-  };
-
-  const assignOfficerAndSchedule = (appId, officerName, date, time) => {
-    const targetApp = applications.find((a) => a.id === appId);
-    const updatedApps = applications.map((app) =>
-      app.id === appId
-        ? {
-            ...app,
-            status: "SCHEDULED",
-            assignedOfficer: officerName,
-            scheduledDate: date,
-            scheduledTime: time || "11:00 AM",
-          }
-        : app
-      );
-    setApplicationsState(updatedApps);
-    localStorage.setItem("metrix_applications", JSON.stringify(updatedApps));
-
-    // Create corresponding inspection record if it doesn't exist
-    const newInspId = `INSP-2026-${String(inspections.length + 50).padStart(4, "0")}`;
-    const newInsp = {
-      id: newInspId,
-      applicationId: appId,
-      instrumentId: targetApp?.instrumentId || "INST-2024-001",
-      instrumentName: targetApp?.instrumentName || "Weighing Instrument",
-      officer: officerName,
-      officerRole: "Legal Metrology Officer",
-      scheduledDate: date,
-      scheduledTime: time || "11:00 AM",
-      status: "SCHEDULED",
-      location: targetApp?.location || "Site Address",
-      gpsCoords: "28.5355° N, 77.2601° E",
-      checklistItems: [
-        { id: "c1", label: "Physical Examination & Plaque Readability", passed: true },
-        { id: "c2", label: "Zero-Load Repeatability & Return to Zero", passed: true },
-        { id: "c3", label: "Corner / Eccentricity Load Testing", passed: true },
-        { id: "c4", label: "Maximum Permissible Error (MPE) Verification", passed: true },
-        { id: "c5", label: "Tamper-Proof Lead/Wire Security Stamping", passed: false },
-      ],
-      measurements: [
-        { testLoad: "10 kg", observed: "10.002 kg", mpe: "± 5 g", result: "PASS" },
-        { testLoad: "20 kg", observed: "20.004 kg", mpe: "± 10 g", result: "PASS" },
-      ],
-      remarks: "Field inspection scheduled by Department Administrator.",
-    };
-
-    const updatedInsps = [newInsp, ...inspections];
-    setInspectionsState(updatedInsps);
-    localStorage.setItem("metrix_inspections", JSON.stringify(updatedInsps));
-
-    addNotification({
-      title: "Officer Assigned & Scheduled",
-      message: `${officerName} assigned to ${appId} for inspection on ${date}.`,
-      category: "SCHEDULE_UPDATE",
-      actionUrl: `/applications`,
-      priority: "MEDIUM",
-    });
-  };
-
-  const completeInspectionAndIssueCertificate = (inspId, result, remarks, measurements) => {
-    const targetInsp = inspections.find((i) => i.id === inspId);
-    if (!targetInsp) return;
-
-    const targetApp = applications.find((a) => a.id === targetInsp.applicationId);
-    const targetInst = instruments.find((i) => i.id === targetInsp.instrumentId);
-
-    // Update inspection
-    const updatedInsps = inspections.map((insp) =>
-      insp.id === inspId
-        ? {
-            ...insp,
-            status: result === "PASS" ? "COMPLETED" : "FAILED",
-            remarks: remarks || insp.remarks,
-            measurements: measurements || insp.measurements,
-          }
-        : insp
-    );
-    setInspectionsState(updatedInsps);
-    localStorage.setItem("metrix_inspections", JSON.stringify(updatedInsps));
-
-    // Update application
-    if (targetApp) {
-      const updatedApps = applications.map((app) =>
-        app.id === targetApp.id
-          ? {
-              ...app,
-              status: result === "PASS" ? "PASSED" : "REJECTED",
-            }
-          : app
-      );
-      setApplicationsState(updatedApps);
-      localStorage.setItem("metrix_applications", JSON.stringify(updatedApps));
-    }
-
-    if (result === "PASS") {
-      // Issue new certificate
-      const certId = `LM-DEL-2026-${String(certificates.length + 500).padStart(5, "0")}`;
-      const today = new Date().toISOString().split("T")[0];
-      const nextYear = new Date();
-      nextYear.setFullYear(nextYear.getFullYear() + 1);
-      const validUntil = nextYear.toISOString().split("T")[0];
-
-      const newCert = {
-        id: certId,
-        certificateNumber: `LM/DL/2026/${certId.replace("LM-DEL-", "")}/PASS`,
-        instrumentId: targetInst?.id || targetInsp.instrumentId,
-        instrumentName: targetInst?.name || targetInsp.instrumentName,
-        serialNumber: targetInst?.serialNumber || "SN-VERIFIED-2026",
-        manufacturer: targetInst?.manufacturer || "Certified Manufacturer",
-        model: targetInst?.model || "Standard Model",
-        capacity: targetInst?.maxCapacity || "Standard Capacity",
-        ownerName: userProfile.businessName,
-        location: targetInsp.location,
-        issueDate: today,
-        validFrom: today,
-        validUntil: validUntil,
-        status: "VALID",
-        issuingAuthority: "Directorate of Legal Metrology, Government of NCT of Delhi",
-        officerName: targetInsp.officer,
-        officerDesignation: "Legal Metrology Officer",
-        securityHash: generateHash(certId + targetInst?.serialNumber),
-        sealNumber: `SEAL-DEL-${Math.floor(10000 + Math.random() * 90000)}`,
-        verificationStandardsUsed: "Working Standards verified against Apex Reference Masses",
-      };
-
-      const updatedCerts = [newCert, ...certificates];
-      setCertificatesState(updatedCerts);
-      localStorage.setItem("metrix_certificates", JSON.stringify(updatedCerts));
-
-      // Update instrument status
-      if (targetInst) {
-        const updatedInsts = instruments.map((inst) =>
-          inst.id === targetInst.id
-            ? {
-                ...inst,
-                verificationStatus: "VERIFIED",
-                lastVerificationDate: today,
-                validUntil: validUntil,
-                certificateId: certId,
-                stampingOfficer: targetInsp.officer,
-              }
-            : inst
+  // --- 1. Accept Application ---
+  const acceptApplication = async (id) => {
+    try {
+      const res = await metrixApi.acceptApplication(id);
+      if (res?.data) {
+        setApplications((prev) =>
+          prev.map((a) => (a.id === id ? res.data : a))
         );
-        setInstrumentsState(updatedInsts);
-        localStorage.setItem("metrix_instruments", JSON.stringify(updatedInsts));
+        refreshData(currentUser);
+        return res.data;
       }
-
-      addNotification({
-        title: "Digital Certificate Issued!",
-        message: `Certificate ${certId} generated for ${targetInsp.instrumentName}. Digitally signed and QR verified.`,
-        category: "CERTIFICATE_ISSUED",
-        actionUrl: `/certificates`,
-        priority: "HIGH",
-      });
-
-      return newCert;
+    } catch (err) {
+      console.error("Accept application failed:", err);
+      throw err;
     }
   };
 
-  const addNotification = (notif) => {
-    const newNotif = {
-      id: `NOTIF-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      unread: true,
-      ...notif,
-    };
-    const updated = [newNotif, ...notifications];
-    setNotificationsState(updated);
-    localStorage.setItem("metrix_notifications", JSON.stringify(updated));
+  // --- 2. Reject Application ---
+  const rejectApplication = async (id, rejectionReason) => {
+    try {
+      const res = await metrixApi.rejectApplication(id, rejectionReason);
+      if (res?.data) {
+        setApplications((prev) =>
+          prev.map((a) => (a.id === id ? res.data : a))
+        );
+        refreshData(currentUser);
+        return res.data;
+      }
+    } catch (err) {
+      console.error("Reject application failed:", err);
+      throw err;
+    }
+  };
+
+  // --- 3. LMO Assignment ---
+  const assignLmo = async ({ applicationId, officerId, scheduledDate }) => {
+    try {
+      const res = await metrixApi.assignLmo(applicationId, officerId, scheduledDate);
+      if (res?.data) {
+        refreshData(currentUser);
+        return res.data;
+      }
+    } catch (err) {
+      console.error("Assign LMO failed:", err);
+      throw err;
+    }
+  };
+
+  // --- 4. Final Approval & Certificate Issuance ---
+  const approveInspection = async ({ applicationId, remarks }) => {
+    try {
+      const res = await metrixApi.approveInspection(applicationId, remarks);
+      if (res?.data) {
+        setCertificates((prev) => [res.data, ...prev]);
+        refreshData(currentUser);
+        return res.data;
+      }
+    } catch (err) {
+      console.error("Approve inspection failed:", err);
+      throw err;
+    }
+  };
+
+  // --- 5. Return Inspection for Correction ---
+  const returnInspection = async ({ applicationId, reason }) => {
+    try {
+      const res = await metrixApi.returnInspection(applicationId, reason);
+      if (res?.data) {
+        refreshData(currentUser);
+        return res.data;
+      }
+    } catch (err) {
+      console.error("Return inspection failed:", err);
+      throw err;
+    }
+  };
+
+  // --- 6. Update Business Profile ---
+  const updateBusinessProfile = async (profileData) => {
+    try {
+      const res = await metrixApi.updateBusinessProfile(profileData);
+      if (res?.data) {
+        setBusinessProfile(res.data);
+        refreshData(currentUser);
+        return res.data;
+      }
+    } catch (err) {
+      console.error("Update business profile failed:", err);
+      throw err;
+    }
+  };
+
+  // --- 7. Add Instrument with Purchase Bill ---
+  const addInstrument = async (instrumentData) => {
+    try {
+      const res = await metrixApi.createInstrument(instrumentData);
+      if (res?.data) {
+        setInstruments((prev) => [res.data, ...prev]);
+        refreshData(currentUser);
+        return res.data;
+      }
+    } catch (err) {
+      console.error("Add instrument failed:", err);
+      throw err;
+    }
+  };
+
+  // --- 8. Submit Application ---
+  const submitApplication = async (applicationData) => {
+    try {
+      const res = await metrixApi.createApplication(applicationData);
+      if (res?.data) {
+        setApplications((prev) => [res.data, ...prev]);
+        setCurrentDraft(null);
+        refreshData(currentUser);
+        return res.data;
+      }
+    } catch (err) {
+      console.error("Submit application failed:", err);
+      throw err;
+    }
+  };
+
+  // --- 9. Draft Management ---
+  const saveDraft = async (draftData) => {
+    try {
+      const res = await metrixApi.saveDraft(draftData);
+      if (res?.data) {
+        setCurrentDraft(res.data);
+        return res.data;
+      }
+    } catch (err) {
+      console.warn("Save draft fallback:", err);
+    }
+  };
+
+  const clearDraft = () => {
+    setCurrentDraft(null);
+  };
+
+  // --- 10. Issue Official Notice to LMOs ---
+  const issueNotice = async (noticeData) => {
+    try {
+      const res = await metrixApi.createNotice(noticeData);
+      if (res?.data) {
+        setNotifications((prev) => [res.data, ...prev]);
+        refreshData(currentUser);
+        return res.data;
+      }
+    } catch (err) {
+      console.error("Issue notice failed:", err);
+      throw err;
+    }
   };
 
   const markNotificationAsRead = (id) => {
-    const updated = notifications.map((n) =>
-      n.id === id ? { ...n, unread: false } : n
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, unread: false, read: true } : n))
     );
-    setNotificationsState(updated);
-    localStorage.setItem("metrix_notifications", JSON.stringify(updated));
   };
 
   const markAllNotificationsAsRead = () => {
-    const updated = notifications.map((n) => ({ ...n, unread: false }));
-    setNotificationsState(updated);
-    localStorage.setItem("metrix_notifications", JSON.stringify(updated));
+    setNotifications((prev) =>
+      prev.map((n) => ({ ...n, unread: false, read: true }))
+    );
   };
 
-  const resetToDefault = () => {
-    localStorage.clear();
-    setUserRoleState("business");
-    setUserProfileState(initialUserProfile);
-    setInstrumentsState(initialInstruments);
-    setApplicationsState(initialApplications);
-    setCertificatesState(initialCertificates);
-    setInspectionsState(initialInspections);
-    setNotificationsState(initialNotifications);
+  // Reset to default state
+  const resetToDefault = async () => {
+    await metrixApi.resetDatabase().catch(() => {});
+    refreshData(currentUser);
   };
 
   return (
     <MetrixStoreContext.Provider
       value={{
         isHydrated,
+        currentUser,
+        switchUser,
         userRole,
         setUserRole,
-        userProfile,
-        setUserProfile,
+        district,
+        dashboardStats,
+        businesses,
         instruments,
-        addInstrument,
         applications,
-        submitApplication,
-        assignOfficerAndSchedule,
-        certificates,
+        lmos,
         inspections,
-        completeInspectionAndIssueCertificate,
+        certificates,
         notifications,
-        addNotification,
+        auditLogs,
+        businessProfile,
+        currentDraft,
+        updateBusinessProfile,
+        addInstrument,
+        submitApplication,
+        saveDraft,
+        clearDraft,
+        acceptApplication,
+        rejectApplication,
+        assignLmo,
+        approveInspection,
+        returnInspection,
+        issueNotice,
         markNotificationAsRead,
         markAllNotificationsAsRead,
+        refreshData,
         resetToDefault,
       }}
     >

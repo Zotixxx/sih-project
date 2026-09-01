@@ -1,12 +1,12 @@
 "use client";
-
-import React, { use } from "react";
+import React, { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import PublicHeader from "@/components/layout/PublicHeader";
 import StatTicker from "@/components/shared/StatTicker";
 import Badge from "@/components/ui/Badge";
 import { useMetrixStore } from "@/lib/store";
+import { metrixApi } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 export default function CertificateVerificationResultPage({ params }) {
@@ -14,13 +14,38 @@ export default function CertificateVerificationResultPage({ params }) {
   const certId = decodeURIComponent(unwrappedParams.id);
 
   const { certificates } = useMetrixStore();
+  const [apiCert, setApiCert] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Find certificate by ID or CertificateNumber
-  const certificate = certificates.find(
-    (c) =>
-      c.id.toLowerCase() === certId.toLowerCase() ||
-      c.certificateNumber.toLowerCase() === certId.toLowerCase()
-  );
+  useEffect(() => {
+    let isMounted = true;
+    async function loadPublicCert() {
+      try {
+        const res = await metrixApi.getPublicCertificate(certId);
+        if (isMounted && res?.data) {
+          setApiCert(res.data);
+        }
+      } catch (err) {
+        console.warn("Public verification API fallback:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+    loadPublicCert();
+    return () => {
+      isMounted = false;
+    };
+  }, [certId]);
+
+  // Find certificate from API or fallback to store
+  const certificate =
+    apiCert ||
+    certificates.find(
+      (c) =>
+        c.id.toLowerCase() === certId.toLowerCase() ||
+        c.certificateNumber?.toLowerCase() === certId.toLowerCase() ||
+        c.qrVerificationToken?.toLowerCase() === certId.toLowerCase()
+    );
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-between">
@@ -59,7 +84,7 @@ export default function CertificateVerificationResultPage({ params }) {
                     : "✗ Certificate Expired"}
                 </h1>
                 <p className="text-xs sm:text-sm font-medium mt-1 opacity-90">
-                  Authoritative record retrieved from Directorate of Legal Metrology, NCT of Delhi.
+                  Authoritative record retrieved from Directorate of Legal Metrology, Government of Rajasthan (Ajmer District).
                 </p>
               </div>
 

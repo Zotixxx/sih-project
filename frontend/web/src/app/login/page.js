@@ -15,30 +15,26 @@ export default function LoginPage() {
   const [officerBadge, setOfficerBadge] = useState("LMO-DEL-104");
   const [selectedAuthorityRole, setSelectedAuthorityRole] = useState("lmo"); // 'lmo' | 'admin'
 
+  const [isSignup, setIsSignup] = useState(false);
+
   const handleLogin = (e) => {
     e.preventDefault();
     if (activeTab === "business") {
       setUserRole("business");
-      router.push("/dashboard");
+      if (isSignup || email.toLowerCase().includes("business@example.com")) {
+        router.push("/settings");
+      } else {
+        router.push("/dashboard");
+      }
     } else {
       setUserRole(selectedAuthorityRole);
-      if (selectedAuthorityRole === "lmo") {
-        router.push("/lmo/inspect/INSP-2026-0044");
-      } else {
-        router.push("/admin");
-      }
+      router.push("/dashboard");
     }
   };
 
   const handleQuickPersona = (role) => {
     setUserRole(role);
-    if (role === "business") {
-      router.push("/dashboard");
-    } else if (role === "lmo") {
-      router.push("/lmo/inspect/INSP-2026-0044");
-    } else {
-      router.push("/admin");
-    }
+    router.push("/dashboard");
   };
 
   return (
@@ -253,8 +249,10 @@ export default function LoginPage() {
                 type="submit"
                 className="w-full mt-2 py-3 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors shadow-2xs flex items-center justify-center gap-2"
               >
-                <span className="material-symbols-outlined text-[18px]">login</span>
-                Sign In to Platform
+                <span className="material-symbols-outlined text-[18px]">
+                  {isSignup ? "person_add" : "login"}
+                </span>
+                {isSignup ? "Register & Setup Profile" : "Sign In to Platform"}
               </button>
             </form>
           </div>
@@ -262,13 +260,14 @@ export default function LoginPage() {
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500">
             {activeTab === "business" ? (
               <p>
-                New Business?{" "}
-                <Link
-                  href="/settings"
-                  className="font-bold text-slate-900 hover:underline"
+                {isSignup ? "Already registered? " : "New Business? "}
+                <button
+                  type="button"
+                  onClick={() => setIsSignup(!isSignup)}
+                  className="font-bold text-slate-900 hover:underline cursor-pointer"
                 >
-                  Register Organization
-                </Link>
+                  {isSignup ? "Sign In" : "Sign Up / Register Business"}
+                </button>
               </p>
             ) : (
               <p>Official Legal Metrology Department Credentials Required.</p>

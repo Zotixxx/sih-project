@@ -1,158 +1,173 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import PublicHeader from "@/components/layout/PublicHeader";
 import StatTicker from "@/components/shared/StatTicker";
-import { initialCertificates } from "@/lib/mockData";
 
-export default function PublicVerifyLookupPage() {
-  const router = useRouter();
-  const [certInput, setCertInput] = useState("");
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (certInput.trim()) {
-      router.push(`/verify/${encodeURIComponent(certInput.trim())}`);
-    }
-  };
-
-  const sampleCertList = [
-    { id: "LM-DEL-2026-00114", label: "Valid Class I Micro-Balance (Valid)", status: "VALID" },
-    { id: "LM-DEL-2025-00892", label: "Weighbridge (Expiring Soon)", status: "EXPIRING" },
-    { id: "LM-DEL-2025-00109", label: "Platform Scale (Expired)", status: "EXPIRED" },
-    { id: "INVALID-999", label: "Counterfeit / Unknown ID (Not Found)", status: "NOT_FOUND" },
-  ];
-
+export default function PublicVerifyInfoPage() {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-between">
       <div>
         <PublicHeader />
         <StatTicker />
 
-        <main className="max-w-4xl mx-auto px-4 py-12 sm:py-16 space-y-8">
+        <main className="max-w-4xl mx-auto px-4 py-12 sm:py-16 space-y-10">
           {/* Header */}
           <div className="text-center space-y-3">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold">
-              <span className="material-symbols-outlined text-[16px]">
-                verified_user
+              <span aria-hidden="true" className="material-symbols-outlined text-[16px]">
+                qr_code_scanner
               </span>
-              Official Public Verification Portal
+              QR Verification Information
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Legal Metrology Certificate Verification
+              How to Verify a Certificate
             </h1>
-            <p className="text-sm text-slate-600 max-w-2xl mx-auto">
-              Scan the QR code printed on the physical certificate or enter the unique Certificate ID below to verify authenticity directly against the central regulatory database.
+            <p className="text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed">
+              Every commercial weighing and measuring instrument verified under the Legal Metrology Act, 2009 receives a dynamic, cryptographically signed QR code. Scanning this QR code is the only authorized method to verify statutory validity.
             </p>
           </div>
 
-          {/* Search Box */}
-          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-md">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
-                  Certificate Identifier / Stamped Reference
-                </label>
-                <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-4 text-slate-400 text-[24px]">
-                    qr_code_scanner
+          {/* Core Explainer Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 shadow-sm space-y-8">
+            <div className="border-b border-slate-200 pb-4">
+              <h2 className="text-lg font-bold text-slate-900">
+                Steps to Verify Instrument Authenticity
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Follow these three simple steps to confirm statutory verification in seconds.
+              </p>
+            </div>
+
+            {/* 3 Step Visual Guide */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Step 1 */}
+              <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-slate-900 text-white flex items-center justify-center font-black text-sm">
+                  1
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm">
+                  Locate the Official QR Code
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Find the printed QR code on the official verification certificate (Form VIII) or the physical security seal plate affixed to the weighing instrument by the Legal Metrology Officer.
+                </p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-slate-900 text-white flex items-center justify-center font-black text-sm">
+                  2
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm">
+                  Scan with Your Smartphone
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Open your smartphone camera, Google Lens, or any standard QR code scanner. Point your device directly at the QR code. No special app or login is needed.
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="w-10 h-10 rounded-lg bg-emerald-700 text-white flex items-center justify-center font-black text-sm">
+                  3
+                </div>
+                <h3 className="font-bold text-slate-900 text-sm">
+                  View Real-Time Record
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  The scan immediately opens the secure official verification page (<code className="text-[11px] bg-slate-200 px-1 py-0.5 rounded font-mono-code">/verify/[id]</code>) showing live statutory status and technical parameters.
+                </p>
+              </div>
+            </div>
+
+            {/* What Information Is Verified */}
+            <div className="pt-6 border-t border-slate-200 space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Information Displayed Upon Scanning
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="flex items-start gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                  <span aria-hidden="true" className="material-symbols-outlined text-emerald-600 text-[18px] shrink-0 mt-0.5">
+                    verified
                   </span>
-                  <input
-                    type="text"
-                    value={certInput}
-                    onChange={(e) => setCertInput(e.target.value)}
-                    placeholder="e.g. LM-DEL-2026-00114 or LM/DL/2026/00114/PREC"
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-12 pr-4 py-3.5 text-sm sm:text-base font-mono-code font-bold text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900/10"
-                    required
-                  />
+                  <div>
+                    <strong className="text-slate-900 block">Statutory Validity Status</strong>
+                    <span className="text-slate-500">
+                      Live indicator displaying VALID, EXPIRING SOON, or EXPIRED.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                  <span aria-hidden="true" className="material-symbols-outlined text-emerald-600 text-[18px] shrink-0 mt-0.5">
+                    storefront
+                  </span>
+                  <div>
+                    <strong className="text-slate-900 block">Commercial Establishment Details</strong>
+                    <span className="text-slate-500">
+                      Merchant name, registered trade location, and license reference.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                  <span aria-hidden="true" className="material-symbols-outlined text-emerald-600 text-[18px] shrink-0 mt-0.5">
+                    straighten
+                  </span>
+                  <div>
+                    <strong className="text-slate-900 block">Physical Instrument Identification</strong>
+                    <span className="text-slate-500">
+                      Serial number, manufacturer, model, capacity, and accuracy class.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200">
+                  <span aria-hidden="true" className="material-symbols-outlined text-emerald-600 text-[18px] shrink-0 mt-0.5">
+                    badge
+                  </span>
+                  <div>
+                    <strong className="text-slate-900 block">Officer Endorsement &amp; Cryptographic Seal</strong>
+                    <span className="text-slate-500">
+                      Stamping Legal Metrology Officer, verification date, and SHA-256 hash.
+                    </span>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <button
-                type="submit"
-                className="w-full py-3.5 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-slate-800 transition-colors shadow-sm flex items-center justify-center gap-2"
+            {/* Why QR Scanning is Mandatory */}
+            <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl flex items-start gap-3 text-xs text-amber-950">
+              <span aria-hidden="true" className="material-symbols-outlined text-amber-600 text-[22px] shrink-0 mt-0.5">
+                security
+              </span>
+              <div className="space-y-1">
+                <strong className="font-bold block">Why arbitrary search is not permitted</strong>
+                <p className="text-[11px] text-amber-900 leading-relaxed">
+                  To prevent unauthorized scraping and counterfeit replication of certificate numbers, public verification requires scanning the physical QR code. This ensures that only parties in actual physical proximity to the certified instrument or official certificate can inspect its regulatory record.
+                </p>
+              </div>
+            </div>
+
+            {/* Sample link for testing/demonstration on PC */}
+            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+              <span>Testing without a physical scanner?</span>
+              <Link
+                href="/verify/CERT-AJM-0523"
+                className="text-slate-900 font-bold hover:underline flex items-center gap-1"
               >
-                <span className="material-symbols-outlined text-[20px]">
-                  search_check
-                </span>
-                Verify Certificate Record
-              </button>
-            </form>
-
-            {/* Quick One-Click Samples for Judges & Reviewers */}
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                Quick Demo Lookups:
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {sampleCertList.map((sample) => (
-                  <button
-                    key={sample.id}
-                    onClick={() => router.push(`/verify/${sample.id}`)}
-                    className="p-3 text-left rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-all flex items-center justify-between text-xs font-semibold text-slate-800"
-                  >
-                    <div>
-                      <span className="font-mono-code font-bold block text-slate-900">
-                        {sample.id}
-                      </span>
-                      <span className="text-[11px] text-slate-500 font-normal">
-                        {sample.label}
-                      </span>
-                    </div>
-                    <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                      arrow_forward
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Security & Authenticity Explainer */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-600">
-            <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                <span className="material-symbols-outlined text-emerald-600 text-[18px]">
-                  security
-                </span>
-                Tamper-Resistant
-              </div>
-              <p className="text-[11px] text-slate-500">
-                Data is fetched strictly from authoritative government servers, not from client-generated strings.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                <span className="material-symbols-outlined text-emerald-600 text-[18px]">
-                  gavel
-                </span>
-                Statutory Compliance
-              </div>
-              <p className="text-[11px] text-slate-500">
-                Guarantees instruments are within Maximum Permissible Error tolerances under Act 2009.
-              </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1.5">
-              <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                <span className="material-symbols-outlined text-emerald-600 text-[18px]">
-                  history
-                </span>
-                Lifetime Traceability
-              </div>
-              <p className="text-[11px] text-slate-500">
-                Complete historical record of all past verification inspections and calibration events.
-              </p>
+                Preview Sample Verified Certificate (Ajmer District)
+                <span aria-hidden="true" className="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </Link>
             </div>
           </div>
         </main>
       </div>
 
       <footer className="py-6 text-center text-xs text-slate-400 border-t border-slate-200 bg-white">
-        © 2026 Directorate of Legal Metrology • Public Verification Infrastructure
+        © 2026 Directorate of Legal Metrology • Legal Metrology Act, 2009
       </footer>
     </div>
   );

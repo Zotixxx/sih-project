@@ -8,78 +8,82 @@ import { cn } from "@/lib/utils";
 
 export default function SideNavBar() {
   const pathname = usePathname();
-  const { userRole, notifications } = useMetrixStore();
+  const { currentUser, userRole, district, notifications, applications, inspections } = useMetrixStore();
 
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const unreadCount = (notifications || []).filter((n) => n.unread).length;
+  const pendingReviewCount = (applications || []).filter(
+    (a) => a.status === "SUBMITTED" || a.status === "UNDER_REVIEW"
+  ).length;
+  const awaitingApprovalCount = (inspections || []).filter(
+    (i) => i.status === "SUBMITTED_FOR_APPROVAL"
+  ).length;
 
-  // Base navigation links
-  const navItems = [
+  // 1. Assistant Controller Navigation (Section 58)
+  const adminNav = [
+    { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
     {
-      label: "Dashboard",
-      href: "/dashboard",
-      icon: "dashboard",
-      roles: ["business", "lmo", "admin"],
-    },
-    {
-      label: "Instruments",
-      href: "/instruments",
-      icon: "straighten",
-      roles: ["business", "admin"],
-    },
-    {
-      label: "Applications",
-      href: "/applications",
+      label: "Fresh Applications",
+      href: "/admin/fresh-applications",
       icon: "description",
-      roles: ["business", "admin", "lmo"],
+      badgeCount: pendingReviewCount > 0 ? pendingReviewCount : null,
     },
     {
-      label: "Inspections",
-      href: "/inspections",
-      icon: "assignment_turned_in",
-      roles: ["business", "lmo", "admin"],
+      label: "Verify",
+      href: "/admin/verify",
+      icon: "approval",
+      badgeCount: awaitingApprovalCount > 0 ? awaitingApprovalCount : null,
+      highlightBadge: true,
     },
-    {
-      label: "Certificates Vault",
-      href: "/certificates",
-      icon: "verified",
-      roles: ["business", "admin", "lmo"],
-    },
-    {
-      label: "Admin Scheduling",
-      href: "/admin",
-      icon: "calendar_month",
-      roles: ["admin"],
-      badge: "Govt",
-    },
-    {
-      label: "LMO Field Tablet",
-      href: "/lmo/inspect/INSP-2026-0044",
-      icon: "tablet_mac",
-      roles: ["lmo"],
-      badge: "Field",
-    },
+    { label: "LMOs", href: "/admin/lmos", icon: "badge" },
     {
       label: "Notifications",
       href: "/notifications",
       icon: "notifications",
-      roles: ["business", "lmo", "admin"],
       badgeCount: unreadCount > 0 ? unreadCount : null,
     },
-    {
-      label: "Settings & Profile",
-      href: "/settings",
-      icon: "settings",
-      roles: ["business", "admin"],
-    },
+    { label: "Settings", href: "/settings", icon: "settings" },
   ];
 
-  // Filter items visible to current role
-  const visibleItems = navItems.filter((item) => item.roles.includes(userRole));
+  // 2. Business Navigation (Section 58)
+  const businessNav = [
+    { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+    {
+      label: "Applications",
+      href: "/applications",
+      icon: "description",
+    },
+    { label: "Certificates", href: "/certificates", icon: "verified" },
+    { label: "Instruments", href: "/instruments", icon: "straighten" },
+    {
+      label: "Notifications",
+      href: "/notifications",
+      icon: "notifications",
+      badgeCount: unreadCount > 0 ? unreadCount : null,
+    },
+    { label: "Settings", href: "/settings", icon: "settings" },
+  ];
+
+  // 3. LMO Navigation (Section 58)
+  const lmoNav = [
+    { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+    { label: "Inspections", href: "/inspections", icon: "assignment_turned_in" },
+    { label: "Verification Details", href: "/lmo/verification-details", icon: "fact_check" },
+    {
+      label: "Notifications",
+      href: "/notifications",
+      icon: "notifications",
+      badgeCount: unreadCount > 0 ? unreadCount : null,
+    },
+    { label: "Settings", href: "/settings", icon: "settings" },
+  ];
+
+  const visibleItems =
+    userRole === "lmo" ? lmoNav : userRole === "business" ? businessNav : adminNav;
 
   return (
     <aside className="fixed left-0 top-0 h-full w-[260px] bg-white border-r border-slate-200 flex flex-col z-40 select-none">
-      {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-200 shrink-0">
+      {/* Brand & District Header */}
+      <div className="h-16 flex items-center px-5 border-b border-slate-200 shrink-0">
         <Link href="/" className="flex items-center gap-3 group">
           <div className="w-8 h-8 rounded bg-slate-900 flex items-center justify-center text-white shadow-2xs group-hover:bg-slate-800 transition-colors">
             <span className="material-symbols-outlined text-[20px]">balance</span>
@@ -87,12 +91,12 @@ export default function SideNavBar() {
           <div>
             <h1 className="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-1.5">
               MetriX
-              <span className="text-[9px] font-bold px-1.5 py-0.2 bg-slate-100 text-slate-700 rounded border border-slate-200">
-                GOV
+              <span className="text-[9px] font-bold px-1.5 py-0.2 bg-slate-100 text-slate-700 rounded border border-slate-200 uppercase">
+                {currentUser?.district_id || district?.name || "RJ"}
               </span>
             </h1>
             <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-              Legal Metrology
+              Legal Metrology Dept
             </p>
           </div>
         </Link>
@@ -100,9 +104,21 @@ export default function SideNavBar() {
 
       {/* Main Nav Links */}
       <div className="flex-1 overflow-y-auto py-4 px-3 flex flex-col gap-1">
-        <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          Navigation
+        <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+          <span>
+            {userRole === "business"
+              ? "Merchant Portal"
+              : userRole === "lmo"
+              ? "Field Officer Portal"
+              : "District Admin Menu"}
+          </span>
+          {userRole === "admin" && (
+            <span className="text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-mono-code font-bold">
+              {district?.name || currentUser?.districtName || "Ajmer"}
+            </span>
+          )}
         </div>
+
         {visibleItems.map((item) => {
           const isActive =
             pathname === item.href ||
@@ -110,7 +126,7 @@ export default function SideNavBar() {
 
           return (
             <Link
-              key={item.href}
+              key={item.label + item.href}
               href={item.href}
               className={cn(
                 "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 group",
@@ -128,29 +144,18 @@ export default function SideNavBar() {
                 >
                   {item.icon}
                 </span>
-                <span>{item.label}</span>
+                <span className="truncate">{item.label}</span>
               </div>
-
-              {item.badge && (
-                <span
-                  className={cn(
-                    "text-[10px] font-bold px-1.5 py-0.5 rounded",
-                    isActive
-                      ? "bg-slate-800 text-slate-200"
-                      : "bg-slate-100 text-slate-600"
-                  )}
-                >
-                  {item.badge}
-                </span>
-              )}
 
               {item.badgeCount && (
                 <span
                   className={cn(
-                    "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                    isActive
-                      ? "bg-emerald-400 text-slate-900"
-                      : "bg-rose-500 text-white"
+                    "text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0",
+                    item.highlightBadge
+                      ? "bg-amber-500 text-white animate-pulse"
+                      : isActive
+                      ? "bg-slate-700 text-white"
+                      : "bg-slate-200 text-slate-800"
                   )}
                 >
                   {item.badgeCount}
@@ -161,34 +166,68 @@ export default function SideNavBar() {
         })}
       </div>
 
-      {/* Quick Action Button in Sidebar */}
+      {/* Quick Action Button */}
       <div className="p-3 border-t border-slate-200 shrink-0">
-        <Link
-          href="/applications/apply"
-          className="w-full bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-2xs"
-        >
-          <span className="material-symbols-outlined text-[18px]">add_circle</span>
-          Apply for Verification
-        </Link>
+        {userRole === "admin" && (
+          <Link
+            href="/admin/awaiting-certificates"
+            className="w-full bg-slate-900 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-2xs"
+          >
+            <span className="material-symbols-outlined text-[18px]">fact_check</span>
+            Review Awaiting ({awaitingApprovalCount})
+          </Link>
+        )}
+
+        {userRole === "business" && (
+          <Link
+            href="/applications/apply"
+            className="w-full bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-2xs"
+          >
+            <span className="material-symbols-outlined text-[18px]">add_circle</span>
+            Apply for Verification
+          </Link>
+        )}
+
+        {userRole === "lmo" && (
+          <Link
+            href="/inspections"
+            className="w-full bg-slate-900 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-2xs"
+          >
+            <span className="material-symbols-outlined text-[18px]">calendar_today</span>
+            View Field Itinerary
+          </Link>
+        )}
       </div>
 
       {/* Bottom User Info */}
       <div className="p-3 border-t border-slate-200 bg-slate-50 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 truncate">
-            <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-xs font-bold text-slate-700 uppercase">
-              {userRole === "business" ? "AP" : userRole === "lmo" ? "RS" : "AD"}
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase ${
+                userRole === "business"
+                  ? "bg-blue-100 text-blue-800 border border-blue-200"
+                  : userRole === "lmo"
+                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                  : "bg-purple-100 text-purple-800 border border-purple-200"
+              }`}
+            >
+              {userRole === "business" ? "SB" : userRole === "lmo" ? "RK" : "AC"}
             </div>
             <div className="truncate">
               <p className="text-xs font-bold text-slate-900 truncate">
                 {userRole === "business"
-                  ? "Apex Logistics"
+                  ? "Shree Balaji Traders"
                   : userRole === "lmo"
-                  ? "Insp. R. Sharma"
-                  : "HQ Administrator"}
+                  ? "Rajesh Kumar (LMO)"
+                  : "Dr. R. K. Sharma"}
               </p>
               <p className="text-[10px] text-slate-500 uppercase font-semibold">
-                {userRole}
+                {userRole === "business"
+                  ? "Ajmer Merchant"
+                  : userRole === "lmo"
+                  ? "Ajmer City Zone"
+                  : "Assistant Controller • Ajmer"}
               </p>
             </div>
           </div>

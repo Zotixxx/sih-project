@@ -15,7 +15,8 @@ function InstrumentsContent() {
   const initialStatusFilter = searchParams.get("status") || "ALL";
   const initialSearch = searchParams.get("search") || "";
 
-  const { instruments, certificates } = useMetrixStore();
+  const { instruments, certificates, currentUser, userRole } = useMetrixStore();
+  const isBusiness = userRole === "business" || currentUser?.role === "BUSINESS";
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
   const [categoryFilter, setCategoryFilter] = useState("ALL");
@@ -23,9 +24,23 @@ function InstrumentsContent() {
   const [selectedCert, setSelectedCert] = useState(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
+  // Business isolation: Only see own instruments
+  const userInstruments = useMemo(() => {
+    if (isBusiness) {
+      return (instruments || []).filter(
+        (inst) =>
+          inst.businessId === currentUser?.id ||
+          inst.business_id === currentUser?.id ||
+          inst.ownerName?.toLowerCase().includes(currentUser?.name?.toLowerCase()) ||
+          inst.businessName?.toLowerCase().includes(currentUser?.businessName?.toLowerCase())
+      );
+    }
+    return instruments || [];
+  }, [instruments, isBusiness, currentUser]);
+
   // Filter instruments
   const filteredInstruments = useMemo(() => {
-    return instruments.filter((inst) => {
+    return userInstruments.filter((inst) => {
       const matchSearch =
         search === "" ||
         inst.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -41,7 +56,7 @@ function InstrumentsContent() {
 
       return matchSearch && matchStatus && matchCategory;
     });
-  }, [instruments, search, statusFilter, categoryFilter]);
+  }, [userInstruments, search, statusFilter, categoryFilter]);
 
   const categories = [
     "ALL",
@@ -67,10 +82,10 @@ function InstrumentsContent() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-base font-bold text-slate-900 tracking-tight">
-              Regulated Instrument Inventory
+              My Instruments
             </h3>
             <p className="text-xs text-slate-500">
-              Showing {filteredInstruments.length} of {instruments.length} total units
+              Showing {filteredInstruments.length} registered commercial units
             </p>
           </div>
 
@@ -79,7 +94,7 @@ function InstrumentsContent() {
             className="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-2xs self-start sm:self-auto"
           >
             <span className="material-symbols-outlined text-[18px]">add</span>
-            Register New Instrument
+            + Add Instrument
           </Link>
         </div>
 
@@ -213,7 +228,7 @@ function InstrumentsContent() {
                         href={`/applications/apply?instrumentId=${inst.id}`}
                         className="px-2.5 py-1 rounded bg-slate-900 text-white font-semibold text-[11px] hover:bg-slate-800 transition-colors inline-block"
                       >
-                        Apply
+                        Apply for Verification
                       </Link>
                     </td>
                   </tr>
@@ -323,6 +338,31 @@ function InstrumentsContent() {
                 </div>
               </div>
 
+              {/* Purchase Bill & Documents (Section 8, 10) */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider text-slate-500">
+                  Supporting Purchase Document
+                </h4>
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="material-symbols-outlined text-emerald-600 text-[20px]">
+                      receipt_long
+                    </span>
+                    <div>
+                      <p className="font-bold text-slate-900 text-xs">
+                        {selectedInstrument.purchaseBill?.fileName || "Purchase_Bill_OEM_Invoice.pdf"}
+                      </p>
+                      <p className="text-[10px] text-slate-500">
+                        {selectedInstrument.purchaseBill?.fileSize || "1.2 MB"} • Source: Instrument
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                    Attached
+                  </span>
+                </div>
+              </div>
+
               {/* Verification & Stamping Officer */}
               {selectedInstrument.certificateId && (
                 <div className="space-y-3">
@@ -364,7 +404,7 @@ function InstrumentsContent() {
                 href={`/applications/apply?instrumentId=${selectedInstrument.id}`}
                 className="flex-1 py-2.5 rounded-lg bg-slate-900 text-white font-bold text-xs text-center hover:bg-slate-800 transition-colors"
               >
-                Apply for Re-Verification
+                Apply for Verification
               </Link>
             </div>
           </div>
@@ -384,14 +424,23 @@ function InstrumentsContent() {
 }
 
 export default function InstrumentsPage() {
+  const { userRole, setUserRole } = useMetrixStore();
+
+  React.useEffect(() => {
+    // Ensure business persona when visiting My Instruments
+    if (userRole !== "business") {
+      setUserRole("business");
+    }
+  }, [userRole, setUserRole]);
+
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
       <SideNavBar />
 
       <div className="flex-1 ml-[260px] flex flex-col min-w-0">
         <TopNavBar
-          title="Instrument Management"
-          subtitle="Comprehensive inventory of registered weighing and measuring devices under Legal Metrology supervision."
+          title="My Instruments"
+          subtitle="Registered commercial weighing and measuring instruments belonging to your establishment."
           breadcrumbs={[{ label: "MetriX", href: "/dashboard" }, { label: "Instruments" }]}
         />
 

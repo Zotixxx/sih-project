@@ -376,27 +376,27 @@ export default function LandingPage() {
                     <span className="material-symbols-outlined text-emerald-600 text-[16px]">
                       check
                     </span>
-                    Tablet-optimized inspection checklist
+                    Assigned inspection itinerary &amp; territory queue
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-emerald-600 text-[16px]">
                       check
                     </span>
-                    Standard test weight measurements &amp; MPE errors
+                    Enforcement audit logs &amp; stamped certificates
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-emerald-600 text-[16px]">
                       check
                     </span>
-                    GPS location stamping &amp; photo evidence capture
+                    Offline field execution via MetriX Android App
                   </li>
                 </ul>
               </div>
               <Link
-                href="/lmo/inspect/INSP-2026-0044"
+                href="/login"
                 className="mt-6 w-full py-2.5 rounded-lg bg-slate-900 text-white font-bold text-xs text-center hover:bg-slate-800 transition-colors"
               >
-                Open LMO Field Tablet →
+                Open LMO Duty Portal →
               </Link>
             </div>
 

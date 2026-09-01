@@ -2,38 +2,99 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { QRCodeSVG } from "qrcode.react";
 import SideNavBar from "@/components/layout/SideNavBar";
 import TopNavBar from "@/components/layout/TopNavBar";
 import Badge from "@/components/ui/Badge";
 import QRCodeModal from "@/components/ui/QRCodeModal";
-import Modal from "@/components/ui/Modal";
+import CertificatePreviewModal from "@/components/certificates/CertificatePreviewModal";
 import { useMetrixStore } from "@/lib/store";
 import { formatDate } from "@/lib/utils";
+import { exportToCSV } from "@/lib/exportUtils";
 
-export default function CertificatesVaultPage() {
-  const { certificates } = useMetrixStore();
-  const [search, setSearch] = useState("");
+export default function CertificatesPage() {
+  const { certificates, userRole, currentUser, district } = useMetrixStore();
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCertForQr, setSelectedCertForQr] = useState(null);
   const [viewingCert, setViewingCert] = useState(null);
 
-  const filteredCerts = useMemo(() => {
-    return certificates.filter((cert) => {
-      return (
-        search === "" ||
-        cert.id.toLowerCase().includes(search.toLowerCase()) ||
-        cert.certificateNumber.toLowerCase().includes(search.toLowerCase()) ||
-        cert.instrumentName.toLowerCase().includes(search.toLowerCase()) ||
-        cert.serialNumber.toLowerCase().includes(search.toLowerCase()) ||
-        cert.officerName.toLowerCase().includes(search.toLowerCase())
-      );
-    });
-  }, [certificates, search]);
+  // Business Certificates: Filter to logged-in business
+  const businessCertificates = useMemo(() => {
+    return (certificates || [])
+      .filter((cert) => {
+        if (currentUser?.role === "BUSINESS") {
+          return (
+            cert.business_id === currentUser.id ||
+            cert.businessId === currentUser.id ||
+            cert.ownerName?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
+            cert.ownerName?.toLowerCase().includes(currentUser.businessName?.toLowerCase())
+          );
+        }
+        return true;
+      })
+      .filter((cert) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase().trim();
+        return (
+          cert.id?.toLowerCase().includes(q) ||
+          cert.certificateNumber?.toLowerCase().includes(q) ||
+          cert.instrumentName?.toLowerCase().includes(q) ||
+          cert.serialNumber?.toLowerCase().includes(q) ||
+          cert.verifyingOfficer?.toLowerCase().includes(q) ||
+          cert.sealNumber?.toLowerCase().includes(q)
+        );
+      });
+  }, [certificates, currentUser, searchQuery]);
 
-  const handlePrint = () => {
-    if (typeof window !== "undefined") {
-      window.print();
-    }
+  // Access guard for LMO
+  if (userRole === "lmo") {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex">
+        <SideNavBar />
+        <div className="flex-1 ml-[260px] flex flex-col min-w-0">
+          <TopNavBar
+            title="Certificates"
+            subtitle="Access Restricted • Reserved for Registered Businesses and District Administration."
+            breadcrumbs={[
+              { label: "Dashboard", href: "/dashboard" },
+              { label: "Certificates" },
+            ]}
+          />
+          <main className="p-12 max-w-xl mx-auto text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto border border-amber-200">
+              <span className="material-symbols-outlined text-[36px]">lock</span>
+            </div>
+            <h2 className="text-xl font-bold text-slate-900">
+              Certificates Unavailable for LMO Duty
+            </h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Field officers conduct physical inspections and record test measurements. Official certificates are issued to businesses upon Assistant Controller approval.
+            </p>
+            <div className="pt-2">
+              <Link
+                href="/inspections"
+                className="px-5 py-2.5 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors inline-block shadow-2xs"
+              >
+                Go to Assigned Inspections
+              </Link>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  const handleExportCSV = () => {
+    const data = businessCertificates.map((c) => ({
+      "Certificate ID": c.certificateNumber || c.id,
+      "Instrument": c.instrumentName,
+      "Serial Number": c.serialNumber,
+      "Business": c.ownerName,
+      "Verification Date": c.verificationDate,
+      "Valid Until": c.validUntil,
+      "Status": c.status,
+      "Seal Number": c.sealNumber,
+    }));
+    exportToCSV(`My_Certificates_${new Date().toISOString().split("T")[0]}.csv`, data);
   };
 
   return (
@@ -42,312 +103,138 @@ export default function CertificatesVaultPage() {
 
       <div className="flex-1 ml-[260px] flex flex-col min-w-0">
         <TopNavBar
-          title="Certificates Vault"
-          subtitle="Centrally verified, cryptographically signed digital certificates issued under Legal Metrology Regulations."
+          title="Certificates"
+          subtitle="Official Legal Metrology Verification Certificates issued for your weighing and measuring instruments."
           breadcrumbs={[
-            { label: "MetriX", href: "/dashboard" },
+            { label: "Dashboard", href: "/dashboard" },
             { label: "Certificates" },
           ]}
         />
 
         <main className="p-6 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
-          {/* Header & Search Bar */}
+          {/* Header Card with Search & Export */}
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                Authoritative Certificates Vault
-              </h3>
-              <p className="text-xs text-slate-500">
-                {filteredCerts.length} active digital certificates on file
+              <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                My Certificates
+                <span className="px-2 py-0.5 rounded-full text-xs font-mono-code font-bold bg-emerald-100 text-emerald-900">
+                  {businessCertificates.length} Certificates
+                </span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Statically stamped and digitally authenticated verification certificates.
               </p>
             </div>
 
-            <div className="relative w-full sm:w-80">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
-                search
-              </span>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search certificate ID, serial, make..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
-              />
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-72">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
+                  search
+                </span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by Certificate ID, instrument..."
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                />
+              </div>
+              <button
+                onClick={handleExportCSV}
+                className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-bold text-xs flex items-center gap-1.5 shrink-0"
+              >
+                <span className="material-symbols-outlined text-[16px]">download</span>
+                Export
+              </button>
             </div>
           </div>
 
-          {/* Certificates Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCerts.map((cert) => (
-              <div
-                key={cert.id}
-                className="bg-white border-2 border-slate-200 hover:border-slate-400 rounded-xl p-5 shadow-2xs transition-all flex flex-col justify-between"
-              >
-                <div>
-                  {/* Top Header */}
-                  <div className="flex items-start justify-between border-b border-slate-100 pb-3 mb-3">
-                    <div>
-                      <span className="text-[10px] font-mono-code font-bold uppercase text-slate-500">
-                        {cert.id}
-                      </span>
-                      <h4 className="text-sm font-bold text-slate-900 mt-0.5">
-                        {cert.instrumentName}
-                      </h4>
-                    </div>
-                    <Badge status={cert.status} />
-                  </div>
-
-                  {/* Metadata */}
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Certificate No:</span>
-                      <span className="font-mono-code font-semibold text-slate-800">
-                        {cert.certificateNumber}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Serial Number:</span>
-                      <span className="font-mono-code font-bold text-slate-900">
-                        {cert.serialNumber}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Capacity / Make:</span>
-                      <span className="font-semibold text-slate-800">
-                        {cert.manufacturer}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Verified Date:</span>
-                      <span className="text-slate-800">
-                        {formatDate(cert.validFrom)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Valid Until:</span>
-                      <span className="font-bold text-emerald-800">
-                        {formatDate(cert.validUntil)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Mini SHA Hash */}
-                  <div className="mt-3 p-2 bg-slate-50 rounded border border-slate-100 text-[10px]">
-                    <span className="text-slate-400 block font-bold">
-                      SHA-256 INTEGRITY HASH
-                    </span>
-                    <span className="font-mono-code text-slate-600 truncate block">
-                      {cert.securityHash}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Card Actions */}
-                <div className="mt-5 pt-3 border-t border-slate-100 flex items-center gap-2">
-                  <button
-                    onClick={() => setViewingCert(cert)}
-                    className="flex-1 py-2 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">
-                      visibility
-                    </span>
-                    View &amp; Print PDF
-                  </button>
-                  <button
-                    onClick={() => setSelectedCertForQr(cert)}
-                    className="p-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 transition-colors"
-                    title="Open Verifiable QR Code"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      qr_code
-                    </span>
-                  </button>
-                  <Link
-                    href={`/verify/${cert.id}`}
-                    className="p-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-emerald-700 transition-colors"
-                    title="Test Public Verification URL"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      open_in_new
-                    </span>
-                  </Link>
-                </div>
+          {/* Certificates Table */}
+          <div className="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden">
+            {businessCertificates.length === 0 ? (
+              <div className="p-12 text-center text-slate-500 text-xs space-y-3">
+                <span className="material-symbols-outlined text-[40px] text-slate-300 block">
+                  verified
+                </span>
+                <p className="font-bold text-slate-700 text-sm">No Certificates Found</p>
+                <p className="text-slate-500">No verification certificates matching your filter were found.</p>
               </div>
-            ))}
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">Certificate ID</th>
+                      <th className="py-3 px-4">Instrument</th>
+                      <th className="py-3 px-4">Verification Date</th>
+                      <th className="py-3 px-4">Valid Until</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">QR Code</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {businessCertificates.map((cert) => (
+                      <tr key={cert.id || cert.certificateNumber} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-mono-code font-bold text-slate-900">
+                          {cert.certificateNumber || cert.id}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="font-bold text-slate-900 block">{cert.instrumentName}</span>
+                          <span className="text-[11px] text-slate-500 font-mono-code">S/N: {cert.serialNumber}</span>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {formatDate(cert.verificationDate)}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {formatDate(cert.validUntil)}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <Badge status={cert.status} className="text-[10px]" />
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <button
+                            onClick={() => setSelectedCertForQr(cert)}
+                            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors"
+                            title="View Public QR Code"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">qr_code_2</span>
+                          </button>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            onClick={() => setViewingCert(cert)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-2xs inline-flex items-center gap-1"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">visibility</span>
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </main>
       </div>
 
-      {/* High-Trust Printable Certificate Modal */}
-      {viewingCert && (
-        <Modal
-          isOpen={Boolean(viewingCert)}
-          onClose={() => setViewingCert(null)}
-          title="Official Government Verification Certificate"
-          subtitle={`Act 2009 • Stamped Reference: ${viewingCert.certificateNumber}`}
-          maxWidth="max-w-3xl"
-          footer={
-            <>
-              <button
-                onClick={() => setViewingCert(null)}
-                className="px-4 py-2 text-xs font-semibold rounded border border-slate-300 text-slate-700 hover:bg-slate-100"
-              >
-                Close
-              </button>
-              <button
-                onClick={handlePrint}
-                className="px-5 py-2 text-xs font-bold rounded bg-slate-900 text-white hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-2xs"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  print
-                </span>
-                Print Official Certificate
-              </button>
-            </>
-          }
-        >
-          {/* Official Printable Certificate Slab */}
-          <div
-            id="printable-certificate"
-            className="border-4 border-double border-slate-900 p-6 sm:p-8 bg-white rounded-lg relative overflow-hidden"
-          >
-            {/* Watermark Logo */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-              <span className="material-symbols-outlined text-[300px]">
-                balance
-              </span>
-            </div>
-
-            {/* Header Stamp */}
-            <div className="text-center border-b-2 border-slate-900 pb-4 mb-6">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600">
-                GOVERNMENT OF NCT OF DELHI
-              </p>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase mt-0.5">
-                Directorate of Legal Metrology
-              </h2>
-              <p className="text-xs font-semibold text-slate-700 mt-1">
-                Certificate of Verification &amp; Stamping under Legal Metrology Act, 2009
-              </p>
-              <div className="mt-2 inline-block px-3 py-0.5 bg-slate-100 border border-slate-300 rounded text-[11px] font-mono-code font-bold text-slate-900">
-                CERTIFICATE ID: {viewingCert.certificateNumber}
-              </div>
-            </div>
-
-            {/* Content Table */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs mb-6">
-              <div className="space-y-2 p-4 bg-slate-50 rounded border border-slate-200">
-                <p className="font-bold text-slate-900 border-b border-slate-200 pb-1">
-                  1. Instrument Details
-                </p>
-                <p>
-                  <span className="text-slate-500">Name / Description:</span>{" "}
-                  <strong className="text-slate-900">{viewingCert.instrumentName}</strong>
-                </p>
-                <p>
-                  <span className="text-slate-500">Manufacturer &amp; Model:</span>{" "}
-                  <strong className="text-slate-900">{viewingCert.manufacturer} ({viewingCert.model})</strong>
-                </p>
-                <p>
-                  <span className="text-slate-500">Serial Number:</span>{" "}
-                  <strong className="font-mono-code text-slate-900">{viewingCert.serialNumber}</strong>
-                </p>
-                <p>
-                  <span className="text-slate-500">Maximum Capacity:</span>{" "}
-                  <strong className="text-slate-900">{viewingCert.capacity}</strong>
-                </p>
-              </div>
-
-              <div className="space-y-2 p-4 bg-slate-50 rounded border border-slate-200">
-                <p className="font-bold text-slate-900 border-b border-slate-200 pb-1">
-                  2. Owner &amp; Operating Location
-                </p>
-                <p>
-                  <span className="text-slate-500">Registered Owner:</span>{" "}
-                  <strong className="text-slate-900">{viewingCert.ownerName}</strong>
-                </p>
-                <p>
-                  <span className="text-slate-500">Location of Use:</span>{" "}
-                  <strong className="text-slate-900">{viewingCert.location}</strong>
-                </p>
-                <p>
-                  <span className="text-slate-500">Statutory Seal Reference:</span>{" "}
-                  <strong className="font-mono-code text-slate-900">{viewingCert.sealNumber}</strong>
-                </p>
-                <p>
-                  <span className="text-slate-500">Standards Used:</span>{" "}
-                  <strong className="text-slate-900">{viewingCert.verificationStandardsUsed}</strong>
-                </p>
-              </div>
-            </div>
-
-            {/* Validity Declaration */}
-            <div className="p-4 bg-emerald-50 border border-emerald-300 rounded text-xs space-y-1 mb-6">
-              <p className="font-bold text-emerald-950">
-                Statutory Validity Certification:
-              </p>
-              <p className="text-emerald-900 leading-relaxed">
-                This certifies that the weighing/measuring instrument described above has been thoroughly inspected and verified against the applicable tolerances under the Legal Metrology (General) Rules, 2011.
-              </p>
-              <div className="flex flex-wrap items-center justify-between pt-2 text-xs font-bold text-emerald-950">
-                <span>Verified On: {formatDate(viewingCert.validFrom)}</span>
-                <span className="text-emerald-800 underline">
-                  VALID UNTIL: {formatDate(viewingCert.validUntil)}
-                </span>
-              </div>
-            </div>
-
-            {/* Footer QR & Authority Signature */}
-            <div className="pt-4 border-t-2 border-slate-900 flex items-end justify-between">
-              {/* QR Code */}
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 bg-white border border-slate-900 rounded">
-                  <QRCodeSVG
-                    value={
-                      typeof window !== "undefined"
-                        ? `${window.location.origin}/verify/${viewingCert.id}`
-                        : `https://metrix.gov.in/verify/${viewingCert.id}`
-                    }
-                    size={72}
-                    level="H"
-                  />
-                </div>
-                <div className="text-[10px] text-slate-500">
-                  <p className="font-bold uppercase text-slate-800">
-                    Scan to Verify Online
-                  </p>
-                  <p className="font-mono-code text-[9px]">
-                    Hash: {viewingCert.securityHash?.slice(0, 16)}...
-                  </p>
-                </div>
-              </div>
-
-              {/* Officer Signature */}
-              <div className="text-right">
-                <div className="font-mono-code text-[11px] text-slate-400 italic mb-1">
-                  [DIGITALLY SIGNED &amp; SEALED]
-                </div>
-                <p className="font-bold text-sm text-slate-900">
-                  {viewingCert.officerName}
-                </p>
-                <p className="text-[10px] text-slate-600">
-                  {viewingCert.officerDesignation}
-                </p>
-                <p className="text-[10px] font-semibold text-slate-500">
-                  {viewingCert.issuingAuthority}
-                </p>
-              </div>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* QR Modal */}
+      {/* QR Code Modal */}
       {selectedCertForQr && (
         <QRCodeModal
           isOpen={Boolean(selectedCertForQr)}
           onClose={() => setSelectedCertForQr(null)}
           certificate={selectedCertForQr}
+        />
+      )}
+
+      {/* Certificate Preview Modal */}
+      {viewingCert && (
+        <CertificatePreviewModal
+          certificate={viewingCert}
+          isOpen={Boolean(viewingCert)}
+          onClose={() => setViewingCert(null)}
         />
       )}
     </div>

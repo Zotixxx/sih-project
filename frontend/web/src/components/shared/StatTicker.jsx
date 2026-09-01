@@ -7,7 +7,7 @@ export default function StatTicker() {
     { label: "LEGAL METROLOGY ACT 2009", value: "Active Statutory Compliance", icon: "gavel" },
     { label: "VERIFIED INSTRUMENTS", value: "248,910 Total Regulated", icon: "verified" },
     { label: "CRYPTOGRAPHIC SEALING", value: "SHA-256 Tamper Evident", icon: "security" },
-    { label: "OFFICERS IN FIELD", value: "1,420 Active LMOs / GATCs", icon: "engineering" },
+    { label: "OFFICERS IN FIELD", value: "1,420 Active Field LMOs", icon: "engineering" },
     { label: "PUBLIC QR LOOKUPS", value: "99.98% Verification Uptime", icon: "qr_code_scanner" },
   ];
 
