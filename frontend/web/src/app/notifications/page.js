@@ -605,7 +605,7 @@ export default function NotificationsPage() {
                 </span>
                 <span className="text-[11px] text-slate-500">
                   {currentUser?.designation || "Assistant Controller of Legal Metrology"} •{" "}
-                  {currentUser?.districtName || "Ajmer District"}
+                  {currentUser?.districtName || currentUser?.district_id || "District"}
                 </span>
               </div>
             </div>

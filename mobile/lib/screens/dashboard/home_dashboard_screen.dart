@@ -42,7 +42,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           ],
         ),
         actions: [
-          // Online / Offline Toggle Simulator
+          // Local connectivity state for offline queue handling.
           IconButton(
             tooltip: state.isOnline ? 'Online Mode' : 'Offline Mode',
             icon: Row(

@@ -94,7 +94,6 @@ class OfficerProfileScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   _buildProfileRow('Designated Zone', officer.zone),
                   _buildProfileRow('Department', 'Directorate of Legal Metrology'),
-                  _buildProfileRow('State / UT', 'Government of NCT of Delhi'),
                   _buildProfileRow('Official Email', officer.email),
                   _buildProfileRow('Contact Phone', officer.phone),
                 ],

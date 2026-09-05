@@ -2,18 +2,17 @@
 
 import React, { useState, use, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import SideNavBar from "@/components/layout/SideNavBar";
 import TopNavBar from "@/components/layout/TopNavBar";
 import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import CertificatePreviewModal from "@/components/certificates/CertificatePreviewModal";
 import { useMetrixStore } from "@/lib/store";
+import { portalPath } from "@/lib/routes";
 import { formatDate, getNormalizedChecklist } from "@/lib/utils";
 
 export default function ApplicationDetailPage({ params }) {
   const unwrappedParams = use(params);
-  const router = useRouter();
   const appId = decodeURIComponent(unwrappedParams.id);
 
   const {
@@ -29,6 +28,7 @@ export default function ApplicationDetailPage({ params }) {
     approveInspection,
     returnInspection,
   } = useMetrixStore();
+  const href = (path) => portalPath(currentUser, path);
 
   const isAssistantController =
     userRole === "admin" ||
@@ -75,8 +75,7 @@ export default function ApplicationDetailPage({ params }) {
   const [rejectionReason, setRejectionReason] = useState("");
   const [assigningApp, setAssigningApp] = useState(false);
   const [selectedOfficer, setSelectedOfficer] = useState("");
-  const [scheduledDate, setScheduledDate] = useState("2026-09-03");
-  const [scheduledTime, setScheduledTime] = useState("11:30 AM");
+  const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split("T")[0]);
   const [returningInspection, setReturningInspection] = useState(false);
   const [inspectionReturnReason, setInspectionReturnReason] = useState("");
   const [controllerRemarks, setControllerRemarks] = useState("");
@@ -109,7 +108,7 @@ export default function ApplicationDetailPage({ params }) {
               Please verify the application reference or return to the applications queue.
             </p>
             <Link
-              href="/applications"
+              href={href("/applications")}
               className="inline-block px-4 py-2 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800"
             >
               ← Back to Applications
@@ -144,12 +143,11 @@ export default function ApplicationDetailPage({ params }) {
 
   const handleConfirmAssign = async (e) => {
     e.preventDefault();
-    const officerId = selectedOfficer || (lmos[0]?.officerId || "LMO-AJM-021");
+    if (!selectedOfficer) return;
     await assignLmo({
       applicationId: app.id,
-      officerId,
+      officerId: selectedOfficer,
       scheduledDate,
-      scheduledTime,
     });
     setAssigningApp(false);
   };
@@ -223,7 +221,7 @@ export default function ApplicationDetailPage({ params }) {
                   {app.businessName} — {app.instrumentName}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Application Type: <strong>{app.applicationType}</strong> • District: <strong>{app.district || "Ajmer"}, Rajasthan</strong>
+                  Application Type: <strong>{app.applicationType || app.verificationType}</strong> • District: <strong>{app.district || app.district_id || "Not recorded"}</strong>
                 </p>
               </div>
 
@@ -379,7 +377,7 @@ export default function ApplicationDetailPage({ params }) {
               <div className="sm:col-span-2">
                 <span className="text-slate-400 text-[10px] uppercase font-bold block">Operating Premises Location</span>
                 <p className="font-medium text-slate-800">
-                  {app.address}, District {app.district || "Ajmer"}, {app.state || "Rajasthan"} - {app.pincode || "305001"}
+                  {[app.address, app.district || app.district_id, app.state, app.pincode].filter(Boolean).join(", ") || "Not recorded"}
                 </p>
               </div>
             </div>
@@ -515,7 +513,7 @@ export default function ApplicationDetailPage({ params }) {
                 </div>
                 <div>
                   <span className="text-slate-500 text-[10px] uppercase font-bold block">Badge ID</span>
-                  <span className="font-mono-code font-bold text-slate-900">{inspection.officerBadge || "LMO-AJM"}</span>
+                  <span className="font-mono-code font-bold text-slate-900">{inspection.officerBadge || inspection.lmoId || "Not recorded"}</span>
                 </div>
                 <div>
                   <span className="text-slate-500 text-[10px] uppercase font-bold block">Inspection Executed</span>
@@ -523,7 +521,7 @@ export default function ApplicationDetailPage({ params }) {
                 </div>
                 <div>
                   <span className="text-slate-500 text-[10px] uppercase font-bold block">Lead Wire Seal #</span>
-                  <span className="font-mono-code font-bold text-emerald-800">{inspection.sealNumber || "SEAL-AJM-2026"}</span>
+                  <span className="font-mono-code font-bold text-emerald-800">{inspection.sealNumber || "Not submitted"}</span>
                 </div>
               </div>
 
@@ -567,7 +565,7 @@ export default function ApplicationDetailPage({ params }) {
                     <span className="font-bold text-slate-800 block">Schedule VII Mandatory Checklist:</span>
                     <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
                       <span aria-hidden="true" className="material-symbols-outlined text-[12px] text-emerald-600">tablet_mac</span>
-                      Tablet Synced
+                      Submitted
                     </span>
                   </div>
                   {getNormalizedChecklist(inspection).map((c) => (
@@ -592,11 +590,11 @@ export default function ApplicationDetailPage({ params }) {
                 <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
                   <div>
                     <span className="text-slate-400 text-[10px] uppercase font-bold block">Standards Equipment</span>
-                    <p className="font-medium text-slate-800">{inspection.standardsUsed || "Government Certified Test Weights"}</p>
+                    <p className="font-medium text-slate-800">{inspection.standardsUsed || "Not submitted"}</p>
                   </div>
                   <div>
                     <span className="text-slate-400 text-[10px] uppercase font-bold block">GPS Coordinates</span>
-                    <p className="font-mono-code font-bold text-slate-900">{inspection.gpsCoords || "26.4499° N, 74.6399° E"}</p>
+                    <p className="font-mono-code font-bold text-slate-900">{inspection.gpsCoords || "Not submitted"}</p>
                   </div>
                   <div>
                     <span className="text-slate-400 text-[10px] uppercase font-bold block">LMO Officer Remarks</span>
@@ -771,7 +769,7 @@ export default function ApplicationDetailPage({ params }) {
                   events.push({
                     event: "Application Accepted by Assistant Controller",
                     date: app.acceptedDate ? formatDate(app.acceptedDate) : "Accepted",
-                    actor: app.acceptedByName || "Dr. R. K. Sharma (Assistant Controller)",
+                    actor: app.acceptedByName || "Assistant Controller",
                     note: "Statutory documents verified. Application approved for LMO field inspection.",
                   });
                 }
@@ -881,14 +879,14 @@ export default function ApplicationDetailPage({ params }) {
                 {(lmos || [])
                   .filter((lmo) => !lmo.district_id || lmo.district_id === app.district_id)
                   .map((lmo) => (
-                    <option key={lmo.officerId || lmo.id} value={lmo.officerId || lmo.id}>
-                      {lmo.name} ({lmo.officerId || lmo.badgeNumber || lmo.id}) — {lmo.jurisdiction}
+                    <option key={lmo.lmo_id || lmo.domainId || lmo.id} value={lmo.lmo_id || lmo.domainId || lmo.id}>
+                      {lmo.name} ({lmo.lmo_id || lmo.domainId || lmo.badgeNumber || lmo.id}) — {lmo.jurisdiction}
                     </option>
                   ))}
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div className="space-y-1.5">
                 <label className="font-semibold text-slate-700">Scheduled Date</label>
                 <input
@@ -898,20 +896,6 @@ export default function ApplicationDetailPage({ params }) {
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none"
                   required
                 />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-700">Time Slot</label>
-                <select
-                  value={scheduledTime}
-                  onChange={(e) => setScheduledTime(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none"
-                >
-                  <option>10:00 AM</option>
-                  <option>11:30 AM</option>
-                  <option>02:00 PM</option>
-                  <option>04:00 PM</option>
-                </select>
               </div>
             </div>
           </form>

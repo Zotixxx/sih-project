@@ -10,7 +10,7 @@ import { useMetrixStore } from "@/lib/store";
 import { formatDate, getNormalizedChecklist, getNormalizedMeasurements } from "@/lib/utils";
 
 export default function LmoVerificationDetailsPage() {
-  const { inspections, applications, currentUser } = useMetrixStore();
+  const { inspections, applications } = useMetrixStore();
 
   const [search, setSearch] = useState("");
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -19,13 +19,6 @@ export default function LmoVerificationDetailsPage() {
   // Submitted verification records entered by the logged-in LMO
   const submittedRecords = useMemo(() => {
     return (inspections || [])
-      .filter((i) => {
-        // Belongs to current LMO if logged in as LMO, or matches district
-        if (currentUser?.role === "LMO") {
-          return i.officerId === currentUser.id || i.officerId === currentUser.badge || !i.officerId;
-        }
-        return true;
-      })
       .filter(
         (i) =>
           i.status === "SUBMITTED" ||
@@ -44,7 +37,7 @@ export default function LmoVerificationDetailsPage() {
           i.serialNumber?.toLowerCase().includes(q)
         );
       });
-  }, [inspections, currentUser, search]);
+  }, [inspections, search]);
 
   const pagedRecords = submittedRecords.slice(0, visibleCount);
   const hasMore = visibleCount < submittedRecords.length;
@@ -137,7 +130,7 @@ export default function LmoVerificationDetailsPage() {
                           {formatDate(item.inspectionDate || item.submissionDate || item.scheduledDate)}
                         </td>
                         <td className="py-3.5 px-4 font-mono-code font-bold text-emerald-800">
-                          {item.sealNumber || "SEAL-RAJ-99412"}
+                          {item.sealNumber || "Not submitted"}
                         </td>
                         <td className="py-3.5 px-4">
                           <Badge status={item.status} className="text-[10px]" />
@@ -211,15 +204,15 @@ export default function LmoVerificationDetailsPage() {
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Lead Wire Seal</span>
-                <span className="font-mono-code font-bold text-emerald-700">{selectedRecord.sealNumber || "SEAL-RAJ-99412"}</span>
+                <span className="font-mono-code font-bold text-emerald-700">{selectedRecord.sealNumber || "Not submitted"}</span>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">GPS Coordinates</span>
-                <span className="font-mono-code text-slate-700">{selectedRecord.gpsCoords || "26.4499° N, 74.6399° E"}</span>
+                <span className="font-mono-code text-slate-700">{selectedRecord.gpsCoords || "Not recorded"}</span>
               </div>
             </div>
 
-            {/* Checklist & Physical Tests (Entered via Field Tablet) */}
+            {/* Checklist & Physical Tests */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -232,7 +225,7 @@ export default function LmoVerificationDetailsPage() {
                 </div>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
                   <span aria-hidden="true" className="material-symbols-outlined text-[13px] text-emerald-600 select-none">tablet_mac</span>
-                  Tablet Synced
+                  Submitted
                 </span>
               </div>
 
@@ -280,7 +273,7 @@ export default function LmoVerificationDetailsPage() {
               </div>
             </div>
 
-            {/* Gravimetric Load Test Measurements from Tablet */}
+            {/* Gravimetric Load Test Measurements */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2.5">
               <div className="flex items-center justify-between">
                 <div>

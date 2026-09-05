@@ -10,6 +10,7 @@ import CertificatePreviewModal from "@/components/certificates/CertificatePrevie
 import { useMetrixStore } from "@/lib/store";
 import { formatDate } from "@/lib/utils";
 import { exportToCSV } from "@/lib/exportUtils";
+import { portalPath } from "@/lib/routes";
 
 export default function CertificatesPage() {
   const { certificates, userRole, currentUser, district } = useMetrixStore();
@@ -17,20 +18,8 @@ export default function CertificatesPage() {
   const [selectedCertForQr, setSelectedCertForQr] = useState(null);
   const [viewingCert, setViewingCert] = useState(null);
 
-  // Business Certificates: Filter to logged-in business
   const businessCertificates = useMemo(() => {
     return (certificates || [])
-      .filter((cert) => {
-        if (currentUser?.role === "BUSINESS") {
-          return (
-            cert.business_id === currentUser.id ||
-            cert.businessId === currentUser.id ||
-            cert.ownerName?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
-            cert.ownerName?.toLowerCase().includes(currentUser.businessName?.toLowerCase())
-          );
-        }
-        return true;
-      })
       .filter((cert) => {
         if (!searchQuery.trim()) return true;
         const q = searchQuery.toLowerCase().trim();
@@ -43,7 +32,7 @@ export default function CertificatesPage() {
           cert.sealNumber?.toLowerCase().includes(q)
         );
       });
-  }, [certificates, currentUser, searchQuery]);
+  }, [certificates, searchQuery]);
 
   // Access guard for LMO
   if (userRole === "lmo") {
@@ -71,7 +60,7 @@ export default function CertificatesPage() {
             </p>
             <div className="pt-2">
               <Link
-                href="/inspections"
+                href={portalPath(currentUser, "/inspections")}
                 className="px-5 py-2.5 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors inline-block shadow-2xs"
               >
                 Go to Assigned Inspections

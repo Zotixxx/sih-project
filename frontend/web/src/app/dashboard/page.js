@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import SideNavBar from "@/components/layout/SideNavBar";
 import TopNavBar from "@/components/layout/TopNavBar";
 import MetricCard from "@/components/ui/MetricCard";
 import Badge from "@/components/ui/Badge";
 import { useMetrixStore } from "@/lib/store";
+import { portalPath } from "@/lib/routes";
 import { formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const {
     currentUser,
     userRole,
@@ -23,40 +26,18 @@ export default function DashboardPage() {
     notifications,
   } = useMetrixStore();
 
-  const districtName = district?.name || currentUser?.districtName || "Ajmer";
+  const districtName = district?.name || currentUser?.districtName || currentUser?.district_id || "District";
   const officerName = currentUser?.name || "Official";
-  const officerId = currentUser?.badge || currentUser?.id || "OFFICER";
+  const officerId = currentUser?.domainId || currentUser?.badge || currentUser?.id || "OFFICER";
+  const href = (path) => portalPath(currentUser, path);
 
   // ==========================================
   // 1. BUSINESS DASHBOARD (Section 4)
   // ==========================================
   if (userRole === "business" || currentUser?.role === "BUSINESS") {
-    const myApps = (applications || []).filter((a) => {
-      return (
-        a.businessId === currentUser.id ||
-        a.business_id === currentUser.id ||
-        a.businessName?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
-        a.businessName?.toLowerCase().includes(currentUser.businessName?.toLowerCase())
-      );
-    });
-
-    const myCerts = (certificates || []).filter((c) => {
-      return (
-        c.businessId === currentUser.id ||
-        c.business_id === currentUser.id ||
-        c.ownerName?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
-        c.ownerName?.toLowerCase().includes(currentUser.businessName?.toLowerCase())
-      );
-    });
-
-    const myInstruments = (instruments || []).filter((i) => {
-      return (
-        i.businessId === currentUser.id ||
-        i.business_id === currentUser.id ||
-        i.ownerName?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
-        i.ownerName?.toLowerCase().includes(currentUser.businessName?.toLowerCase())
-      );
-    });
+    const myApps = applications || [];
+    const myCerts = certificates || [];
+    const myInstruments = instruments || [];
 
     const inProgressApps = myApps.filter(
       (a) => a.status !== "CERTIFIED" && a.status !== "REJECTED"
@@ -101,13 +82,13 @@ export default function DashboardPage() {
 
               <div className="flex items-center gap-2">
                 <Link
-                  href="/applications"
+                  href={href("/applications")}
                   className="px-4 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs transition-colors shadow-2xs"
                 >
                   View My Applications ({myApps.length})
                 </Link>
                 <Link
-                  href="/instruments"
+                  href={href("/instruments/new")}
                   className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition-colors"
                 >
                   + Add Instrument
@@ -118,7 +99,7 @@ export default function DashboardPage() {
             {/* 3 Clickable Summary Metrics (Total Applications, Instruments, Certificates) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div
-                onClick={() => router.push("/applications")}
+                onClick={() => router.push(href("/applications"))}
                 className="cursor-pointer group focus:outline-none"
               >
                 <MetricCard
@@ -126,11 +107,11 @@ export default function DashboardPage() {
                   value={myApps.length}
                   icon="description"
                   subtitle="Click to view all applications →"
-                  onClick={() => router.push("/applications")}
+                  onClick={() => router.push(href("/applications"))}
                 />
               </div>
               <div
-                onClick={() => router.push("/instruments")}
+                onClick={() => router.push(href("/instruments"))}
                 className="cursor-pointer group focus:outline-none"
               >
                 <MetricCard
@@ -138,11 +119,11 @@ export default function DashboardPage() {
                   value={myInstruments.length}
                   icon="straighten"
                   subtitle="Click to view instruments →"
-                  onClick={() => router.push("/instruments")}
+                  onClick={() => router.push(href("/instruments"))}
                 />
               </div>
               <div
-                onClick={() => router.push("/certificates")}
+                onClick={() => router.push(href("/certificates"))}
                 className="cursor-pointer group focus:outline-none"
               >
                 <MetricCard
@@ -150,7 +131,7 @@ export default function DashboardPage() {
                   value={myCerts.length}
                   icon="workspace_premium"
                   subtitle="Click to view certificates →"
-                  onClick={() => router.push("/certificates")}
+                  onClick={() => router.push(href("/certificates"))}
                 />
               </div>
             </div>
@@ -167,7 +148,7 @@ export default function DashboardPage() {
                     Track status and verification progress of your filings
                   </p>
                 </div>
-                <Link href="/applications" className="text-xs text-blue-700 hover:underline font-bold">
+                <Link href={href("/applications")} className="text-xs text-blue-700 hover:underline font-bold">
                   View All ({myApps.length}) →
                 </Link>
               </div>
@@ -189,7 +170,7 @@ export default function DashboardPage() {
                         <p className="text-[11px] text-slate-500 font-mono-code">S/N: {app.serialNumber} • Submitted: {formatDate(app.applicationDate || app.submissionDate)}</p>
                       </div>
                       <Link
-                        href={`/applications/${app.id}`}
+                        href={href(`/applications/${app.id}`)}
                         className="px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-2xs shrink-0"
                       >
                         Track Status →
@@ -209,14 +190,7 @@ export default function DashboardPage() {
   // 2. LMO WORK DASHBOARD (Section 6)
   // ==========================================
   if (userRole === "lmo" || currentUser?.role === "LMO") {
-    const myInspections = (inspections || []).filter((i) => {
-      return (
-        i.officerId === currentUser.id ||
-        i.officerId === currentUser.badge ||
-        i.officer?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
-        !i.officerId
-      );
-    });
+    const myInspections = inspections || [];
 
     const pendingToday = myInspections.filter(
       (i) => i.status === "SCHEDULED" || i.status === "ASSIGNED" || i.status === "IN_PROGRESS"
@@ -259,7 +233,7 @@ export default function DashboardPage() {
               </div>
 
               <Link
-                href="/inspections"
+                href={href("/inspections")}
                 className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-colors shadow-2xs self-start sm:self-auto"
               >
                 Go to Today&apos;s Duty Queue →
@@ -306,7 +280,7 @@ export default function DashboardPage() {
                   <span className="material-symbols-outlined text-blue-700 text-[20px]">assignment_late</span>
                   Today&apos;s Inspections Needing Action
                 </h3>
-                <Link href="/inspections" className="text-xs text-blue-700 hover:underline font-bold">
+                <Link href={href("/inspections")} className="text-xs text-blue-700 hover:underline font-bold">
                   View All Inspections →
                 </Link>
               </div>
@@ -330,7 +304,7 @@ export default function DashboardPage() {
                         <p className="text-slate-600 text-[11px]">{insp.instrumentName} • S/N: {insp.serialNumber}</p>
                       </div>
                       <Link
-                        href={`/lmo/inspect/${insp.id}`}
+                        href={href(`/inspect/${insp.id}`)}
                         className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors self-start sm:self-auto shadow-2xs"
                       >
                         Start Inspection →
@@ -391,7 +365,7 @@ export default function DashboardPage() {
       <div className="flex-1 ml-[260px] flex flex-col min-w-0">
         <TopNavBar
           title="Dashboard"
-          subtitle={`Assistant Controller: ${officerName} (${officerId}) • District: ${districtName}, Rajasthan`}
+          subtitle={`Assistant Controller: ${officerName} (${officerId}) • District: ${districtName}`}
           breadcrumbs={[
             { label: "Dashboard" },
           ]}
@@ -422,13 +396,13 @@ export default function DashboardPage() {
 
             <div className="flex items-center gap-2">
               <Link
-                href="/admin/fresh-applications"
+                href={href("/fresh-applications")}
                 className="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors shadow-2xs"
               >
                 Fresh Applications ({freshCount})
               </Link>
               <Link
-                href="/admin/verify"
+                href={href("/verify")}
                 className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-2xs"
               >
                 Verify ({awaitingFinalCount})
@@ -479,7 +453,7 @@ export default function DashboardPage() {
                   <span className="material-symbols-outlined text-amber-600 text-[18px]">inbox</span>
                   Fresh Applications Needing Review
                 </h3>
-                <Link href="/admin/fresh-applications" className="text-xs text-blue-700 hover:underline font-bold">
+                <Link href={href("/fresh-applications")} className="text-xs text-blue-700 hover:underline font-bold">
                   View All ({freshCount}) →
                 </Link>
               </div>
@@ -501,7 +475,7 @@ export default function DashboardPage() {
                         <p className="text-slate-500 text-[11px]">{app.instrumentName} • S/N: {app.serialNumber}</p>
                       </div>
                       <Link
-                        href="/admin/fresh-applications"
+                        href={href("/fresh-applications")}
                         className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shrink-0"
                       >
                         Review →
@@ -519,7 +493,7 @@ export default function DashboardPage() {
                   <span className="material-symbols-outlined text-emerald-700 text-[18px]">approval</span>
                   Waiting for Final Approval
                 </h3>
-                <Link href="/admin/verify" className="text-xs text-blue-700 hover:underline font-bold">
+                <Link href={href("/verify")} className="text-xs text-blue-700 hover:underline font-bold">
                   View All ({awaitingFinalCount}) →
                 </Link>
               </div>
@@ -543,7 +517,7 @@ export default function DashboardPage() {
                         <p className="text-slate-500 text-[11px]">{app.instrumentName} • LMO: {app.assignedLmoName}</p>
                       </div>
                       <Link
-                        href="/admin/verify"
+                        href={href("/verify")}
                         className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shrink-0"
                       >
                         Sanction →

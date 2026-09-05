@@ -1,59 +1,39 @@
-// MetriX Frontend Unified API Client connecting to Express Backend on port 5001
-// Automatically passes x-user-id header for multi-district authorization
+import { getSupabaseBrowserClient } from "./supabase/browser";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
 
-let activeUserId = "AC-AJM-001";
-let authToken = null;
+const isSupabaseConfigured = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+);
 
-export const setApiUserId = (userId) => {
-  if (activeUserId !== userId) {
-    authToken = null;
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem("metrix_auth_token");
-    }
-  }
-  activeUserId = userId;
-};
+const getAuthHeaders = async () => {
+  if (!isSupabaseConfigured) return {};
 
-export const getApiUserId = () => activeUserId;
-
-export const setApiAuthToken = (token) => {
-  authToken = token;
-  if (typeof window !== "undefined") {
-    if (token) window.localStorage.setItem("metrix_auth_token", token);
-    else window.localStorage.removeItem("metrix_auth_token");
-  }
-};
-
-const getStoredAuthToken = () => {
-  if (authToken) return authToken;
-  if (typeof window !== "undefined") {
-    authToken = window.localStorage.getItem("metrix_auth_token");
-  }
-  return authToken;
+  const { data } = await getSupabaseBrowserClient().auth.getSession();
+  if (!data.session?.access_token) return {};
+  return { Authorization: `Bearer ${data.session.access_token}` };
 };
 
 async function request(endpoint, options = {}) {
+  const { auth = true, headers, ...fetchOptions } = options;
   const url = `${API_BASE}${endpoint}`;
+
   try {
-    const authHeaders = getStoredAuthToken()
-      ? { Authorization: `Bearer ${getStoredAuthToken()}` }
-      : { "x-user-id": activeUserId };
+    const authHeaders = auth ? await getAuthHeaders() : {};
     const res = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       headers: {
         "Content-Type": "application/json",
         ...authHeaders,
-        ...options.headers,
+        ...headers,
       },
     });
 
     const body = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      const errorMsg = body?.error?.message || body?.message || `HTTP error ${res.status}`;
-      const err = new Error(errorMsg);
+      const err = new Error(body?.error?.message || body?.message || `HTTP error ${res.status}`);
       err.status = res.status;
       err.code = body?.error?.code || "REQUEST_FAILED";
       throw err;
@@ -61,32 +41,43 @@ async function request(endpoint, options = {}) {
 
     return body;
   } catch (err) {
-    console.error(`API Request Error [${endpoint}]:`, err);
+    if (!err.status || err.status >= 500) {
+      console.error(`API Request Error [${endpoint}]:`, err);
+    }
     throw err;
   }
 }
 
 export const metrixApi = {
-  login: async (userId) => {
-    const body = await request("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ userId }),
-    });
-    setApiUserId(body.data.user.id);
-    setApiAuthToken(body.data.token);
-    return body.data;
-  },
-  logout: () => setApiAuthToken(null),
-  setUserId: setApiUserId,
-  getUserId: getApiUserId,
+  isSupabaseConfigured,
 
-  // Health & Stats
-  getHealth: () => request("/health"),
+  loginWithSupabase: async (email, password) => {
+    const { data, error } = await getSupabaseBrowserClient().auth.signInWithPassword({ email, password });
+    if (error || !data.session) throw new Error(error?.message || "Supabase login failed.");
+    const profile = await request("/auth/profile", {
+      headers: { Authorization: `Bearer ${data.session.access_token}` },
+    });
+    return { session: data.session, user: profile.data };
+  },
+
+  registerBusinessProfile: (data, accessToken) =>
+    request("/auth/register-business", {
+      method: "POST",
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+      body: JSON.stringify(data),
+    }),
+
+  logoutSupabase: async () => {
+    if (isSupabaseConfigured) {
+      await getSupabaseBrowserClient().auth.signOut();
+    }
+  },
+
+  getHealth: () => request("/health", { auth: false }),
+  getPublicDistricts: () => request("/public/districts", { auth: false }),
   getDashboardStats: () => request("/dashboard/stats"),
   getProfile: () => request("/auth/profile"),
-  getDemoUsers: () => request("/auth/demo-users"),
 
-  // Business Profile
   getBusinessProfile: () => request("/business/profile"),
   updateBusinessProfile: (data) =>
     request("/business/profile", {
@@ -94,7 +85,6 @@ export const metrixApi = {
       body: JSON.stringify(data),
     }),
 
-  // Instruments
   getInstruments: () => request("/instruments"),
   getInstrumentById: (id) => request(`/instruments/${id}`),
   createInstrument: (data) =>
@@ -108,7 +98,12 @@ export const metrixApi = {
       body: JSON.stringify(data),
     }),
 
-  // Applications
+  uploadDocument: (data) =>
+    request("/documents/upload", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   getApplications: (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return request(`/applications${query ? `?${query}` : ""}`);
@@ -140,25 +135,21 @@ export const metrixApi = {
       body: JSON.stringify({ lmoId, scheduledDate }),
     }),
 
-  // LMOs
   getLmos: () => request("/lmos"),
   getLmoById: (id) => request(`/lmos/${id}`),
 
-  // Inspections
   getInspections: (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return request(`/inspections${query ? `?${query}` : ""}`);
   },
   getInspectionById: (id) => request(`/inspections/${id}`),
-  startInspection: (id) =>
-    request(`/inspections/${id}/start`, { method: "POST" }),
+  startInspection: (id) => request(`/inspections/${id}/start`, { method: "POST" }),
   submitInspection: (id, payload) =>
     request(`/inspections/${id}/submit`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),
 
-  // Approvals & Supervisory Actions
   getAwaitingApproval: () => request("/approvals/awaiting"),
   approveInspection: (applicationId, remarks) =>
     request("/approvals/approve", {
@@ -171,17 +162,14 @@ export const metrixApi = {
       body: JSON.stringify({ applicationId, reason }),
     }),
 
-  // Certificates & Search
   getCertificates: (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return request(`/certificates${query ? `?${query}` : ""}`);
   },
   getCertificateById: (id) => request(`/certificates/${id}`),
-  searchCertificates: (query) =>
-    request(`/certificates/search?q=${encodeURIComponent(query)}`),
-  getPublicCertificate: (id) => request(`/public/certificates/${id}`),
+  searchCertificates: (query) => request(`/certificates/search?q=${encodeURIComponent(query)}`),
+  getPublicCertificate: (id) => request(`/public/certificates/${id}`, { auth: false }),
 
-  // Reports, Audits & Notifications
   getReportsSummary: () => request("/reports/summary"),
   getAuditLogs: () => request("/reports/audit-logs"),
   getNotifications: () => request("/reports/notifications"),
@@ -190,5 +178,4 @@ export const metrixApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
-  resetDatabase: () => request("/reset", { method: "POST" }),
 };

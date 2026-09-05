@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import RoleSwitcher from "../shared/RoleSwitcher";
 
 export default function PublicHeader() {
   return (
@@ -33,29 +32,10 @@ export default function PublicHeader() {
           <Link href="/" className="hover:text-slate-900 transition-colors">
             Home
           </Link>
-          <Link href="/verify" className="hover:text-slate-900 transition-colors">
-            Verify Certificate
-          </Link>
-          <Link href="/dashboard" className="hover:text-slate-900 transition-colors">
-            Business Portal
-          </Link>
-          <Link href="/admin" className="hover:text-slate-900 transition-colors">
-            Govt Authority
-          </Link>
         </nav>
 
         {/* Right CTA */}
         <div className="flex items-center gap-3">
-          <RoleSwitcher />
-          <Link
-            href="/verify"
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 text-slate-800 hover:bg-slate-50 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[16px] text-emerald-600">
-              qr_code_scanner
-            </span>
-            Verify QR
-          </Link>
           <Link
             href="/login"
             className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-2xs"

@@ -1,11 +1,9 @@
 "use client";
 import React, { use, useState, useEffect } from "react";
 import Link from "next/link";
-import { QRCodeSVG } from "qrcode.react";
 import PublicHeader from "@/components/layout/PublicHeader";
 import StatTicker from "@/components/shared/StatTicker";
 import Badge from "@/components/ui/Badge";
-import { useMetrixStore } from "@/lib/store";
 import { metrixApi } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
@@ -13,7 +11,6 @@ export default function CertificateVerificationResultPage({ params }) {
   const unwrappedParams = use(params);
   const certId = decodeURIComponent(unwrappedParams.id);
 
-  const { certificates } = useMetrixStore();
   const [apiCert, setApiCert] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +23,7 @@ export default function CertificateVerificationResultPage({ params }) {
           setApiCert(res.data);
         }
       } catch (err) {
-        console.warn("Public verification API fallback:", err);
+        console.warn("Public verification request failed:", err);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -37,15 +34,7 @@ export default function CertificateVerificationResultPage({ params }) {
     };
   }, [certId]);
 
-  // Find certificate from API or fallback to store
-  const certificate =
-    apiCert ||
-    certificates.find(
-      (c) =>
-        c.id.toLowerCase() === certId.toLowerCase() ||
-        c.certificateNumber?.toLowerCase() === certId.toLowerCase() ||
-        c.qrVerificationToken?.toLowerCase() === certId.toLowerCase()
-    );
+  const certificate = apiCert;
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-between">
@@ -54,7 +43,15 @@ export default function CertificateVerificationResultPage({ params }) {
         <StatTicker />
 
         <main className="max-w-3xl mx-auto px-4 py-10 sm:py-14">
-          {certificate ? (
+          {loading ? (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 sm:p-12 text-center space-y-3">
+              <span className="material-symbols-outlined text-[40px] text-slate-400 animate-pulse">
+                progress_activity
+              </span>
+              <h1 className="text-xl font-bold text-slate-900">Checking Certificate</h1>
+              <p className="text-sm text-slate-500">Retrieving the live verification record.</p>
+            </div>
+          ) : certificate ? (
             /* FOUND CERTIFICATE */
             <div className="bg-white rounded-2xl border-2 border-slate-900 shadow-xl overflow-hidden">
               {/* Status Header Banner */}
@@ -78,13 +75,13 @@ export default function CertificateVerificationResultPage({ params }) {
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">
                   {certificate.status === "VALID"
-                    ? "✓ Official Certificate Verified"
+                    ? "Official Certificate Verified"
                     : certificate.status === "EXPIRING_SOON"
-                    ? "⚠️ Certificate Expiring Soon"
-                    : "✗ Certificate Expired"}
+                    ? "Certificate Expiring Soon"
+                    : "Certificate Expired"}
                 </h1>
                 <p className="text-xs sm:text-sm font-medium mt-1 opacity-90">
-                  Authoritative record retrieved from Directorate of Legal Metrology, Government of Rajasthan (Ajmer District).
+                  Authoritative record retrieved from the Legal Metrology certificate registry.
                 </p>
               </div>
 
@@ -186,10 +183,11 @@ export default function CertificateVerificationResultPage({ params }) {
                       Issuing Authority
                     </span>
                     <p className="font-bold text-slate-900">
-                      {certificate.officerName}
+                      {certificate.verifyingOfficer || certificate.approvingOfficer}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {certificate.officerDesignation} • {certificate.issuingAuthority}
+                      {certificate.approvingOfficer ? `${certificate.approvingOfficer} • ` : ""}
+                      {certificate.issuingAuthority}
                     </p>
                   </div>
 
@@ -213,10 +211,10 @@ export default function CertificateVerificationResultPage({ params }) {
                   ← Verify Another Instrument
                 </Link>
                 <Link
-                  href="/dashboard"
+                  href="/login"
                   className="px-5 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors"
                 >
-                  Go to Business Dashboard
+                  Portal Login
                 </Link>
               </div>
             </div>
@@ -258,7 +256,7 @@ export default function CertificateVerificationResultPage({ params }) {
                   href="/verify"
                   className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors"
                 >
-                  Try Another Certificate ID
+                  Verification Information
                 </Link>
               </div>
             </div>

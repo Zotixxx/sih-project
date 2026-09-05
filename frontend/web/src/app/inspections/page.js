@@ -7,11 +7,13 @@ import SideNavBar from "@/components/layout/SideNavBar";
 import TopNavBar from "@/components/layout/TopNavBar";
 import Badge from "@/components/ui/Badge";
 import { useMetrixStore } from "@/lib/store";
+import { portalPath } from "@/lib/routes";
 import { formatDate } from "@/lib/utils";
 
 export default function InspectionsPage() {
   const router = useRouter();
   const { inspections, currentUser, district } = useMetrixStore();
+  const href = (path) => portalPath(currentUser, path);
 
   const [activeTab, setActiveTab] = useState("today"); // 'today' | 'history'
   const [search, setSearch] = useState("");
@@ -19,18 +21,8 @@ export default function InspectionsPage() {
 
   // Filter inspections for the active LMO or active district
   const lmoInspections = useMemo(() => {
-    return (inspections || []).filter((i) => {
-      if (currentUser?.role === "LMO") {
-        return (
-          i.officerId === currentUser.id ||
-          i.officerId === currentUser.badge ||
-          i.officer?.toLowerCase().includes(currentUser.name?.toLowerCase()) ||
-          !i.officerId
-        );
-      }
-      return true;
-    });
-  }, [inspections, currentUser]);
+    return inspections || [];
+  }, [inspections]);
 
   // Today's inspections (assigned/scheduled or in progress)
   const todayInspections = useMemo(() => {
@@ -81,7 +73,7 @@ export default function InspectionsPage() {
   const pagedHistory = historyInspections.slice(0, historyLimit);
   const hasMoreHistory = historyLimit < historyInspections.length;
 
-  const districtName = district?.name || currentUser?.districtName || "Ajmer";
+  const districtName = district?.name || currentUser?.districtName || "District";
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
@@ -90,7 +82,7 @@ export default function InspectionsPage() {
       <div className="flex-1 ml-[260px] flex flex-col min-w-0">
         <TopNavBar
           title="Inspections"
-          subtitle={`Field Inspection Queue • ${currentUser?.name || "Field Officer"} (${currentUser?.badge || "LMO"}) • ${districtName}`}
+          subtitle={`Field Inspection Queue • ${currentUser?.name || "Field Officer"} (${currentUser?.domainId || currentUser?.badge || "LMO"}) • ${districtName}`}
           breadcrumbs={[
             { label: "Dashboard", href: "/dashboard" },
             { label: "Inspections" },
@@ -189,18 +181,18 @@ export default function InspectionsPage() {
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-1">
                           <div className="flex items-center gap-2 text-slate-700">
                             <span className="material-symbols-outlined text-[16px] text-slate-400">schedule</span>
-                            <span>{formatDate(insp.scheduledDate)} at {insp.scheduledTime || "11:30 AM"}</span>
+                            <span>{formatDate(insp.scheduledDate)}</span>
                           </div>
                           <div className="flex items-center gap-2 text-slate-700 truncate">
                             <span className="material-symbols-outlined text-[16px] text-slate-400">pin_drop</span>
-                            <span className="truncate">{insp.location || "Commercial Site"}</span>
+                            <span className="truncate">{insp.location || "Not recorded"}</span>
                           </div>
                         </div>
                       </div>
 
                       <div className="pt-2">
                         <Link
-                          href={`/lmo/inspect/${insp.id}`}
+                          href={href(`/inspect/${insp.id}`)}
                           className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
                         >
                           <span className="material-symbols-outlined text-[16px]">edit_document</span>
@@ -257,14 +249,14 @@ export default function InspectionsPage() {
                               {formatDate(insp.inspectionDate || insp.submissionDate || insp.scheduledDate)}
                             </td>
                             <td className="py-3.5 px-4 font-mono-code font-bold text-emerald-800">
-                              {insp.sealNumber || "SEAL-RAJ-99412"}
+                              {insp.sealNumber || "Not submitted"}
                             </td>
                             <td className="py-3.5 px-4">
                               <Badge status={insp.status} className="text-[10px]" />
                             </td>
                             <td className="py-3.5 px-4 text-right">
                               <Link
-                                href={`/lmo/inspect/${insp.id}`}
+                                href={href(`/inspect/${insp.id}`)}
                                 className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs inline-block"
                               >
                                 View Data

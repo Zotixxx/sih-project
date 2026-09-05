@@ -1,200 +1,175 @@
 import crypto from "crypto";
-import { certificateRepository } from "../repositories/certificateRepository.js";
 import { applicationRepository } from "../repositories/applicationRepository.js";
-import { inspectionRepository } from "../repositories/inspectionRepository.js";
 import { auditRepository } from "../repositories/auditRepository.js";
-import { notificationRepository } from "../repositories/notificationRepository.js";
+import { certificateRepository } from "../repositories/certificateRepository.js";
 import { districtRepository } from "../repositories/districtRepository.js";
-import { APPLICATION_STATUS, INSPECTION_STATUS, CERTIFICATE_STATUS } from "../constants/status.js";
+import { inspectionRepository } from "../repositories/inspectionRepository.js";
+import { notificationRepository } from "../repositories/notificationRepository.js";
+import { APPLICATION_STATUS, INSPECTION_STATUS } from "../constants/status.js";
 import { ROLES } from "../constants/roles.js";
+import { badRequest, conflict, forbidden, notFound } from "../utils/errors.js";
+
+const actorUserId = (user) => user.auth_user_id || user.user_id || user.id;
+
+const assertCertificateAccess = (certificate, user) => {
+  if (!certificate) throw notFound("Certificate not found.");
+  if (!user || user.role === ROLES.SYSTEM_ADMIN) return;
+
+  if (user.role === ROLES.BUSINESS) {
+    if (certificate.businessUuid !== user.business_uuid && certificate.businessUserId !== actorUserId(user)) {
+      throw forbidden("Certificate belongs to another business.");
+    }
+    return;
+  }
+
+  if (certificate.district_id !== user.district_id && user.district_id !== "ALL") {
+    throw forbidden("Certificate belongs to another district.");
+  }
+};
+
+const applicationScopeCheck = (application, user, action) => {
+  if (!application) throw notFound("Application not found.");
+  if (user.role !== ROLES.SYSTEM_ADMIN && application.district_id !== user.district_id) {
+    throw forbidden(`Cannot ${action} applications from another district.`);
+  }
+};
+
+const buildPublicSnapshot = ({ application, inspection, district, user, today, validUntil, remarks }) => ({
+  applicationId: application.applicationId,
+  certificateId: application.applicationId,
+  certificateNumber: application.applicationId,
+  businessId: application.businessId,
+  businessName: application.businessName,
+  ownerName: application.businessName,
+  applicantName: application.applicantName,
+  district_id: application.district_id,
+  district: district?.name || application.verificationLocation?.district || application.district_id,
+  instrumentId: application.instrumentId,
+  instrumentName: application.instrumentName,
+  instrumentType: application.instrumentType,
+  manufacturer: application.manufacturer,
+  model: application.model,
+  serialNumber: application.serialNumber,
+  capacity: application.capacity,
+  accuracyClass: application.accuracyClass,
+  location: [
+    application.verificationLocation?.city,
+    application.verificationLocation?.district,
+    application.verificationLocation?.state,
+  ]
+    .filter(Boolean)
+    .join(", "),
+  verificationDate: inspection.inspectionDate || today,
+  validFrom: today,
+  validUntil,
+  verifyingOfficer: `${inspection.officerName} (${inspection.officerBadge || inspection.lmoId})`,
+  approvingOfficer: `${user.name} (${user.designation || "Assistant Controller"})`,
+  issuingAuthority: district?.state
+    ? `Directorate of Legal Metrology, Government of ${district.state}`
+    : "Directorate of Legal Metrology",
+  sealNumber: inspection.sealNumber,
+  remarks: remarks || "Statutory verification approved and digital certificate issued.",
+});
 
 export const certificateService = {
   getCertificates: async (user) => {
-    return certificateRepository.getByDistrict(user.district_id);
+    if (user.role === ROLES.BUSINESS) {
+      return certificateRepository.getByBusiness(user.business_uuid);
+    }
+    if (user.role === ROLES.ASSISTANT_CONTROLLER || user.role === ROLES.LMO) {
+      if (!user.district_id) throw forbidden("Officer district scope is not configured.");
+      return certificateRepository.getByDistrict(user.district_id);
+    }
+    if (user.role === ROLES.SYSTEM_ADMIN) {
+      return certificateRepository.getByDistrict(user.district_id || "ALL");
+    }
+    throw forbidden("Role is not authorized to list certificates.");
   },
 
   getCertificateById: async (id, user) => {
-    const cert = await certificateRepository.getById(id);
-    if (!cert) {
-      const err = new Error("Certificate not found.");
-      err.statusCode = 404;
-      throw err;
-    }
-
-    // If user provided, check district isolation (public routes pass user=null)
-    if (user && user.role !== ROLES.SYSTEM_ADMIN && user.district_id !== "ALL") {
-      if (cert.district_id !== user.district_id) {
-        const err = new Error("Forbidden: Certificate belongs to another district.");
-        err.statusCode = 403;
-        throw err;
-      }
-    }
-
-    return cert;
+    const certificate = await certificateRepository.getById(id);
+    assertCertificateAccess(certificate, user);
+    return certificate;
   },
 
   searchCertificates: async (query, user) => {
-    const districtId = user?.district_id || null;
-    return certificateRepository.search(query, districtId);
+    let districtId = null;
+    if (user?.role === ROLES.SYSTEM_ADMIN) {
+      districtId = user.district_id || "ALL";
+    } else if (user?.role === ROLES.ASSISTANT_CONTROLLER || user?.role === ROLES.LMO) {
+      if (!user.district_id) throw forbidden("Officer district scope is not configured.");
+      districtId = user.district_id;
+    }
+    let certificates = await certificateRepository.search(query, districtId);
+    if (user?.role === ROLES.BUSINESS) {
+      certificates = certificates.filter(
+        (certificate) => certificate.businessUuid === user.business_uuid || certificate.businessUserId === actorUserId(user)
+      );
+    }
+    return certificates;
   },
 
   approveAndGenerateCertificate: async (applicationId, user, remarks) => {
     if (user.role !== ROLES.ASSISTANT_CONTROLLER && user.role !== ROLES.SYSTEM_ADMIN) {
-      const err = new Error("Forbidden: Only an Assistant Controller can sanction certificates.");
-      err.statusCode = 403;
-      throw err;
+      throw forbidden("Only an Assistant Controller can sanction certificates.");
     }
 
     const application = await applicationRepository.getById(applicationId);
-    if (!application) {
-      const err = new Error("Application not found.");
-      err.statusCode = 404;
-      throw err;
-    }
+    applicationScopeCheck(application, user, "approve");
 
-    // District isolation check
-    if (user.role !== ROLES.SYSTEM_ADMIN && application.district_id !== user.district_id) {
-      const err = new Error(
-        `Forbidden: Cannot approve applications from district '${application.district_id}'. Your assigned district is '${user.district_id}'.`
-      );
-      err.statusCode = 403;
-      throw err;
-    }
-
-    // Ensure application is awaiting approval
-    if (application.status !== APPLICATION_STATUS.AWAITING_APPROVAL) {
-      const err = new Error(
-        `Invalid transition: Application must be in 'AWAITING_APPROVAL' state. Current state: '${application.status}'.`
-      );
-      err.statusCode = 400;
-      throw err;
-    }
-
-    const existingCertificate = (await certificateRepository.getAll()).find(
-      (certificate) => certificate.applicationId === application.id
-    );
+    const existingCertificate = await certificateRepository.getByApplicationId(application.uuid);
     if (existingCertificate) {
-      const err = new Error("A certificate has already been generated for this application.");
-      err.statusCode = 409;
-      throw err;
+      throw conflict("A certificate has already been generated for this application.");
     }
 
-    // Look up associated inspection
+    if (application.status !== APPLICATION_STATUS.AWAITING_APPROVAL) {
+      throw badRequest(
+        `Application must be in 'AWAITING_APPROVAL' state. Current state: '${application.status}'.`
+      );
+    }
+
     const inspection =
       (application.inspectionId && (await inspectionRepository.getById(application.inspectionId))) ||
-      (await inspectionRepository.getByApplicationId(applicationId));
-
-    if (!inspection) {
-      const err = new Error("Cannot sanction: Inspection record not found for this application.");
-      err.statusCode = 400;
-      throw err;
+      (await inspectionRepository.getByApplicationId(application.id));
+    if (!inspection) throw badRequest("Cannot sanction: inspection record was not found for this application.");
+    if (inspection.status !== INSPECTION_STATUS.SUBMITTED) {
+      throw badRequest(`Inspection must be submitted before approval. Current status: '${inspection.status}'.`);
+    }
+    if (!inspection.measurements?.length) {
+      throw badRequest("Inspection measurements are required before certificate approval.");
     }
 
     const district = await districtRepository.getById(application.district_id);
     const now = new Date();
     const today = now.toISOString().split("T")[0];
-    const nextYear = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-
-    const randomSuffix = Math.floor(100000 + Math.random() * 900000);
-    const certNumber = `LM-${application.district_id}-2026-${randomSuffix}`;
-    const certId = application.id;
-    const qrToken = `VRF-${application.district_id}-2026-${randomSuffix}`;
-
-    // Compute cryptographic SHA-256 integrity hash
+    const validUntil = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const certificateId = application.applicationId || application.id;
+    const officialNumber = `${application.district_id}/${now.getFullYear()}/${certificateId}`;
     const securityHash = crypto
       .createHash("sha256")
-      .update(certNumber + (application.serialNumber || "SN") + today + application.district_id + "_METRIX_GOV")
+      .update(`${certificateId}:${application.serialNumber || ""}:${inspection.sealNumber || ""}:${today}:METRIX`)
       .digest("hex");
 
-    const newCertificate = {
-      id: certId,
-      certificateNumber: certNumber,
-      officialNumber: `RJ/${application.district_id}/2026/${randomSuffix}`,
-      district_id: application.district_id,
-      district: application.district || district?.name || "Ajmer",
-      applicationId: application.id,
-      inspectionId: inspection.id,
-      businessId: application.businessId,
-      businessName: application.businessName,
-      ownerName: application.businessName,
-      applicantName: application.applicantName,
-      instrumentId: application.instrumentId,
-      instrumentName: application.instrumentName,
-      instrumentType: application.instrumentType,
-      manufacturer: application.manufacturer,
-      model: application.model,
-      serialNumber: application.serialNumber,
-      capacity: application.capacity,
-      accuracyClass: application.accuracyClass,
-      location: application.location,
-      verificationDate: inspection.inspectionDate || today,
+    const publicSnapshot = buildPublicSnapshot({
+      application,
+      inspection,
+      district,
+      user,
+      today,
+      validUntil,
+      remarks,
+    });
+
+    const savedCertificate = await certificateRepository.approveApplicationTransaction({
+      applicationRef: certificateId,
+      actorUserId: actorUserId(user),
+      actorRole: user.role,
       validFrom: today,
-      validUntil: nextYear,
-      verifyingOfficer: `${inspection.officerName} (${inspection.officerBadge})`,
-      approvingOfficer: `${user.name} (Assistant Controller, ${district?.name || application.district})`,
-      issuingAuthority: `Directorate of Legal Metrology, Government of Rajasthan (${district?.name || application.district} District)`,
-      status: CERTIFICATE_STATUS.VALID,
-      sealNumber: inspection.sealNumber || `RAJ-${application.district_id}-2026-SL-${Math.floor(10000 + Math.random() * 90000)}`,
+      validUntil,
       securityHash,
-      qrVerificationToken: qrToken,
-      createdTimestamp: now.toISOString(),
-      remarks: remarks || "Statutory verification approved and digital certificate sanctioned under Legal Metrology Act, 2009.",
-    };
-
-    const savedCertificate = await certificateRepository.create(newCertificate);
-
-    // Update inspection
-    await inspectionRepository.update(inspection.id, {
-      status: INSPECTION_STATUS.APPROVED,
-      certificateId: savedCertificate.id,
-      certificateNumber: certNumber,
-      approvedDate: today,
-    });
-
-    // Advance application state to CERTIFIED
-    const updatedTimeline = [
-      ...(application.timeline || []),
-      {
-        event: "Statutory Verification Approved",
-        date: now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-        actor: `${user.name} (${user.role})`,
-        remarks: remarks || "Verification sanctioned",
-      },
-      {
-        event: "Digital Certificate & QR Generated",
-        date: now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-        actor: "MetriX Authority Trust System",
-        certificateNumber: certNumber,
-      },
-    ];
-
-    await applicationRepository.update(applicationId, {
-      status: APPLICATION_STATUS.CERTIFIED,
-      certificateId: savedCertificate.id,
-      certificateNumber: certNumber,
-      certifiedDate: today,
-      timeline: updatedTimeline,
-    });
-
-    // Create audit record
-    await auditRepository.create({
-      district_id: application.district_id,
-      actor_id: user.id,
-      actor_name: user.name,
-      actor_role: user.role,
-      action: "CERTIFICATE_GENERATED",
-      entity_type: "CERTIFICATE",
-      entity_id: savedCertificate.id,
-      remarks: `Certificate ${certNumber} sanctioned for ${application.businessName}. SHA-256 Hash: ${securityHash.substring(0, 16)}...`,
-    });
-
-    // Notify Business
-    await notificationRepository.create({
-      district_id: application.district_id,
-      targetRole: ROLES.BUSINESS,
-      title: "Legal Metrology Certificate Issued",
-      message: `Verification certificate ${certNumber} has been sanctioned for your instrument ${application.instrumentName}.`,
-      link: `/certificates`,
+      officialNumber,
+      publicSnapshot,
+      remarks,
     });
 
     return savedCertificate;
@@ -202,84 +177,65 @@ export const certificateService = {
 
   returnInspection: async (applicationId, reason, user) => {
     if (user.role !== ROLES.ASSISTANT_CONTROLLER && user.role !== ROLES.SYSTEM_ADMIN) {
-      const err = new Error("Forbidden: Only an Assistant Controller can return inspections.");
-      err.statusCode = 403;
-      throw err;
+      throw forbidden("Only an Assistant Controller can return inspections.");
     }
 
     if (!reason || !reason.trim()) {
-      const err = new Error("Validation error: A formal reason is mandatory when returning an inspection.");
-      err.statusCode = 400;
-      throw err;
+      throw badRequest("A formal reason is mandatory when returning an inspection.");
     }
 
     const application = await applicationRepository.getById(applicationId);
-    if (!application) {
-      const err = new Error("Application not found.");
-      err.statusCode = 404;
-      throw err;
-    }
-
-    if (user.role !== ROLES.SYSTEM_ADMIN && application.district_id !== user.district_id) {
-      const err = new Error("Forbidden: Cannot return inspections from another district.");
-      err.statusCode = 403;
-      throw err;
-    }
+    applicationScopeCheck(application, user, "return");
 
     if (application.status !== APPLICATION_STATUS.AWAITING_APPROVAL) {
-      const err = new Error(
-        `Invalid transition: Application must be in 'AWAITING_APPROVAL' state to return for correction.`
-      );
-      err.statusCode = 400;
-      throw err;
+      throw badRequest("Application must be in 'AWAITING_APPROVAL' state to return for correction.");
     }
 
-    // Update inspection status to RETURNED
-    if (application.inspectionId) {
-      await inspectionRepository.update(application.inspectionId, {
-        status: INSPECTION_STATUS.RETURNED,
-        returnReason: reason.trim(),
-        returnedAt: new Date().toISOString(),
-      });
-    }
+    const inspection =
+      (application.inspectionId && (await inspectionRepository.getById(application.inspectionId))) ||
+      (await inspectionRepository.getByApplicationId(application.id));
+    if (!inspection) throw badRequest("Inspection record not found for this application.");
 
-    const updatedTimeline = [
-      ...(application.timeline || []),
-      {
-        event: "Inspection Returned for Correction",
-        date: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-        actor: `${user.name} (${user.role})`,
-        reason: reason.trim(),
-      },
-    ];
+    await inspectionRepository.update(inspection.id, {
+      status: INSPECTION_STATUS.RETURNED,
+      returnReason: reason.trim(),
+      returnedAt: new Date().toISOString(),
+    });
 
-    // Reset application to SCHEDULED so LMO can re-execute inspection
     const updatedApplication = await applicationRepository.update(applicationId, {
       status: APPLICATION_STATUS.SCHEDULED,
-      returnReason: reason.trim(),
-      timeline: updatedTimeline,
+      returnedReason: reason.trim(),
     });
 
-    // Audit record
+    await applicationRepository.addStatusHistory({
+      applicationUuid: application.uuid,
+      fromStatus: application.status,
+      toStatus: APPLICATION_STATUS.SCHEDULED,
+      actorUserId: actorUserId(user),
+      reason: reason.trim(),
+    });
+
     await auditRepository.create({
       district_id: application.district_id,
-      actor_id: user.id,
-      actor_name: user.name,
+      actor_user_id: actorUserId(user),
       actor_role: user.role,
-      action: "APPROVAL_RETURNED",
+      action: "FINAL_REVIEW_RETURNED",
       entity_type: "APPLICATION",
-      entity_id: applicationId,
-      remarks: `Inspection returned to LMO for correction. Reason: ${reason.trim()}`,
+      entity_id: application.applicationId || application.id,
+      metadata: { reason: reason.trim() },
     });
 
-    // Notify assigned LMO
-    await notificationRepository.create({
-      district_id: application.district_id,
-      targetRole: ROLES.LMO,
-      title: "Inspection Returned for Clarification",
-      message: `Assistant Controller returned inspection for ${application.businessName}. Reason: ${reason.trim()}`,
-      link: `/applications/${applicationId}`,
-    });
+    if (application.assignedLmoUserId) {
+      await notificationRepository.create({
+        district_id: application.district_id,
+        recipient_user_id: application.assignedLmoUserId,
+        related_application_uuid: application.uuid,
+        title: "Inspection Returned",
+        message: `Application ${application.applicationId} was returned for correction. Reason: ${reason.trim()}`,
+        category: "INSPECTION_RETURNED",
+        link: `/${application.assignedLmoUserId}/inspections`,
+      });
+    }
 
     return updatedApplication;
   },

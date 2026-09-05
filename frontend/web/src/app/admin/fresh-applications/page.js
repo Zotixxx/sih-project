@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import SideNavBar from "@/components/layout/SideNavBar";
 import TopNavBar from "@/components/layout/TopNavBar";
 import Badge from "@/components/ui/Badge";
@@ -11,13 +9,11 @@ import { useMetrixStore } from "@/lib/store";
 import { formatDate } from "@/lib/utils";
 
 export default function FreshApplicationsPage() {
-  const router = useRouter();
   const {
     applications,
     lmos,
     currentUser,
     district,
-    acceptApplication,
     rejectApplication,
     assignLmo,
   } = useMetrixStore();
@@ -28,8 +24,7 @@ export default function FreshApplicationsPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [assigningApp, setAssigningApp] = useState(null);
   const [selectedOfficer, setSelectedOfficer] = useState("");
-  const [scheduledDate, setScheduledDate] = useState("2026-09-04");
-  const [scheduledTime, setScheduledTime] = useState("11:30 AM");
+  const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split("T")[0]);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Fresh applications requiring initial review (SUBMITTED / UNDER_REVIEW)
@@ -69,25 +64,17 @@ export default function FreshApplicationsPage() {
   const handleConfirmAcceptAndAssign = async (e) => {
     e.preventDefault();
     if (!assigningApp) return;
-    const districtLmos = (lmos || []).filter(
-      (l) => !l.district_id || l.district_id === assigningApp.district_id
-    );
-    const officerId = selectedOfficer || districtLmos[0]?.officerId || districtLmos[0]?.id;
-    if (!officerId) {
+    if (!selectedOfficer) {
       alert("Please select a field LMO from this district.");
       return;
     }
 
     setIsProcessing(true);
     try {
-      // 1. Accept application (moves to ACCEPTED, does NOT generate certificate)
-      await acceptApplication(assigningApp.id);
-      // 2. Assign LMO (moves to SCHEDULED, creates inspection)
       await assignLmo({
         applicationId: assigningApp.id,
-        officerId,
+        officerId: selectedOfficer,
         scheduledDate,
-        scheduledTime,
       });
       setAssigningApp(null);
       setSelectedApp(null);
@@ -98,7 +85,7 @@ export default function FreshApplicationsPage() {
     }
   };
 
-  const districtName = district?.name || currentUser?.districtName || "Ajmer";
+  const districtName = district?.name || currentUser?.districtName || "District";
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
@@ -282,7 +269,11 @@ export default function FreshApplicationsPage() {
               </div>
               <div className="col-span-2 sm:col-span-3">
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Establishment Address</span>
-                <span className="text-slate-700">{selectedApp.address}, {selectedApp.district}, Rajasthan - {selectedApp.pincode}</span>
+                <span className="text-slate-700">
+                  {[selectedApp.address, selectedApp.city, selectedApp.district || selectedApp.district_id, selectedApp.state, selectedApp.pincode]
+                    .filter(Boolean)
+                    .join(", ") || "Not recorded"}
+                </span>
               </div>
             </div>
 
@@ -370,14 +361,14 @@ export default function FreshApplicationsPage() {
                 {(lmos || [])
                   .filter((lmo) => !lmo.district_id || lmo.district_id === assigningApp.district_id)
                   .map((lmo) => (
-                    <option key={lmo.officerId || lmo.id} value={lmo.officerId || lmo.id}>
-                      {lmo.name} ({lmo.officerId || lmo.badgeNumber || lmo.id}) — {lmo.jurisdiction}
+                    <option key={lmo.lmo_id || lmo.domainId || lmo.id} value={lmo.lmo_id || lmo.domainId || lmo.id}>
+                      {lmo.name} ({lmo.lmo_id || lmo.domainId || lmo.badgeNumber || lmo.id}) — {lmo.jurisdiction}
                     </option>
                   ))}
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div className="space-y-1.5">
                 <label className="font-semibold text-slate-700">Scheduled Date *</label>
                 <input
@@ -387,20 +378,6 @@ export default function FreshApplicationsPage() {
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none"
                   required
                 />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-700">Time Slot *</label>
-                <select
-                  value={scheduledTime}
-                  onChange={(e) => setScheduledTime(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none"
-                >
-                  <option>10:00 AM</option>
-                  <option>11:30 AM</option>
-                  <option>02:00 PM</option>
-                  <option>04:00 PM</option>
-                </select>
               </div>
             </div>
           </form>

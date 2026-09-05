@@ -1,0 +1,32 @@
+# Local environment
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Local databases
+backend/src/data/*.sqlite
+backend/src/data/*.sqlite-shm
+backend/src/data/*.sqlite-wal
+
+# Build output
+.next/
+frontend/web/.next/
+out
+dist
+
+# Supabase local CLI metadata
+supabase/.temp/
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Flutter
+.dart_tool
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build

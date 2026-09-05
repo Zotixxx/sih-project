@@ -1,129 +1,171 @@
+import { businessRepository } from "../repositories/businessRepository.js";
+import { documentRepository } from "../repositories/documentRepository.js";
 import { instrumentRepository } from "../repositories/instrumentRepository.js";
 import { ROLES } from "../constants/roles.js";
+import { assertDomainId, generateDomainId } from "../utils/id.js";
+import { badRequest, forbidden, notFound, unprocessable } from "../utils/errors.js";
+
+const actorUserId = (user) => user.auth_user_id || user.user_id || user.id;
+
+const requireBusinessRecord = async (user) => {
+  const business = await businessRepository.getByUserId(actorUserId(user));
+  if (!business) {
+    throw unprocessable("Create the business role record in Supabase before registering instruments.");
+  }
+  return business;
+};
+
+const normalizeInstrumentId = (data, districtId) => {
+  const requested = data.instrumentId || data.instrument_id || data.id;
+  return requested ? assertDomainId(requested, "Instrument ID") : generateDomainId("INS", districtId);
+};
+
+const resolvePurchaseBill = async ({ user, businessUuid, instrumentUuid, purchaseBill }) => {
+  const documentId = purchaseBill?.documentId || purchaseBill?.id;
+  if (documentId) {
+    await documentRepository.assertUploader(documentId, user);
+    return documentRepository.attachToInstrument(documentId, instrumentUuid, businessUuid);
+  }
+
+  if (purchaseBill?.base64 && purchaseBill?.fileName && purchaseBill?.mimeType) {
+    return documentRepository.upload({
+      user,
+      bucket: "instrument-documents",
+      fileName: purchaseBill.fileName,
+      mimeType: purchaseBill.mimeType,
+      base64: purchaseBill.base64,
+      businessUuid,
+      instrumentUuid,
+    });
+  }
+
+  throw unprocessable("Upload a purchase bill and pass its documentId before registering an instrument.");
+};
 
 export const instrumentService = {
   getInstruments: async (user) => {
     if (user.role === ROLES.BUSINESS) {
-      const businessId = user.business_id || user.id;
-      const instruments = await instrumentRepository.getByBusiness(businessId);
-      return instruments.filter((instrument) => instrument.visibleToBusiness !== false);
+      const business = await requireBusinessRecord(user);
+      return instrumentRepository.getByBusiness(business.uuid);
     }
-    return await instrumentRepository.getByDistrict(user.district_id);
+
+    if (user.role === ROLES.LMO || user.role === ROLES.ASSISTANT_CONTROLLER) {
+      if (!user.district_id) throw forbidden("Officer district scope is not configured.");
+      return instrumentRepository.getByDistrict(user.district_id);
+    }
+
+    if (user.role === ROLES.SYSTEM_ADMIN) {
+      return instrumentRepository.getByDistrict(user.district_id || "ALL");
+    }
+
+    throw forbidden("Role is not authorized to list instruments.");
   },
 
   getInstrumentById: async (id, user) => {
     const instrument = await instrumentRepository.getById(id);
-    if (!instrument) {
-      const err = new Error("Instrument not found.");
-      err.statusCode = 404;
-      throw err;
-    }
+    if (!instrument) throw notFound("Instrument not found.");
 
     if (user.role === ROLES.BUSINESS) {
-      const userBizId = user.business_id || user.id;
-      if (
-        instrument.businessId !== userBizId &&
-        instrument.business_id !== userBizId
-      ) {
-        const err = new Error("Forbidden: This instrument belongs to another business.");
-        err.statusCode = 403;
-        throw err;
+      const business = await requireBusinessRecord(user);
+      if (instrument.businessUuid !== business.uuid) {
+        throw forbidden("This instrument belongs to another business.");
       }
-    } else if (
-      user.role !== ROLES.SYSTEM_ADMIN &&
-      user.district_id !== "ALL" &&
-      instrument.district_id !== user.district_id
-    ) {
-      const err = new Error("Forbidden: Instrument outside your assigned district.");
-      err.statusCode = 403;
-      throw err;
+      return instrument;
+    }
+
+    if (user.role !== ROLES.SYSTEM_ADMIN && user.district_id !== "ALL" && instrument.district_id !== user.district_id) {
+      throw forbidden("Instrument is outside your assigned district.");
     }
 
     return instrument;
   },
 
   createInstrument: async (user, data) => {
-    if (user.role !== ROLES.BUSINESS && user.role !== ROLES.SYSTEM_ADMIN) {
-      const err = new Error("Forbidden: Only businesses can register instruments.");
-      err.statusCode = 403;
-      throw err;
+    if (user.role !== ROLES.BUSINESS) {
+      throw forbidden("Only business users can register instruments.");
     }
 
-    if (!data.name || !data.serialNumber || !data.capacity) {
-      const err = new Error("Missing required instrument information (name, serial number, capacity).");
-      err.statusCode = 400;
-      throw err;
-    }
-
-    // Purchase bill validation (Section 8 & 45)
-    if (!data.purchaseBill || !data.purchaseBill.fileName) {
-      const err = new Error(
-        "Please add the purchase bill to this instrument before applying for verification."
-      );
-      err.statusCode = 400;
-      throw err;
-    }
-
-    const district = user.district_id || "AJM";
-    const newId = `INS-${district}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    const instrument = {
-      id: newId,
-      district_id: district,
-      businessId: user.business_id || user.id,
-      businessName: user.name || user.businessName || "Registered Business",
+    const normalized = {
       name: data.name,
-      type: data.type || data.category || "Non-Automatic Weighing Instrument (NAWI)",
-      category: data.category || "General Commercial Scale",
-      manufacturer: data.manufacturer || "Certified Manufacturer",
-      model: data.model || "Standard Model",
-      serialNumber: data.serialNumber,
+      serialNumber: data.serialNumber || data.serial_number || data.serialNo,
       capacity: data.capacity,
-      readability: data.readability || data.verificationInterval || "Standard",
-      accuracyClass: data.accuracyClass || "Class III (Medium)",
-      location: data.location || "Business Premises",
-      installationLocation: data.location || "Business Premises",
-      purchaseDate: data.purchaseDate || new Date().toISOString().split("T")[0],
-      purpose: data.purpose || "Commercial Trade & Packaging",
-      status: "READY_FOR_VERIFICATION",
-      purchaseBill: {
-        documentId: `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
-        fileName: data.purchaseBill.fileName,
-        fileSize: data.purchaseBill.fileSize || "1.2 MB",
-        fileType: data.purchaseBill.fileType || "application/pdf",
-        uploadedDate: new Date().toISOString().split("T")[0],
-        source: "INSTRUMENT",
-      },
-      createdAt: new Date().toISOString(),
     };
+    const missing = Object.entries(normalized)
+      .filter(([, value]) => !value)
+      .map(([field]) => field);
+    if (missing.length) {
+      throw badRequest(`Missing required instrument information: ${missing.join(", ")}.`);
+    }
 
-    return await instrumentRepository.create(instrument);
+    if (!data.purchaseBill) {
+      throw unprocessable("A purchase bill document is required before registering an instrument.");
+    }
+
+    const business = await requireBusinessRecord(user);
+    const instrumentId = normalizeInstrumentId(data, business.district_id);
+    const purchaseBillDocumentId = data.purchaseBill.documentId || data.purchaseBill.id;
+    let uploadedPurchaseBill = null;
+
+    if (purchaseBillDocumentId) {
+      await documentRepository.assertUploader(purchaseBillDocumentId, user);
+    } else if (data.purchaseBill.base64 && data.purchaseBill.fileName && data.purchaseBill.mimeType) {
+      uploadedPurchaseBill = await documentRepository.upload({
+        user,
+        bucket: "instrument-documents",
+        fileName: data.purchaseBill.fileName,
+        mimeType: data.purchaseBill.mimeType,
+        base64: data.purchaseBill.base64,
+        businessUuid: business.uuid,
+      });
+    } else {
+      throw unprocessable("Upload a purchase bill and pass its documentId before registering an instrument.");
+    }
+
+    const created = await instrumentRepository.create({
+      instrumentId,
+      businessUuid: business.uuid,
+      district_id: business.district_id,
+      name: normalized.name,
+      type: data.type || data.category || data.instrumentType,
+      category: data.category || data.type || data.instrumentType,
+      manufacturer: data.manufacturer,
+      model: data.model,
+      serialNumber: normalized.serialNumber,
+      capacity: normalized.capacity,
+      accuracyClass: data.accuracyClass,
+      yearOfManufacture: data.yearOfManufacture,
+      purchaseDate: data.purchaseDate,
+      purpose: data.purpose,
+      location: data.location,
+      city: data.city,
+      state: data.state,
+      pincode: data.pincode,
+      status: "READY_FOR_VERIFICATION",
+    });
+
+    await documentRepository.attachToInstrument(
+      purchaseBillDocumentId || uploadedPurchaseBill.id,
+      created.uuid,
+      business.uuid
+    );
+
+    return instrumentRepository.getById(created.instrumentId || created.id);
   },
 
   updateInstrument: async (id, user, data) => {
     const existing = await instrumentService.getInstrumentById(id, user);
+    const updated = await instrumentRepository.update(id, data);
+    if (!updated) throw notFound("Instrument not found.");
 
-    let updatedPurchaseBill = existing.purchaseBill;
     if (data.purchaseBill) {
-      updatedPurchaseBill = {
-        documentId:
-          data.purchaseBill.documentId ||
-          existing.purchaseBill?.documentId ||
-          `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
-        fileName: data.purchaseBill.fileName,
-        fileSize: data.purchaseBill.fileSize || "1.2 MB",
-        fileType: data.purchaseBill.fileType || "application/pdf",
-        uploadedDate:
-          data.purchaseBill.uploadedDate || new Date().toISOString().split("T")[0],
-        source: "INSTRUMENT",
-      };
+      await resolvePurchaseBill({
+        user,
+        businessUuid: existing.businessUuid,
+        instrumentUuid: existing.uuid,
+        purchaseBill: data.purchaseBill,
+      });
+      return instrumentRepository.getById(updated.instrumentId || updated.id);
     }
-
-    const updated = await instrumentRepository.update(id, {
-      ...existing,
-      ...data,
-      purchaseBill: updatedPurchaseBill,
-    });
 
     return updated;
   },

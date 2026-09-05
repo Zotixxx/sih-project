@@ -6,12 +6,23 @@ import { useRouter } from "next/navigation";
 import SideNavBar from "@/components/layout/SideNavBar";
 import TopNavBar from "@/components/layout/TopNavBar";
 import { useMetrixStore } from "@/lib/store";
+import { portalPath } from "@/lib/routes";
+
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
+    reader.onerror = () => reject(reader.error || new Error("Could not read file."));
+    reader.readAsDataURL(file);
+  });
 
 export default function RegisterInstrumentPage() {
   const router = useRouter();
   const { addInstrument, currentUser, businessProfile } = useMetrixStore();
+  const href = (path) => portalPath(currentUser, path);
 
   const [formData, setFormData] = useState({
+    instrumentId: "",
     name: "",
     type: "Non-Automatic Weighing Instrument (NAWI)",
     category: "Non-Automatic Weighing Instrument",
@@ -22,10 +33,10 @@ export default function RegisterInstrumentPage() {
     accuracyClass: "Class III (Medium)",
     yearOfManufacture: "2024",
     purchaseDate: new Date().toISOString().split("T")[0],
-    location: businessProfile?.address || "Plot 12, Krishi Mandi Commercial Yard, Ajmer",
-    city: businessProfile?.city || "Ajmer",
-    district: businessProfile?.district || "Ajmer",
-    state: businessProfile?.state || "Rajasthan",
+    location: businessProfile?.address || "",
+    city: businessProfile?.city || "",
+    district: businessProfile?.district || "",
+    state: businessProfile?.state || "",
     purpose: "Commercial Trade & Packaging",
   });
 
@@ -34,16 +45,22 @@ export default function RegisterInstrumentPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPurchaseBill({
-        fileName: file.name,
-        fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-        fileType: file.type || "application/pdf",
-        uploadedDate: new Date().toISOString().split("T")[0],
-      });
-      setErrorMessage("");
+      try {
+        setPurchaseBill({
+          fileName: file.name,
+          fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+          fileType: file.type || "application/pdf",
+          mimeType: file.type || "application/pdf",
+          base64: await fileToBase64(file),
+          uploadedDate: new Date().toISOString().split("T")[0],
+        });
+        setErrorMessage("");
+      } catch (error) {
+        setErrorMessage(error.message || "Could not read purchase bill.");
+      }
     }
   };
 
@@ -68,7 +85,7 @@ export default function RegisterInstrumentPage() {
         ...formData,
         purchaseBill,
       });
-      router.push("/instruments");
+      router.push(href("/instruments"));
     } catch (err) {
       setErrorMessage(err.message || "Failed to register instrument.");
       setIsSubmitting(false);
@@ -116,6 +133,19 @@ export default function RegisterInstrumentPage() {
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="font-semibold text-slate-700">
+                      Instrument ID
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.instrumentId}
+                      onChange={(e) => setFormData({ ...formData, instrumentId: e.target.value })}
+                      placeholder="Optional, e.g. INS-TEST-001"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 font-mono-code text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                    />
+                  </div>
+
                   <div className="space-y-1.5 sm:col-span-2">
                     <label className="font-semibold text-slate-700">
                       Instrument Name / Description <span className="text-rose-500">*</span>
@@ -265,7 +295,7 @@ export default function RegisterInstrumentPage() {
                       type="text"
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      placeholder="e.g. Industrial Area, Kishangarh, Ajmer"
+                      placeholder="e.g. Industrial area, warehouse bay, market yard"
                       required
                       className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
                     />
@@ -371,7 +401,7 @@ export default function RegisterInstrumentPage() {
               {/* Form Action Buttons */}
               <div className="pt-6 border-t border-slate-200 flex items-center justify-between">
                 <Link
-                  href="/instruments"
+                  href={href("/instruments")}
                   className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold transition-colors text-xs"
                 >
                   Cancel

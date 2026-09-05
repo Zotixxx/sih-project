@@ -1,12 +1,14 @@
-import { applicationRepository } from "../repositories/applicationRepository.js";
 import { inspectionRepository } from "../repositories/inspectionRepository.js";
+import { applicationService } from "../services/applicationService.js";
 import { certificateService } from "../services/certificateService.js";
 import { APPLICATION_STATUS } from "../constants/status.js";
 
 export const approvalController = {
   getAwaitingApproval: async (req, res) => {
     try {
-      const applications = await applicationRepository.getByDistrict(req.user.district_id);
+      const applications = await applicationService.getApplications(req.user, {
+        status: APPLICATION_STATUS.AWAITING_APPROVAL,
+      });
       const awaiting = applications.filter((a) => a.status === APPLICATION_STATUS.AWAITING_APPROVAL);
 
       // Hydrate with inspection reports
@@ -24,7 +26,7 @@ export const approvalController = {
 
       return res.json({ success: true, data: hydrated });
     } catch (error) {
-      return res.status(500).json({
+      return res.status(error.statusCode || 500).json({
         success: false,
         error: { code: "AWAITING_FETCH_ERROR", message: error.message },
       });

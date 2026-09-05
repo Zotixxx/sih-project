@@ -1,12 +1,10 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import '../../theme/app_theme.dart';
 import '../dashboard/home_dashboard_screen.dart';
 
-const apiBaseUrl = String.fromEnvironment(
-  'METRIX_API_BASE_URL',
-  defaultValue: 'http://10.0.2.2:5001/api',
+const supabaseAccessToken = String.fromEnvironment(
+  'METRIX_SUPABASE_ACCESS_TOKEN',
+  defaultValue: '',
 );
 
 class LoginScreen extends StatefulWidget {
@@ -17,27 +15,24 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _badgeController = TextEditingController(text: 'LMO-AJM-021');
-  final _pinController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
 
   Future<void> _handleLogin() async {
+    if (supabaseAccessToken.isEmpty) {
+      setState(() {
+        _errorMessage =
+            'Mobile badge/PIN login has been disabled. Sign in through the web portal, or launch this field prototype with a short-lived Supabase LMO access token.';
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('$apiBaseUrl/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'userId': _badgeController.text.trim()}),
-      );
-      if (response.statusCode != 200) {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        throw Exception(body['error']?['message'] ?? 'Unable to authenticate officer.');
-      }
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const HomeDashboardScreen()),
@@ -83,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Title
                 const Text(
-                  'GOVERNMENT OF NCT OF DELHI',
+                  'LEGAL METROLOGY FIELD PORTAL',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppTheme.slate300,
@@ -141,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'Enter your departmental badge ID and 4-digit security PIN to access field inspections.',
+                          'Use Supabase Auth in the web portal. This mobile prototype only opens when launched with an authenticated LMO access token.',
                         style: TextStyle(
                           fontSize: 12,
                           color: AppTheme.slate500,
@@ -149,48 +144,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 20),
 
-                      // Badge ID Input
-                      const Text(
-                        'Officer Badge ID',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.slate700,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: _badgeController,
-                        decoration: const InputDecoration(
-                          hintText: 'e.g. LMO-104-DL',
-                          prefixIcon: Icon(Icons.badge_outlined, size: 20),
-                        ),
-                      ),
                       if (_errorMessage != null) ...[
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         Text(_errorMessage!, style: const TextStyle(color: AppTheme.roseError, fontSize: 12)),
                       ],
-                      const SizedBox(height: 16),
-
-                      // PIN Input
-                      const Text(
-                        'Security Access PIN',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.slate700,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: _pinController,
-                        obscureText: true,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          hintText: '••••',
-                          prefixIcon: Icon(Icons.lock_outline, size: 20),
-                        ),
-                      ),
                       const SizedBox(height: 24),
 
                       // Login Button
@@ -205,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Authenticate & Access Field Unit'),
+                          : const Text('Continue with Supabase Session'),
                       ),
                     ],
                   ),
@@ -226,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Offline-Ready: Cached inspections can be conducted and stamped without active network.',
+                          'Offline sync requires an authenticated Supabase session token and backend authorization.',
                           style: TextStyle(
                             color: AppTheme.slate300,
                             fontSize: 11,

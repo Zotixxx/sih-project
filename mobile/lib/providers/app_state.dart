@@ -3,7 +3,6 @@ import '../models/inspection_model.dart';
 import '../models/officer_model.dart';
 import '../services/database_helper.dart';
 import '../services/sync_manager.dart';
-import '../services/crypto_service.dart';
 
 class AppState extends ChangeNotifier {
   OfficerModel _officer = OfficerModel.defaultOfficer();
@@ -146,19 +145,6 @@ class AppState extends ChangeNotifier {
       final insp = _inspections[index];
       insp.remarks = remarks;
       insp.status = isPass ? 'COMPLETED' : 'REJECTED';
-
-      if (isPass) {
-        final now = DateTime.now();
-        final certId = 'LM-DEL-${now.year}-${(now.millisecondsSinceEpoch % 90000 + 10000)}';
-        insp.certificateNumber = certId;
-        insp.securityHash = CryptoService.generateCertificateHash(
-          certificateNumber: certId,
-          instrumentId: insp.instrumentId,
-          serialNumber: insp.serialNumber,
-          officerBadge: _officer.badgeId,
-          timestamp: now.toIso8601String(),
-        );
-      }
 
       insp.updatedAt = DateTime.now().toIso8601String();
       insp.isSynced = false;

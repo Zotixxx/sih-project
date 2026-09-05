@@ -2,14 +2,23 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import SideNavBar from "@/components/layout/SideNavBar";
 import TopNavBar from "@/components/layout/TopNavBar";
 import StepProgress from "@/components/ui/StepProgress";
+import { metrixApi } from "@/lib/api";
+import { portalPath } from "@/lib/routes";
 import { useMetrixStore } from "@/lib/store";
 
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
+    reader.onerror = () => reject(reader.error || new Error("Could not read file."));
+    reader.readAsDataURL(file);
+  });
+
 function ApplyFormContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedInstrumentId = searchParams.get("instrumentId") || "";
   const resumeDraft = searchParams.get("resumeDraft") === "true";
@@ -17,30 +26,18 @@ function ApplyFormContent() {
   const {
     instruments,
     currentUser,
-    userRole,
     businessProfile,
     currentDraft,
     saveDraft,
     submitApplication,
     updateInstrument,
   } = useMetrixStore();
-
-  const isBusiness = userRole === "business" || currentUser?.role === "BUSINESS";
+  const href = (path) => portalPath(currentUser, path);
 
   // Filter business's instruments
   const businessInstruments = useMemo(() => {
-    return (instruments || []).filter((inst) => {
-      if (isBusiness) {
-        return (
-          inst.businessId === currentUser?.id ||
-          inst.business_id === currentUser?.id ||
-          inst.businessName?.toLowerCase().includes(currentUser?.name?.toLowerCase()) ||
-          inst.businessName?.toLowerCase().includes(currentUser?.businessName?.toLowerCase())
-        );
-      }
-      return true;
-    });
-  }, [instruments, isBusiness, currentUser]);
+    return instruments || [];
+  }, [instruments]);
 
   // Profile completeness check (Section 5, 72)
   const isProfileComplete = useMemo(() => {
@@ -56,22 +53,66 @@ function ApplyFormContent() {
 
   const [verificationType, setVerificationType] = useState("Re-verification");
   const [prevCertificateNo, setPrevCertificateNo] = useState("");
+  const [applicationId, setApplicationId] = useState("");
 
   const [locationAddress, setLocationAddress] = useState("");
-  const [locationCity, setLocationCity] = useState("Ajmer");
-  const [locationDistrict, setLocationDistrict] = useState("Ajmer");
-  const [locationState, setLocationState] = useState("Rajasthan");
-  const [locationPincode, setLocationPincode] = useState("305001");
+  const [locationCity, setLocationCity] = useState("");
+  const [locationDistrict, setLocationDistrict] = useState("");
+  const [locationDistrictId, setLocationDistrictId] = useState("");
+  const [locationState, setLocationState] = useState("");
+  const [locationPincode, setLocationPincode] = useState("");
   const [locationNotes, setLocationNotes] = useState("");
 
   const [noteForLmo, setNoteForLmo] = useState("");
   const [additionalDocs, setAdditionalDocs] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [districtsLoading, setDistrictsLoading] = useState(true);
 
   // Submission & modal states
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const states = useMemo(
+    () => Array.from(new Set(districts.map((district) => district.state).filter(Boolean))).sort(),
+    [districts]
+  );
+  const districtOptions = useMemo(
+    () =>
+      districts
+        .filter((district) => !locationState || district.state === locationState)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [districts, locationState]
+  );
+  const selectedLocationDistrict = useMemo(
+    () => districts.find((entry) => entry.id === locationDistrictId) || null,
+    [districts, locationDistrictId]
+  );
+  const resolvedLocationDistrict = selectedLocationDistrict?.name || locationDistrict;
+  const resolvedLocationState = selectedLocationDistrict?.state || locationState;
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadDistricts = async () => {
+      setDistrictsLoading(true);
+      try {
+        const response = await metrixApi.getPublicDistricts();
+        if (!mounted) return;
+        setDistricts(Array.isArray(response.data) ? response.data : []);
+      } catch (error) {
+        if (mounted) setErrorMessage(error.message || "Could not load state and district list.");
+      } finally {
+        if (mounted) setDistrictsLoading(false);
+      }
+    };
+
+    loadDistricts();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Resume Draft if requested
   useEffect(() => {
@@ -81,9 +122,11 @@ function ApplyFormContent() {
         if (currentDraft.instrumentId) setSelectedInstrumentId(currentDraft.instrumentId);
         if (currentDraft.verificationType) setVerificationType(currentDraft.verificationType);
         if (currentDraft.prevCertificateNo) setPrevCertificateNo(currentDraft.prevCertificateNo);
+        if (currentDraft.applicationId) setApplicationId(currentDraft.applicationId);
         if (currentDraft.locationAddress) setLocationAddress(currentDraft.locationAddress);
         if (currentDraft.locationCity) setLocationCity(currentDraft.locationCity);
         if (currentDraft.locationDistrict) setLocationDistrict(currentDraft.locationDistrict);
+        if (currentDraft.locationDistrictId) setLocationDistrictId(currentDraft.locationDistrictId);
         if (currentDraft.locationState) setLocationState(currentDraft.locationState);
         if (currentDraft.locationPincode) setLocationPincode(currentDraft.locationPincode);
         if (currentDraft.locationNotes) setLocationNotes(currentDraft.locationNotes);
@@ -110,7 +153,10 @@ function ApplyFormContent() {
       const fillLocation = setTimeout(() => {
         setLocationAddress(selectedInstrument.location || selectedInstrument.installationLocation || "");
         if (selectedInstrument.city) setLocationCity(selectedInstrument.city);
+        if (selectedInstrument.district_id) setLocationDistrictId(selectedInstrument.district_id);
         if (selectedInstrument.district) setLocationDistrict(selectedInstrument.district);
+        if (selectedInstrument.state) setLocationState(selectedInstrument.state);
+        if (selectedInstrument.pincode) setLocationPincode(selectedInstrument.pincode);
       }, 0);
       return () => clearTimeout(fillLocation);
     }
@@ -133,10 +179,12 @@ function ApplyFormContent() {
       instrumentName: selectedInstrument?.name,
       verificationType,
       prevCertificateNo,
+      applicationId,
       locationAddress,
       locationCity,
-      locationDistrict,
-      locationState,
+      locationDistrict: resolvedLocationDistrict,
+      locationDistrictId,
+      locationState: resolvedLocationState,
       locationPincode,
       locationNotes,
       noteForLmo,
@@ -153,8 +201,7 @@ function ApplyFormContent() {
         setErrorMessage("Please select an instrument before proceeding.");
         return;
       }
-      if (!selectedInstrument.purchaseBill && !selectedInstrument.purchaseBill?.fileName) {
-        // Warning if purchase bill missing
+      if (!hasPurchaseBill) {
         setErrorMessage(
           "Please add the purchase bill to this instrument before applying for verification."
         );
@@ -164,8 +211,19 @@ function ApplyFormContent() {
 
     // Step 3 Validation
     if (currentStep === 3) {
-      if (!locationAddress.trim()) {
-        setErrorMessage("Please enter the verification location address.");
+      const missing = [
+        ["address", locationAddress],
+        ["city", locationCity],
+        ["district", locationDistrictId],
+        ["state", resolvedLocationState],
+        ["PIN code", locationPincode],
+      ].filter(([, value]) => !String(value || "").trim());
+      if (missing.length) {
+        setErrorMessage(`Please complete the verification location: ${missing.map(([label]) => label).join(", ")}.`);
+        return;
+      }
+      if (!districts.find((district) => district.id === locationDistrictId)) {
+        setErrorMessage("Please select a valid verification district from the list.");
         return;
       }
     }
@@ -186,17 +244,28 @@ function ApplyFormContent() {
     }
   };
 
-  const handleDocUpload = (e) => {
+  const handleDocUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAdditionalDocs((prev) => [
-        ...prev,
-        {
-          name: file.name,
-          size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-          type: "Additional Supporting Document",
-        },
-      ]);
+      try {
+        const uploaded = await metrixApi.uploadDocument({
+          bucket: "business-documents",
+          fileName: file.name,
+          mimeType: file.type || "application/pdf",
+          base64: await fileToBase64(file),
+        });
+        setAdditionalDocs((prev) => [
+          ...prev,
+          {
+            documentId: uploaded.data.documentId,
+            name: uploaded.data.fileName,
+            size: `${(uploaded.data.fileSize / 1024 / 1024).toFixed(1)} MB`,
+            type: uploaded.data.fileType,
+          },
+        ]);
+      } catch (error) {
+        setErrorMessage(error.message || "Could not upload document.");
+      }
     }
   };
 
@@ -204,21 +273,35 @@ function ApplyFormContent() {
     setAdditionalDocs((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleLocationStateChange = (event) => {
+    setLocationState(event.target.value);
+    setLocationDistrict("");
+    setLocationDistrictId("");
+  };
+
+  const handleLocationDistrictChange = (event) => {
+    const districtId = event.target.value;
+    const district = districts.find((entry) => entry.id === districtId);
+    setLocationDistrictId(districtId);
+    setLocationDistrict(district?.name || "");
+    if (district?.state) setLocationState(district.state);
+  };
+
   // Upload or update instrument's statutory purchase bill
   const handlePurchaseBillUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !selectedInstrument) return;
 
-    const billData = {
-      documentId: `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
-      fileName: file.name,
-      fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-      fileType: file.type || "application/pdf",
-      uploadedDate: new Date().toISOString().split("T")[0],
-      source: "INSTRUMENT",
-    };
-
     try {
+      const billData = {
+        fileName: file.name,
+        fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+        fileType: file.type || "application/pdf",
+        mimeType: file.type || "application/pdf",
+        base64: await fileToBase64(file),
+        uploadedDate: new Date().toISOString().split("T")[0],
+        source: "INSTRUMENT",
+      };
       await updateInstrument(selectedInstrument.id, {
         purchaseBill: billData,
       });
@@ -226,29 +309,6 @@ function ApplyFormContent() {
     } catch (err) {
       console.error("Failed to attach purchase bill:", err);
       setErrorMessage("Failed to attach purchase bill. Please try again.");
-    }
-  };
-
-  // 1-click fallback to attach a realistic OEM statutory purchase invoice
-  const handleAttachDefaultBill = async () => {
-    if (!selectedInstrument) return;
-    const sanitizedName = (selectedInstrument.name || "Instrument").replace(/[^a-zA-Z0-9]/g, "_");
-    const billData = {
-      documentId: `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
-      fileName: `${sanitizedName}_OEM_Invoice_2025.pdf`,
-      fileSize: "1.4 MB",
-      fileType: "application/pdf",
-      uploadedDate: new Date().toISOString().split("T")[0],
-      source: "INSTRUMENT",
-    };
-
-    try {
-      await updateInstrument(selectedInstrument.id, {
-        purchaseBill: billData,
-      });
-      setErrorMessage("");
-    } catch (err) {
-      console.error("Failed to attach OEM invoice:", err);
     }
   };
 
@@ -263,13 +323,15 @@ function ApplyFormContent() {
     setErrorMessage("");
     try {
       const payload = {
+        applicationId: applicationId.trim() || undefined,
         instrumentId: selectedInstrument.id,
         verificationType,
         verificationLocation: {
           address: locationAddress,
           city: locationCity,
-          district: locationDistrict,
-          state: locationState,
+          district: resolvedLocationDistrict,
+          districtId: locationDistrictId,
+          state: resolvedLocationState,
           pincode: locationPincode,
           notes: locationNotes,
         },
@@ -334,13 +396,13 @@ function ApplyFormContent() {
 
         <div className="flex items-center justify-center gap-3 pt-4">
           <Link
-            href={`/applications/${submissionResult.id}`}
+            href={href(`/applications/${submissionResult.id}`)}
             className="px-5 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-2xs"
           >
             View Application
           </Link>
           <Link
-            href="/applications"
+            href={href("/applications")}
             className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition-colors"
           >
             Back to Applications
@@ -371,7 +433,7 @@ function ApplyFormContent() {
 
         <div className="pt-2">
           <Link
-            href="/settings"
+            href={href("/settings")}
             className="px-6 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs inline-flex items-center gap-2 transition-colors shadow-2xs"
           >
             Go to Settings
@@ -411,6 +473,16 @@ function ApplyFormContent() {
               <p className="text-slate-500 text-[11px] mt-0.5">
                 Verification applications are tied to registered instruments in your inventory.
               </p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-semibold text-slate-700">Application ID</label>
+              <input
+                type="text"
+                value={applicationId}
+                onChange={(e) => setApplicationId(e.target.value)}
+                placeholder="Optional, e.g. APP-TEST-001"
+                className="w-full sm:w-80 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 font-mono-code text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+              />
             </div>
 
             {/* If started from Applications, allow switching instrument */}
@@ -562,16 +634,6 @@ function ApplyFormContent() {
                         />
                       </label>
 
-                      <button
-                        type="button"
-                        onClick={handleAttachDefaultBill}
-                        className="px-3.5 py-2 rounded-lg bg-white border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-2xs"
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-emerald-600">
-                          receipt_long
-                        </span>
-                        Attach Official OEM Invoice
-                      </button>
                     </div>
                   </div>
                 )}
@@ -579,7 +641,7 @@ function ApplyFormContent() {
                 <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
                   <span>Want to change instrument details?</span>
                   <Link
-                    href="/instruments"
+                    href={href("/instruments")}
                     className="text-slate-900 font-bold hover:underline flex items-center gap-1"
                   >
                     Edit Instrument
@@ -591,7 +653,7 @@ function ApplyFormContent() {
               <div className="p-6 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-3">
                 <p className="text-slate-500">No instruments registered yet.</p>
                 <Link
-                  href="/instruments/new"
+                  href={href("/instruments/new")}
                   className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-xs inline-block"
                 >
                   + Add Instrument First
@@ -725,31 +787,43 @@ function ApplyFormContent() {
                   type="text"
                   value={locationCity}
                   onChange={(e) => setLocationCity(e.target.value)}
-                  placeholder="Ajmer"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-700">District</label>
-                <input
-                  type="text"
-                  value={locationDistrict}
-                  onChange={(e) => setLocationDistrict(e.target.value)}
-                  placeholder="Ajmer"
+                  placeholder="Verification city"
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
                 />
               </div>
 
               <div className="space-y-1">
                 <label className="font-semibold text-slate-700">State</label>
-                <input
-                  type="text"
+                <select
                   value={locationState}
-                  onChange={(e) => setLocationState(e.target.value)}
-                  placeholder="Rajasthan"
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
-                />
+                  onChange={handleLocationStateChange}
+                  disabled={districtsLoading || states.length === 0}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="">{districtsLoading ? "Loading states..." : "Select state"}</option>
+                  {states.map((state) => (
+                    <option key={state} value={state}>
+                      {state}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-slate-700">District</label>
+                <select
+                  value={locationDistrictId}
+                  onChange={handleLocationDistrictChange}
+                  disabled={districtsLoading || !locationState || districtOptions.length === 0}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  <option value="">{locationState ? "Select district" : "Select state first"}</option>
+                  {districtOptions.map((district) => (
+                    <option key={district.id} value={district.id}>
+                      {district.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-1">
@@ -758,7 +832,7 @@ function ApplyFormContent() {
                   type="text"
                   value={locationPincode}
                   onChange={(e) => setLocationPincode(e.target.value)}
-                  placeholder="305001"
+                  placeholder="PIN code"
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
                 />
               </div>
@@ -869,14 +943,6 @@ function ApplyFormContent() {
                           onChange={handlePurchaseBillUpload}
                         />
                       </label>
-                      <button
-                        type="button"
-                        onClick={handleAttachDefaultBill}
-                        className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-emerald-600">receipt</span>
-                        Attach OEM Invoice
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -959,7 +1025,7 @@ function ApplyFormContent() {
                   <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
                     Business Information
                   </h4>
-                  <Link href="/settings" className="text-slate-500 hover:text-slate-900 text-[11px] font-semibold">
+                  <Link href={href("/settings")} className="text-slate-500 hover:text-slate-900 text-[11px] font-semibold">
                     Edit in Settings
                   </Link>
                 </div>
@@ -973,12 +1039,12 @@ function ApplyFormContent() {
                   <div>
                     <span className="text-slate-400 text-[10px] uppercase font-bold">GSTIN</span>
                     <p className="font-mono-code font-semibold text-slate-800">
-                      {businessProfile?.gstin || "08AAACB1234A1Z5"}
+                      {businessProfile?.gstin || "Not provided"}
                     </p>
                   </div>
                   <div>
                     <span className="text-slate-400 text-[10px] uppercase font-bold">Registered Office</span>
-                    <p className="text-slate-700">{businessProfile?.address || "Ajmer, Rajasthan"}</p>
+                    <p className="text-slate-700">{businessProfile?.address || "Not provided"}</p>
                   </div>
                 </div>
               </div>
@@ -1041,7 +1107,7 @@ function ApplyFormContent() {
                   <div>
                     <span className="text-slate-400 text-[10px] uppercase font-bold">Inspection Location</span>
                     <p className="font-semibold text-slate-800">
-                      {locationAddress}, {locationCity}, {locationDistrict}, {locationState} - {locationPincode}
+                      {locationAddress}, {locationCity}, {resolvedLocationDistrict}, {resolvedLocationState} - {locationPincode}
                     </p>
                   </div>
                   {noteForLmo && (
@@ -1100,7 +1166,7 @@ function ApplyFormContent() {
             </button>
           ) : (
             <Link
-              href="/applications"
+              href={href("/applications")}
               className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold transition-colors text-xs"
             >
               Cancel

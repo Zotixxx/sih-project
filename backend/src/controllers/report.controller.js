@@ -3,14 +3,23 @@ import { certificateRepository } from "../repositories/certificateRepository.js"
 import { auditRepository } from "../repositories/auditRepository.js";
 import { notificationRepository } from "../repositories/notificationRepository.js";
 import { districtRepository } from "../repositories/districtRepository.js";
+import { ROLES } from "../constants/roles.js";
+import { forbidden } from "../utils/errors.js";
+import { userRepository } from "../repositories/userRepository.js";
+
+const resolveDistrictScope = (user) => {
+  if (user.role === ROLES.SYSTEM_ADMIN) return user.district_id || "ALL";
+  if (!user.district_id) throw forbidden("District scope is not configured.");
+  return user.district_id;
+};
 
 export const reportController = {
   getSummary: async (req, res) => {
     try {
-      const districtId = req.user.district_id;
+      const districtId = resolveDistrictScope(req.user);
       const applications = await applicationRepository.getByDistrict(districtId);
       const certificates = await certificateRepository.getByDistrict(districtId);
-      const district = await districtRepository.getById(districtId);
+      const district = districtId === "ALL" ? null : await districtRepository.getById(districtId);
 
       return res.json({
         success: true,
@@ -18,21 +27,12 @@ export const reportController = {
           district: district || { name: districtId },
           totalApplications: applications.length,
           totalCertificates: certificates.length,
-          verifiedRate: "98.4%",
-          monthlyTrends: [
-            { month: "Jan 2026", applications: 18, issued: 16 },
-            { month: "Feb 2026", applications: 24, issued: 22 },
-            { month: "Mar 2026", applications: 31, issued: 29 },
-            { month: "Apr 2026", applications: 28, issued: 27 },
-            { month: "May 2026", applications: 35, issued: 33 },
-            { month: "Jun 2026", applications: 42, issued: 40 },
-            { month: "Jul 2026", applications: 39, issued: 38 },
-            { month: "Aug 2026", applications: 45, issued: 41 },
-          ],
+          verifiedRate: applications.length ? certificates.length / applications.length : null,
+          monthlyTrends: [],
         },
       });
     } catch (error) {
-      return res.status(500).json({
+      return res.status(error.statusCode || 500).json({
         success: false,
         error: { code: "REPORT_ERROR", message: error.message },
       });
@@ -41,19 +41,16 @@ export const reportController = {
 
   getAuditLogs: async (req, res) => {
     try {
-      const logs = await auditRepository.getByDistrict(req.user.district_id);
+      const logs = await auditRepository.getByDistrict(resolveDistrictScope(req.user));
       return res.json({ success: true, data: logs });
     } catch (error) {
-      return res.status(500).json({
+      return res.status(error.statusCode || 500).json({
         success: false,
         error: { code: "AUDIT_ERROR", message: error.message },
       });
     }
   },
 };
-
-import { ROLES } from "../constants/roles.js";
-import { userRepository } from "../repositories/userRepository.js";
 
 export const notificationController = {
   getNotifications: async (req, res) => {
@@ -103,11 +100,20 @@ export const notificationController = {
       let targetLmoName = "All District Legal Metrology Officers";
       if (targetLmoId && targetLmoId !== "ALL") {
         const targetUser = await userRepository.getById(targetLmoId);
-        if (targetUser) {
-          targetLmoName = `${targetUser.name} (${targetUser.badgeNumber || targetUser.id})`;
-        } else {
-          targetLmoName = `LMO (${targetLmoId})`;
+        if (
+          !targetUser ||
+          targetUser.role !== ROLES.LMO ||
+          (req.user.role !== ROLES.SYSTEM_ADMIN && targetUser.district_id !== req.user.district_id)
+        ) {
+          return res.status(422).json({
+            success: false,
+            error: {
+              code: "INVALID_LMO",
+              message: "Select an LMO from your assigned district.",
+            },
+          });
         }
+        targetLmoName = `${targetUser.name} (${targetUser.lmo_id || targetUser.domainId})`;
       }
 
       const notice = await notificationRepository.create({
@@ -121,16 +127,28 @@ export const notificationController = {
         senderName: req.user.name,
         senderDesignation: req.user.designation || "Assistant Controller of Legal Metrology",
         senderOffice: req.user.office || `Office of the Assistant Controller, ${req.user.district_id}`,
-        targetRole: "LMO",
+        targetRole: ROLES.LMO,
         targetUserId: targetLmoId || "ALL",
+        recipient_id: targetLmoId && targetLmoId !== "ALL" ? targetLmoId : undefined,
         targetLmoName,
         district_id: req.user.district_id,
-        role: "lmo", // For UI role filter
         unread: true,
       });
 
+      if (!notice) {
+        return res.status(422).json({
+          success: false,
+          error: {
+            code: "NO_RECIPIENTS",
+            message: "No notification recipients were found for the selected notice target.",
+          },
+        });
+      }
+
       // Audit trail entry
       await auditRepository.create({
+        actor_user_id: req.user.auth_user_id || req.user.id,
+        actor_role: req.user.role,
         entityId: notice.id,
         entityType: "OFFICIAL_NOTICE",
         action: "NOTICE_ISSUED",

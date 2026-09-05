@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/status_badge.dart';
-import 'certificate_preview_screen.dart';
 
 class InspectionDetailScreen extends StatefulWidget {
   final String inspectionId;
@@ -145,7 +144,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
                 const SizedBox(height: 12),
                 _buildInfoRow('Establishment', insp.ownerName),
                 _buildInfoRow('Location', insp.location),
-                _buildInfoRow('Jurisdiction', '${insp.district}, NCT of Delhi'),
+                _buildInfoRow('Jurisdiction', insp.district),
               ],
             ),
           ),
@@ -362,9 +361,8 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
                         icon: const Icon(Icons.refresh, color: AppTheme.primaryNavy),
                         tooltip: 'Recalculate GPS',
                         onPressed: () {
-                          state.updateGpsCoords(insp.id, '28.5289° N, 77.2790° E (Acquired)');
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('GPS coordinates refreshed from device hardware.')),
+                            const SnackBar(content: Text('Device GPS integration is not configured.')),
                           );
                         },
                       ),
@@ -494,7 +492,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
                     Icon(Icons.verified, color: AppTheme.emeraldGreen, size: 24),
                     SizedBox(width: 8),
                     Text(
-                      'Certificate Issued & Stamped',
+                      'Verification Submitted',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -504,25 +502,9 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Certificate ID: ${insp.certificateNumber ?? "LM-DEL-2026-XXXXX"}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Courier',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => CertificatePreviewScreen(inspection: insp),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.qr_code, size: 18),
-                  label: const Text('View Stamped Certificate & QR Code'),
+                const Text(
+                  'Certificate generation is controlled by Assistant Controller final approval in the backend.',
+                  style: TextStyle(fontSize: 12, color: AppTheme.slate700),
                 ),
               ],
             ),

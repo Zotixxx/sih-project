@@ -13,6 +13,7 @@ export default function LmosManagementPage() {
 
   const [search, setSearch] = useState("");
   const [selectedLmo, setSelectedLmo] = useState(null);
+  const districtLabel = district?.name || currentUser?.districtName || currentUser?.district_id || "District";
 
   // Filtered LMO list
   const filteredLmos = useMemo(() => {
@@ -47,7 +48,7 @@ export default function LmosManagementPage() {
       <div className="flex-1 ml-[260px] flex flex-col min-w-0">
         <TopNavBar
           title="LMOs"
-          subtitle={`District Field Officers • ${district?.name || currentUser?.districtName || "Ajmer"} District`}
+          subtitle={`District Field Officers • ${districtLabel}`}
           breadcrumbs={[
             { label: "Dashboard", href: "/dashboard" },
             { label: "LMOs" },
@@ -63,7 +64,7 @@ export default function LmosManagementPage() {
                   District Officers ({filteredLmos.length})
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Field verification officers for {district?.name || currentUser?.districtName || "Ajmer"} District
+                  Field verification officers for {districtLabel}
                 </p>
               </div>
 
@@ -201,7 +202,7 @@ export default function LmosManagementPage() {
               </div>
               <div>
                 <span className="text-slate-400 text-[10px] uppercase font-bold block">District Authority</span>
-                <span className="font-medium text-slate-800">Ajmer District</span>
+                <span className="font-medium text-slate-800">{selectedLmo.district_id || districtLabel}</span>
               </div>
               <div>
                 <span className="text-slate-400 text-[10px] uppercase font-bold block">Contact Phone</span>

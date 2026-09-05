@@ -21,14 +21,14 @@ class OfficerModel {
 
   factory OfficerModel.defaultOfficer() {
     return OfficerModel(
-      badgeId: 'LMO-AJM-021',
-      name: 'Rajesh Kumar',
+      badgeId: '',
+      name: 'Signed-in LMO',
       designation: 'Legal Metrology Officer',
-      zone: 'Ajmer City & Krishi Mandi Commercial Zone',
-      email: 'rajesh.kumar@lmo.raj.gov.in',
-      phone: '+91 94140 12345',
-      totalInspections: 142,
-      pendingSync: 2,
+      zone: '',
+      email: '',
+      phone: '',
+      totalInspections: 0,
+      pendingSync: 0,
     );
   }
 }

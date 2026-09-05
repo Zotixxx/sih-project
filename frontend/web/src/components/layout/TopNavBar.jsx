@@ -3,14 +3,18 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import RoleSwitcher from "../shared/RoleSwitcher";
 import { useMetrixStore } from "@/lib/store";
 
 export default function TopNavBar({ title, subtitle, breadcrumbs }) {
   const router = useRouter();
-  const { userRole, notifications, instruments, certificates } = useMetrixStore();
+  const { currentUser, userRole, notifications } = useMetrixStore();
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const basePath = currentUser?.id ? `/${currentUser.id}` : "";
+  const scopeHref = (href) => {
+    if (!href || href === "/") return href;
+    if (!basePath || href.startsWith(basePath) || href.startsWith("/verify")) return href;
+    return `${basePath}${href}`;
+  };
 
   const unreadCount = notifications.filter(
     (n) => n.unread && (!n.role || n.role === userRole)
@@ -19,7 +23,9 @@ export default function TopNavBar({ title, subtitle, breadcrumbs }) {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/instruments?search=${encodeURIComponent(searchQuery.trim())}`);
+      const target =
+        userRole === "lmo" ? "/inspections" : userRole === "business" ? "/instruments" : "/fresh-applications";
+      router.push(`${scopeHref(target)}?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
@@ -34,7 +40,7 @@ export default function TopNavBar({ title, subtitle, breadcrumbs }) {
                 {idx > 0 && <span className="text-slate-300">/</span>}
                 {crumb.href ? (
                   <Link
-                    href={crumb.href}
+                    href={scopeHref(crumb.href)}
                     className="hover:text-slate-800 transition-colors"
                   >
                     {crumb.label}
@@ -69,8 +75,6 @@ export default function TopNavBar({ title, subtitle, breadcrumbs }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setIsSearchFocused(false)}
             placeholder="Search serial, certificate, ID..."
             className="w-64 lg:w-72 bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:bg-white focus:ring-2 focus:ring-slate-900/10 transition-all"
           />
@@ -78,7 +82,7 @@ export default function TopNavBar({ title, subtitle, breadcrumbs }) {
 
         {/* Notifications Icon Button */}
         <Link
-          href="/notifications"
+          href={scopeHref("/notifications")}
           className="relative w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
           title="Notifications"
         >
@@ -92,8 +96,6 @@ export default function TopNavBar({ title, subtitle, breadcrumbs }) {
           )}
         </Link>
 
-        {/* Persona Switcher */}
-        <RoleSwitcher />
       </div>
     </header>
   );

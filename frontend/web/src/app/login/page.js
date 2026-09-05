@@ -9,21 +9,23 @@ import { cn } from "@/lib/utils";
 export default function LoginPage() {
   const router = useRouter();
   const { authenticate } = useMetrixStore();
-  const [activeTab, setActiveTab] = useState("business"); // 'business' | 'authority'
-  const [email, setEmail] = useState("BIZ-AJM-001");
+  const [activeTab, setActiveTab] = useState("business");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [officerBadge, setOfficerBadge] = useState("LMO-AJM-021");
   const [loginError, setLoginError] = useState("");
-  const [selectedAuthorityRole, setSelectedAuthorityRole] = useState("lmo"); // 'lmo' | 'admin'
-
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError("");
     try {
-      const user = await authenticate(activeTab === "business" ? email : officerBadge);
-      router.push(user.role === "BUSINESS" && !user.address ? "/settings" : "/dashboard");
+      const user = await authenticate({ email, password });
+      const destination = user.role === "BUSINESS" && !user.address ? "settings" : "dashboard";
+      router.push(`/${user.id}/${destination}`);
     } catch (error) {
+      if (error.code === "PROFILE_REQUIRED" && activeTab === "business") {
+        router.push("/register/business?complete=1");
+        return;
+      }
       setLoginError(error.message);
     }
   };
@@ -46,15 +48,6 @@ export default function LoginPage() {
           </div>
         </Link>
 
-        <Link
-          href="/verify"
-          className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1"
-        >
-          <span className="material-symbols-outlined text-[16px] text-emerald-600">
-            qr_code_scanner
-          </span>
-          Public Verification
-        </Link>
       </header>
 
       {/* Main Login Card */}
@@ -66,7 +59,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => {
                 setActiveTab("business");
-                setEmail("BIZ-AJM-001");
+                setEmail("");
               }}
               className={cn(
                 "py-3.5 px-4 text-center transition-colors flex items-center justify-center gap-2",
@@ -84,7 +77,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => {
                 setActiveTab("authority");
-                setOfficerBadge("LMO-AJM-021");
+                setEmail("");
               }}
               className={cn(
                 "py-3.5 px-4 text-center transition-colors flex items-center justify-center gap-2",
@@ -103,9 +96,7 @@ export default function LoginPage() {
           <div className="p-6 sm:p-8 space-y-6">
             <div>
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">
-                {activeTab === "business"
-                  ? "Business Login"
-                  : "Government Authority Login"}
+                {activeTab === "business" ? "Business Login" : "Government Authority Login"}
               </h2>
               <p className="text-xs text-slate-500 mt-1">
                 {activeTab === "business"
@@ -116,55 +107,9 @@ export default function LoginPage() {
 
             {/* Form */}
             <form onSubmit={handleLogin} className="space-y-4 text-xs">
-              {activeTab === "authority" && (
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-slate-700">
-                    Authority Role
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label
-                      className={cn(
-                        "flex items-center gap-2 p-2.5 rounded border cursor-pointer transition-all",
-                        selectedAuthorityRole === "lmo"
-                          ? "bg-slate-50 border-slate-900 font-bold"
-                          : "border-slate-200 text-slate-600"
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="authRole"
-                        checked={selectedAuthorityRole === "lmo"}
-                        onChange={() => setSelectedAuthorityRole("lmo")}
-                        className="text-slate-900 focus:ring-slate-900"
-                      />
-                      LMO Inspector
-                    </label>
-                    <label
-                      className={cn(
-                        "flex items-center gap-2 p-2.5 rounded border cursor-pointer transition-all",
-                        selectedAuthorityRole === "admin"
-                          ? "bg-slate-50 border-slate-900 font-bold"
-                          : "border-slate-200 text-slate-600"
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="authRole"
-                        checked={selectedAuthorityRole === "admin"}
-                        onChange={() => setSelectedAuthorityRole("admin")}
-                        className="text-slate-900 focus:ring-slate-900"
-                      />
-                      Department Admin
-                    </label>
-                  </div>
-                </div>
-              )}
-
               <div className="space-y-1.5">
                 <label className="font-semibold text-slate-700">
-                  {activeTab === "business"
-                    ? "Official Email / Reg ID"
-                    : "Govt Officer Email ID"}
+                  Email
                 </label>
                 <input
                   type="text"
@@ -174,21 +119,6 @@ export default function LoginPage() {
                   required
                 />
               </div>
-
-              {activeTab === "authority" && (
-                <div className="space-y-1.5">
-                  <label className="font-semibold text-slate-700">
-                    Officer Badge / Department Code
-                  </label>
-                  <input
-                    type="text"
-                    value={officerBadge}
-                    onChange={(e) => setOfficerBadge(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-slate-900 text-xs font-mono-code focus:outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-                    required
-                  />
-                </div>
-              )}
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
@@ -215,6 +145,17 @@ export default function LoginPage() {
                 </span>
                 Sign In to Platform
               </button>
+              {activeTab === "business" && (
+                <Link
+                  href="/register/business"
+                  className="w-full py-3 rounded-lg border border-slate-300 bg-white text-slate-800 font-bold text-xs hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    person_add
+                  </span>
+                  New Business Registration
+                </Link>
+              )}
               {loginError && <p className="text-xs text-red-600" role="alert">{loginError}</p>}
             </form>
           </div>

@@ -4,7 +4,13 @@ import { ROLES } from "../constants/roles.js";
 export const lmoController = {
   getLmos: async (req, res) => {
     try {
-      const lmos = await userRepository.getLmosByDistrict(req.user.district_id);
+      if (req.user.role !== ROLES.SYSTEM_ADMIN && !req.user.district_id) {
+        return res.status(403).json({
+          success: false,
+          error: { code: "FORBIDDEN", message: "Assistant Controller district scope is not configured." },
+        });
+      }
+      const lmos = await userRepository.getLmosByDistrict(req.user.district_id || "ALL");
       return res.json({ success: true, data: lmos });
     } catch (error) {
       return res.status(500).json({

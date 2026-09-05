@@ -1,30 +1,158 @@
 import { applicationRepository } from "../repositories/applicationRepository.js";
 import { auditRepository } from "../repositories/auditRepository.js";
+import { businessRepository } from "../repositories/businessRepository.js";
+import { documentRepository } from "../repositories/documentRepository.js";
+import { districtRepository } from "../repositories/districtRepository.js";
+import { instrumentRepository } from "../repositories/instrumentRepository.js";
 import { notificationRepository } from "../repositories/notificationRepository.js";
 import { businessService } from "./businessService.js";
-import { instrumentService } from "./instrumentService.js";
 import { APPLICATION_STATUS } from "../constants/status.js";
 import { ROLES } from "../constants/roles.js";
-import { db } from "../data/db.js";
+import { assertDomainId, generateDomainId } from "../utils/id.js";
+import { badRequest, forbidden, notFound, unprocessable } from "../utils/errors.js";
+
+const actorUserId = (user) => user.auth_user_id || user.user_id || user.id;
+
+const requireBusinessRecord = async (user) => {
+  const business = await businessRepository.getByUserId(actorUserId(user));
+  if (!business) {
+    throw unprocessable("Create the business role record in Supabase before using the business workflow.");
+  }
+  return business;
+};
+
+const normalizeApplicationId = (input, districtId) => {
+  const requested = input.applicationId || input.application_id || input.id;
+  return requested ? assertDomainId(requested, "Application ID") : generateDomainId("APP", districtId);
+};
+
+const normalizeVerificationLocation = async (input) => {
+  const raw = input.verificationLocation || {};
+  const requestedDistrictId = raw.districtId || raw.district_id || input.district_id;
+  const location = {
+    address: raw.address || input.location || "",
+    city: raw.city || "",
+    district: raw.district || "",
+    districtId: requestedDistrictId || "",
+    state: raw.state || "",
+    pincode: raw.pincode || raw.pin || "",
+    notes: raw.notes || input.noteForLmo || input.notes || "",
+  };
+
+  const missing = ["address", "city", "districtId", "state", "pincode"].filter((key) => !location[key]);
+  if (missing.length) {
+    throw badRequest(`Verification location is incomplete. Missing: ${missing.join(", ")}.`);
+  }
+
+  const districtId = assertDomainId(location.districtId, "Verification district");
+  const district = await districtRepository.getById(districtId);
+  if (!district) {
+    throw badRequest(`Verification district '${districtId}' is not configured.`);
+  }
+  if (location.state && district.state && location.state !== district.state) {
+    throw badRequest(`Verification district '${district.name}' belongs to '${district.state}', not '${location.state}'.`);
+  }
+
+  return {
+    district,
+    location: {
+      ...location,
+      district: district.name,
+      districtId: district.id,
+      state: district.state || location.state,
+    },
+  };
+};
+
+const validateVerificationType = (value) => {
+  const allowed = new Set(["First Time Verification", "Re-verification"]);
+  if (!allowed.has(value)) {
+    throw badRequest("Verification type must be either 'First Time Verification' or 'Re-verification'.");
+  }
+  return value;
+};
+
+const assertApplicationAccess = (application, user) => {
+  if (!application) throw notFound("Application not found.");
+
+  if (user.role === ROLES.SYSTEM_ADMIN) return;
+
+  if (user.role === ROLES.BUSINESS) {
+    if (application.businessUuid !== user.business_uuid && application.businessUserId !== actorUserId(user)) {
+      throw forbidden("This application belongs to another business.");
+    }
+    return;
+  }
+
+  if (user.role === ROLES.LMO) {
+    if (application.assignedLmoUuid !== user.lmo_uuid) {
+      throw forbidden("This application is not assigned to this LMO.");
+    }
+    return;
+  }
+
+  if (user.role === ROLES.ASSISTANT_CONTROLLER) {
+    if (application.district_id !== user.district_id) {
+      throw forbidden("Application belongs to another district.");
+    }
+    return;
+  }
+
+  throw forbidden("Role is not authorized for this application.");
+};
+
+const requireScopedOfficer = (user, roleName) => {
+  if (!user.district_id) {
+    throw forbidden(`${roleName} district scope is not configured.`);
+  }
+};
+
+const statusHistory = async ({ application, toStatus, user, reason }) => {
+  await applicationRepository.addStatusHistory({
+    applicationUuid: application.uuid,
+    fromStatus: application.status,
+    toStatus,
+    actorUserId: actorUserId(user),
+    reason,
+  });
+};
+
+const audit = async ({ application, user, action, entityType = "APPLICATION", entityId, metadata }) => {
+  await auditRepository.create({
+    district_id: application.district_id,
+    actor_user_id: actorUserId(user),
+    actor_role: user.role,
+    action,
+    entity_type: entityType,
+    entity_id: entityId || application.applicationId || application.id,
+    metadata,
+  });
+};
 
 export const applicationService = {
   getApplications: async (user, filters = {}) => {
-    let applications = await applicationRepository.getByDistrict(user.district_id);
+    let applications;
 
-    // If business user, filter to only their applications
     if (user.role === ROLES.BUSINESS) {
-      const userBizId = user.business_id || user.id;
-      applications = applications.filter(
-        (a) =>
-          a.businessId === userBizId ||
-          a.business_id === userBizId ||
-          a.email === user.email
+      const business = await requireBusinessRecord(user);
+      applications = await applicationRepository.getByBusiness(business.uuid);
+    } else if (user.role === ROLES.LMO) {
+      requireScopedOfficer(user, "LMO");
+      if (!user.lmo_uuid) throw forbidden("LMO role record is not configured.");
+      applications = (await applicationRepository.getByDistrict(user.district_id)).filter(
+        (application) => application.assignedLmoUuid === user.lmo_uuid
       );
+    } else if (user.role === ROLES.ASSISTANT_CONTROLLER) {
+      requireScopedOfficer(user, "Assistant Controller");
+      applications = await applicationRepository.getByDistrict(user.district_id);
+    } else if (user.role === ROLES.SYSTEM_ADMIN) {
+      applications = await applicationRepository.getByDistrict(user.district_id || "ALL");
+    } else {
+      throw forbidden("Role is not authorized to list applications.");
     }
 
-    // Apply status filter if provided
     if (filters.status) {
-      applications = applications.filter((a) => a.status === filters.status);
+      applications = applications.filter((application) => application.status === filters.status);
     }
 
     return applications;
@@ -32,373 +160,249 @@ export const applicationService = {
 
   getApplicationById: async (id, user) => {
     const application = await applicationRepository.getById(id);
-    if (!application) {
-      const err = new Error("Application not found.");
-      err.statusCode = 404;
-      throw err;
-    }
-
-    // Business ownership check
-    if (user.role === ROLES.BUSINESS) {
-      const userBizId = user.business_id || user.id;
-      if (
-        application.businessId !== userBizId &&
-        application.business_id !== userBizId
-      ) {
-        const err = new Error("Forbidden: This application belongs to another business.");
-        err.statusCode = 403;
-        throw err;
-      }
-    } else if (
-      user.role !== ROLES.SYSTEM_ADMIN &&
-      user.district_id !== "ALL" &&
-      application.district_id !== user.district_id
-    ) {
-      const err = new Error(
-        `Forbidden: Application belongs to district '${application.district_id}', user belongs to '${user.district_id}'.`
-      );
-      err.statusCode = 403;
-      throw err;
-    }
-
+    assertApplicationAccess(application, user);
     return application;
   },
 
   createApplication: async (user, input) => {
-    if (user.role !== ROLES.BUSINESS && user.role !== ROLES.SYSTEM_ADMIN) {
-      const err = new Error("Forbidden: Only businesses can submit verification applications.");
-      err.statusCode = 403;
-      throw err;
+    if (user.role !== ROLES.BUSINESS) {
+      throw forbidden("Only business users can submit verification applications.");
     }
 
-    // 1. Verify business profile completeness (Section 5, 27, 46, 72)
+    const business = await requireBusinessRecord(user);
     const profile = await businessService.getProfile(user);
     if (!profile.isComplete) {
-      const err = new Error("Please complete your business details before applying for verification.");
-      err.statusCode = 400;
+      const err = badRequest("Please complete your business details before applying for verification.");
       err.missingFields = profile.missingFields;
       throw err;
     }
 
-    // 2. Verify instrument exists and belongs to this business (Section 27, 44)
-    if (!input.instrumentId) {
-      const err = new Error("Please select an instrument for verification.");
-      err.statusCode = 400;
-      throw err;
-    }
-    const instrument = await instrumentService.getInstrumentById(input.instrumentId, user);
-
-    // 3. Verify purchase bill exists on the instrument (Section 8, 20, 27, 45, 74)
-    if (!instrument.purchaseBill || !instrument.purchaseBill.fileName) {
-      const err = new Error("Please add the purchase bill to this instrument before applying for verification.");
-      err.statusCode = 400;
-      throw err;
+    if (!input.instrumentId && !input.instrument_id) {
+      throw badRequest("Please select an instrument for verification.");
     }
 
-    // 4. Validate verification type (Section 16, 27)
-    const verificationType =
-      input.verificationType === "First Time Verification" ||
-      input.verificationType === "Re-verification"
-        ? input.verificationType
-        : "Re-verification";
-
-    // 5. Validate verification location (Section 17, 18, 27)
-    const location = input.verificationLocation || {};
-    const locationAddress =
-      location.address || input.location || instrument.location || profile.address;
-    if (!locationAddress) {
-      const err = new Error("Please provide the verification location address.");
-      err.statusCode = 400;
-      throw err;
+    const instrument = await instrumentRepository.getById(input.instrumentId || input.instrument_id);
+    if (!instrument) throw notFound("Instrument not found.");
+    if (instrument.businessUuid !== business.uuid) {
+      throw forbidden("This instrument belongs to another business.");
     }
 
-    const district = user.district_id || profile.district_id || "AJM";
-    const appId = `APP-${district}-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-    const nowStr = new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    if (!instrument.purchaseBill?.documentId) {
+      throw unprocessable("Attach a purchase bill to the instrument before submitting an application.");
+    }
 
-    // 6. Assemble documents: purchase bill from instrument + optional extras
-    const docs = [
-      {
-        documentId: instrument.purchaseBill.documentId || `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
-        name: instrument.purchaseBill.fileName,
-        fileName: instrument.purchaseBill.fileName,
-        size: instrument.purchaseBill.fileSize || "1.2 MB",
-        type: instrument.purchaseBill.fileType || "PDF",
-        uploadDate: instrument.purchaseBill.uploadedDate || new Date().toISOString().split("T")[0],
-        source: "INSTRUMENT",
-      },
-      ...(input.additionalDocuments || []).map((d) => ({
-        documentId: d.documentId || `DOC-ADD-${Math.floor(10000 + Math.random() * 90000)}`,
-        name: d.name || d.fileName || "Supporting Document.pdf",
-        fileName: d.name || d.fileName || "Supporting Document.pdf",
-        size: d.size || "1.0 MB",
-        type: d.type || "PDF",
-        uploadDate: new Date().toISOString().split("T")[0],
-        source: "APPLICATION",
-      })),
-    ];
+    const verificationType = validateVerificationType(input.verificationType || input.verification_type);
+    const { location: verificationLocation, district: verificationDistrict } = await normalizeVerificationLocation(input);
+    const applicationId = normalizeApplicationId(input, verificationDistrict.id);
+    const additionalDocuments = input.additionalDocuments || input.additionalDocumentIds || [];
+    const additionalDocumentIds = additionalDocuments
+      .map((document) => (typeof document === "string" ? document : document.documentId || document.id))
+      .filter(Boolean);
 
-    // 7. Create immutable historical snapshot (Section 30)
-    const application = {
-      id: appId,
-      district_id: district,
-      district: district === "JPR" ? "Jaipur" : "Ajmer",
-      businessId: user.business_id || user.id,
-      business_id: user.business_id || user.id,
-      businessName: profile.businessName || profile.name || user.name,
-      applicantName: profile.contactPerson || profile.ownerName || user.name,
-      phone: profile.phone || user.phone || "+91 98290 11223",
-      email: profile.email || user.email,
-      instrumentId: instrument.id,
-      instrumentName: instrument.name,
-      instrumentType: instrument.type || instrument.category,
-      serialNumber: instrument.serialNumber,
-      manufacturer: instrument.manufacturer,
-      model: instrument.model,
-      capacity: instrument.capacity,
+    for (const documentId of additionalDocumentIds) {
+      await documentRepository.assertUploader(documentId, user);
+    }
+
+    const created = await applicationRepository.create({
+      applicationId,
+      businessUuid: business.uuid,
+      instrumentUuid: instrument.uuid,
+      district_id: verificationDistrict.id,
       verificationType,
-      applicationType: verificationType,
-      verificationLocation: {
-        address: locationAddress,
-        city: location.city || profile.city || (district === "JPR" ? "Jaipur" : "Ajmer"),
-        district: location.district || (district === "JPR" ? "Jaipur" : "Ajmer"),
-        state: location.state || profile.state || "Rajasthan",
-        pincode: location.pincode || profile.pincode || "305001",
-        notes: location.notes || "",
+      verificationLocation,
+      businessSnapshot: {
+        businessId: business.businessId,
+        name: business.businessName || business.name,
+        contactPerson: business.contactPerson,
+        phone: business.phone,
+        email: business.email,
+        address: business.address,
+        city: business.city,
+        district: business.district_id,
+        state: business.state,
+        pincode: business.pincode,
+        gstin: business.gstin,
+        pan: business.pan,
+        registrationNumber: business.registrationNumber,
+        natureOfBusiness: business.natureOfBusiness,
       },
-      location: locationAddress,
-      noteForLmo: input.noteForLmo || input.notes || "",
+      instrumentSnapshot: {
+        instrumentId: instrument.instrumentId || instrument.id,
+        name: instrument.name,
+        type: instrument.type || instrument.category,
+        manufacturer: instrument.manufacturer,
+        model: instrument.model,
+        serialNumber: instrument.serialNumber,
+        capacity: instrument.capacity,
+        accuracyClass: instrument.accuracyClass,
+        purchaseDate: instrument.purchaseDate,
+      },
+      applicantName: business.contactPerson || business.name || user.name,
       notes: input.noteForLmo || input.notes || "",
       status: APPLICATION_STATUS.SUBMITTED,
-      applicationDate: new Date().toISOString().split("T")[0],
-      submissionDate: new Date().toISOString().split("T")[0],
-      feePaid: "₹ 1,500.00",
-      transactionId: `TXN-UPI-${district}-${Math.floor(100000 + Math.random() * 900000)}`,
-      documents: docs,
-      photographs: [
-        { title: "Serial Plaque & Rating Plate", url: "/images/plaque_scale.jpg", uploadDate: new Date().toISOString().split("T")[0] },
-        { title: "Front Platform / Dispenser Assembly", url: "/images/front_scale.jpg", uploadDate: new Date().toISOString().split("T")[0] },
-      ],
-      timeline: [
-        {
-          event: "Application Submitted",
-          date: nowStr,
-          actor: `${user.name} (Applicant)`,
-          note: input.noteForLmo ? `Note for LMO: ${input.noteForLmo}` : "Submitted online with statutory purchase bill.",
-        },
-      ],
-      createdAt: new Date().toISOString(),
-    };
-
-    const saved = await applicationRepository.create(application);
-
-    // 8. Create Audit Log
-    await auditRepository.create({
-      district_id: district,
-      actor_id: user.id,
-      actor_name: user.name,
-      actor_role: user.role,
-      action: "APPLICATION_SUBMITTED",
-      entity_type: "APPLICATION",
-      entity_id: appId,
-      remarks: `Verification application filed for ${instrument.name} (${instrument.serialNumber}).`,
     });
 
-    // 9. Notify Business & Assistant Controller
-    await notificationRepository.create({
-      district_id: district,
-      recipient_role: ROLES.BUSINESS,
-      recipient_id: user.id,
-      title: "Application Submitted Successfully",
-      message: `Your verification filing ${appId} for ${instrument.name} has been received.`,
-      category: "APPLICATION_SUBMITTED",
-      unread: true,
-    });
-
-    await notificationRepository.create({
-      district_id: district,
-      recipient_role: ROLES.ASSISTANT_CONTROLLER,
-      title: "Fresh Application Received",
-      message: `New verification application ${appId} from ${application.businessName} is awaiting initial review.`,
-      category: "ALLOCATION_REQUIRED",
-      unread: true,
-    });
-
-    // Remove matching draft if any
-    if (db.drafts) {
-      const dIndex = db.drafts.findIndex(
-        (d) => d.businessId === (user.business_id || user.id)
-      );
-      if (dIndex !== -1) {
-        db.drafts.splice(dIndex, 1);
-        db.persist();
-      }
+    const documentIds = [instrument.purchaseBill.documentId, ...additionalDocumentIds];
+    for (const documentId of documentIds) {
+      await documentRepository.attachToApplication(documentId, created.uuid);
+      await applicationRepository.attachDocument({ applicationUuid: created.uuid, documentId });
     }
 
-    return saved;
+    await applicationRepository.addStatusHistory({
+      applicationUuid: created.uuid,
+      fromStatus: null,
+      toStatus: APPLICATION_STATUS.SUBMITTED,
+      actorUserId: actorUserId(user),
+      reason: "Application submitted by business.",
+    });
+
+    await audit({
+      application: created,
+      user,
+      action: "APPLICATION_SUBMITTED",
+      metadata: {
+        instrumentId: instrument.instrumentId || instrument.id,
+        verificationType,
+      },
+    });
+
+    await notificationRepository.create({
+      district_id: created.district_id,
+      recipient_user_id: actorUserId(user),
+      related_application_uuid: created.uuid,
+      title: "Application Submitted",
+      message: `Application ${created.applicationId} has been submitted.`,
+      category: "APPLICATION_SUBMITTED",
+      link: `/${actorUserId(user)}/applications/${created.applicationId}`,
+    });
+
+    await notificationRepository.create({
+      district_id: created.district_id,
+      targetRole: ROLES.ASSISTANT_CONTROLLER,
+      related_application_uuid: created.uuid,
+      title: "Fresh Application Received",
+      message: `Application ${created.applicationId} is awaiting initial review.`,
+      category: "ALLOCATION_REQUIRED",
+      link: "/fresh-applications",
+    });
+
+    await applicationRepository.deleteDraft(business.uuid);
+    return created;
   },
 
-  // Draft Management (Section 36, 53, 71)
   saveDraft: async (user, draftData) => {
-    const businessId = user.business_id || user.id;
-    if (!db.drafts) db.drafts = [];
-
-    const existingIndex = db.drafts.findIndex((d) => d.businessId === businessId);
-    const draft = {
-      id: existingIndex !== -1 ? db.drafts[existingIndex].id : `DRAFT-${Math.floor(1000 + Math.random() * 9000)}`,
-      businessId,
-      ...draftData,
-      status: "DRAFT",
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (existingIndex !== -1) {
-      db.drafts[existingIndex] = draft;
-    } else {
-      db.drafts.push(draft);
+    if (user.role !== ROLES.BUSINESS) {
+      throw forbidden("Only business users can save application drafts.");
     }
-    db.persist();
-
-    return draft;
+    const business = await requireBusinessRecord(user);
+    return applicationRepository.saveDraft({
+      businessUuid: business.uuid,
+      userId: actorUserId(user),
+      draftData,
+    });
   },
 
   getDraft: async (user) => {
-    const businessId = user.business_id || user.id;
-    if (!db.drafts) return null;
-    return db.drafts.find((d) => d.businessId === businessId) || null;
+    if (user.role !== ROLES.BUSINESS) return null;
+    const business = await requireBusinessRecord(user);
+    return applicationRepository.getDraft(business.uuid);
   },
 
   deleteDraft: async (user) => {
-    const businessId = user.business_id || user.id;
-    if (!db.drafts) return true;
-    db.drafts = db.drafts.filter((d) => d.businessId !== businessId);
-    db.persist();
-    return true;
+    if (user.role !== ROLES.BUSINESS) {
+      throw forbidden("Only business users can delete application drafts.");
+    }
+    const business = await requireBusinessRecord(user);
+    return applicationRepository.deleteDraft(business.uuid);
   },
 
   acceptApplication: async (id, user) => {
     if (user.role !== ROLES.ASSISTANT_CONTROLLER && user.role !== ROLES.SYSTEM_ADMIN) {
-      const err = new Error("Forbidden: Only an Assistant Controller can accept applications.");
-      err.statusCode = 403;
-      throw err;
+      throw forbidden("Only an Assistant Controller can accept applications.");
     }
 
     const application = await applicationRepository.getById(id);
-    if (!application) {
-      const err = new Error("Application not found.");
-      err.statusCode = 404;
-      throw err;
-    }
+    assertApplicationAccess(application, user);
 
-    // District check
-    if (user.role !== ROLES.SYSTEM_ADMIN && application.district_id !== user.district_id) {
-      const err = new Error("Forbidden: Cannot accept applications outside your assigned district.");
-      err.statusCode = 403;
-      throw err;
+    if (![APPLICATION_STATUS.SUBMITTED, APPLICATION_STATUS.UNDER_REVIEW].includes(application.status)) {
+      throw badRequest(`Invalid transition: Cannot accept application in '${application.status}' state.`);
     }
-
-    if (
-      application.status !== APPLICATION_STATUS.SUBMITTED &&
-      application.status !== APPLICATION_STATUS.UNDER_REVIEW
-    ) {
-      const err = new Error(
-        `Invalid transition: Cannot accept application in '${application.status}' state.`
-      );
-      err.statusCode = 400;
-      throw err;
-    }
-
-    const updatedTimeline = [
-      ...(application.timeline || []),
-      {
-        event: "Application Formally Accepted",
-        date: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-        actor: `${user.name} (${user.role})`,
-        note: "Statutory documents verified. Application approved for LMO field assignment.",
-      },
-    ];
 
     const updated = await applicationRepository.update(id, {
       status: APPLICATION_STATUS.ACCEPTED,
-      acceptedBy: user.id,
-      acceptedByName: user.name,
-      acceptedDate: new Date().toISOString(),
-      timeline: updatedTimeline,
+      acceptedAt: new Date().toISOString(),
     });
 
-    // Audit record
-    await auditRepository.create({
-      district_id: application.district_id,
-      actor_id: user.id,
-      actor_name: user.name,
-      actor_role: user.role,
+    await statusHistory({ application, toStatus: APPLICATION_STATUS.ACCEPTED, user });
+    await audit({
+      application,
+      user,
       action: "APPLICATION_ACCEPTED",
-      entity_type: "APPLICATION",
-      entity_id: id,
-      remarks: "Application scrutiny passed. Ready for LMO field assignment.",
+      metadata: { previousStatus: application.status },
     });
+
+    if (application.businessUserId) {
+      await notificationRepository.create({
+        district_id: application.district_id,
+        recipient_user_id: application.businessUserId,
+        related_application_uuid: application.uuid,
+        title: "Application Accepted",
+        message: `Application ${application.applicationId} has been accepted for field assignment.`,
+        category: "APPLICATION_ACCEPTED",
+        link: `/${application.businessUserId}/applications/${application.applicationId}`,
+      });
+    }
 
     return updated;
   },
 
   rejectApplication: async (id, reason, user) => {
     if (user.role !== ROLES.ASSISTANT_CONTROLLER && user.role !== ROLES.SYSTEM_ADMIN) {
-      const err = new Error("Forbidden: Only an Assistant Controller can reject applications.");
-      err.statusCode = 403;
-      throw err;
+      throw forbidden("Only an Assistant Controller can reject applications.");
     }
 
     if (!reason || !reason.trim()) {
-      const err = new Error("Validation error: A formal rejection reason is mandatory.");
-      err.statusCode = 400;
-      throw err;
+      throw badRequest("A formal rejection reason is mandatory.");
     }
 
     const application = await applicationRepository.getById(id);
-    if (!application) {
-      const err = new Error("Application not found.");
-      err.statusCode = 404;
-      throw err;
-    }
+    assertApplicationAccess(application, user);
 
-    // District check
-    if (user.role !== ROLES.SYSTEM_ADMIN && application.district_id !== user.district_id) {
-      const err = new Error("Forbidden: Cannot reject applications outside your assigned district.");
-      err.statusCode = 403;
-      throw err;
+    if (
+      ![
+        APPLICATION_STATUS.SUBMITTED,
+        APPLICATION_STATUS.UNDER_REVIEW,
+        APPLICATION_STATUS.ACCEPTED,
+      ].includes(application.status)
+    ) {
+      throw badRequest(`Invalid transition: Cannot reject application in '${application.status}' state.`);
     }
-
-    const updatedTimeline = [
-      ...(application.timeline || []),
-      {
-        event: "Application Rejected",
-        date: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
-        actor: `${user.name} (${user.role})`,
-        note: `Rejected by District Authority: ${reason.trim()}`,
-        reason: reason.trim(),
-      },
-    ];
 
     const updated = await applicationRepository.update(id, {
       status: APPLICATION_STATUS.REJECTED,
-      rejectedBy: user.id,
-      rejectedByName: user.name,
+      rejectedAt: new Date().toISOString(),
       rejectionReason: reason.trim(),
-      rejectedDate: new Date().toISOString(),
-      timeline: updatedTimeline,
     });
 
-    // Audit record
-    await auditRepository.create({
-      district_id: application.district_id,
-      actor_id: user.id,
-      actor_name: user.name,
-      actor_role: user.role,
+    await statusHistory({ application, toStatus: APPLICATION_STATUS.REJECTED, user, reason: reason.trim() });
+    await audit({
+      application,
+      user,
       action: "APPLICATION_REJECTED",
-      entity_type: "APPLICATION",
-      entity_id: id,
-      remarks: `Statutory filing rejected. Reason: ${reason.trim()}`,
+      metadata: { reason: reason.trim(), previousStatus: application.status },
     });
+
+    if (application.businessUserId) {
+      await notificationRepository.create({
+        district_id: application.district_id,
+        recipient_user_id: application.businessUserId,
+        related_application_uuid: application.uuid,
+        title: "Application Rejected",
+        message: `Application ${application.applicationId} was rejected. Reason: ${reason.trim()}`,
+        category: "APPLICATION_REJECTED",
+        link: `/${application.businessUserId}/applications/${application.applicationId}`,
+      });
+    }
 
     return updated;
   },

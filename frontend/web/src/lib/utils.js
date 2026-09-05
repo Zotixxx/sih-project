@@ -98,7 +98,6 @@ export function getStatusTheme(status) {
   }
 }
 
-// Generate simple deterministic SHA-like hash for demonstration
 export function generateHash(input) {
   let hash = 0;
   const str = input + "METRIX-GOV-REGULATORY-SALT";
@@ -122,7 +121,7 @@ export function getNormalizedChecklist(record) {
       label: item.label || item.name || item.title || `Checklist Item #${idx + 1}`,
       status: item.status || (item.passed === false ? "FAILED" : "SATISFACTORY"),
       passed: item.passed !== false && item.status !== "FAILED",
-      notes: item.notes || item.remarks || "Recorded via Field Tablet",
+      notes: item.notes || item.remarks || "Recorded during field verification",
     }));
   }
 
@@ -176,52 +175,7 @@ export function getNormalizedChecklist(record) {
     }
   }
 
-  // 3. Fallback placeholder details representing dynamic tablet field entry
-  const seal = record.sealNumber || "SEAL-RAJ-99412";
-  return [
-    {
-      id: "tab-chk-1",
-      label: "Physical Examination & Maker's Plaque Readability",
-      status: "SATISFACTORY",
-      passed: true,
-      notes: "Make, model, serial number, accuracy class and capacity verified against registration",
-    },
-    {
-      id: "tab-chk-2",
-      label: "Foundation Leveling & Automatic Zero Return Mechanism",
-      status: "VERIFIED LEVEL",
-      passed: true,
-      notes: "Spirit level centered; zero deviation measured at 0.00 kg (within ±0.2d)",
-    },
-    {
-      id: "tab-chk-3",
-      label: "Corner / Eccentricity Load Testing (Schedule VII)",
-      status: "PASSED (< 1d)",
-      passed: true,
-      notes: "All 4 platform quadrants tested with certified test weights; maximum deviation 0.01 kg",
-    },
-    {
-      id: "tab-chk-4",
-      label: "Gravimetric Span & Maximum Permissible Error (MPE) Verification",
-      status: "SATISFACTORY",
-      passed: true,
-      notes: "Incremental loads from minimum to maximum capacity within prescribed statutory MPE limits",
-    },
-    {
-      id: "tab-chk-5",
-      label: "Tamper-Proof Lead/Wire Security Stamping Affixed",
-      status: "SEAL AFFIXED",
-      passed: true,
-      notes: `Serialized lead-wire security seal #${seal} clamped to junction enclosure`,
-    },
-    {
-      id: "tab-chk-6",
-      label: "Digital Indicator Enclosure & Calibration Access Port",
-      status: "LOCKED & SEALED",
-      passed: true,
-      notes: "Hardware calibration switch sealed to prevent post-verification alteration",
-    },
-  ];
+  return [];
 }
 
 export function getNormalizedMeasurements(record) {
@@ -248,10 +202,5 @@ export function getNormalizedMeasurements(record) {
     ];
   }
 
-  return [
-    { testLoad: "10,000 kg (25%)", indicatedWeight: "10,000 kg", error: "0 kg", mpeLimit: "±10 kg", result: "PASS" },
-    { testLoad: "20,000 kg (50%)", indicatedWeight: "19,998 kg", error: "-2 kg", mpeLimit: "±20 kg", result: "PASS" },
-    { testLoad: "40,000 kg (75%)", indicatedWeight: "40,004 kg", error: "+4 kg", mpeLimit: "±30 kg", result: "PASS" },
-    { testLoad: "60,000 kg (100%)", indicatedWeight: "60,000 kg", error: "0 kg", mpeLimit: "±30 kg", result: "PASS" },
-  ];
+  return [];
 }

@@ -1,30 +1,12 @@
 import { userRepository } from "../repositories/userRepository.js";
-import { createAuthToken } from "../middleware/auth.middleware.js";
 
 export const authController = {
   login: async (req, res) => {
-    const { userId } = req.body;
-    const user = await userRepository.getById(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: { code: "NOT_FOUND", message: `User '${userId}' not found.` },
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: {
-        token: createAuthToken(user.id),
-        user: {
-          id: user.id,
-          name: user.name,
-          role: user.role,
-          district_id: user.district_id,
-          designation: user.designation,
-          email: user.email,
-        },
+    return res.status(410).json({
+      success: false,
+      error: {
+        code: "SUPABASE_AUTH_REQUIRED",
+        message: "Use Supabase Auth email/password sign-in and send the Supabase access token to the API.",
       },
     });
   },
@@ -36,19 +18,30 @@ export const authController = {
     });
   },
 
-  getDemoUsers: async (req, res) => {
+  registerBusinessProfile: async (req, res, next) => {
+    try {
+      const user = await userRepository.createBusinessRegistration(req.authUser, req.body);
+      return res.status(201).json({
+        success: true,
+        data: user,
+        message: "Business profile registered successfully.",
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  getUsers: async (req, res) => {
     const allUsers = await userRepository.getAll();
     const safeUsers = allUsers.map((u) => ({
       id: u.id,
+      domainId: u.domainId,
       name: u.name,
       role: u.role,
       district_id: u.district_id,
       designation: u.designation,
     }));
 
-    return res.json({
-      success: true,
-      data: safeUsers,
-    });
+    return res.json({ success: true, data: safeUsers });
   },
 };

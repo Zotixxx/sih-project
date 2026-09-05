@@ -6,7 +6,7 @@ export const dashboardController = {
       const stats = await dashboardService.getStats(req.user);
       return res.json({ success: true, data: stats });
     } catch (error) {
-      return res.status(500).json({
+      return res.status(error.statusCode || 500).json({
         success: false,
         error: { code: "DASHBOARD_STATS_ERROR", message: error.message },
       });

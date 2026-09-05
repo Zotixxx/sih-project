@@ -2,79 +2,82 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useMetrixStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function SideNavBar() {
   const pathname = usePathname();
-  const { currentUser, userRole, district, notifications, applications, inspections } = useMetrixStore();
+  const router = useRouter();
+  const { currentUser, userRole, district, notifications, applications, logout } = useMetrixStore();
+  const basePath = currentUser?.id ? `/${currentUser.id}` : "";
+  const scoped = (href) => `${basePath}${href}`;
 
   const unreadCount = (notifications || []).filter((n) => n.unread).length;
   const pendingReviewCount = (applications || []).filter(
     (a) => a.status === "SUBMITTED" || a.status === "UNDER_REVIEW"
   ).length;
-  const awaitingApprovalCount = (inspections || []).filter(
-    (i) => i.status === "SUBMITTED_FOR_APPROVAL"
+  const awaitingApprovalCount = (applications || []).filter(
+    (application) => application.status === "AWAITING_APPROVAL"
   ).length;
 
   // 1. Assistant Controller Navigation (Section 58)
   const adminNav = [
-    { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+    { label: "Dashboard", href: scoped("/dashboard"), icon: "dashboard" },
     {
       label: "Fresh Applications",
-      href: "/admin/fresh-applications",
+      href: scoped("/fresh-applications"),
       icon: "description",
       badgeCount: pendingReviewCount > 0 ? pendingReviewCount : null,
     },
     {
       label: "Verify",
-      href: "/admin/verify",
+      href: scoped("/verify"),
       icon: "approval",
       badgeCount: awaitingApprovalCount > 0 ? awaitingApprovalCount : null,
       highlightBadge: true,
     },
-    { label: "LMOs", href: "/admin/lmos", icon: "badge" },
+    { label: "LMOs", href: scoped("/lmos"), icon: "badge" },
     {
       label: "Notifications",
-      href: "/notifications",
+      href: scoped("/notifications"),
       icon: "notifications",
       badgeCount: unreadCount > 0 ? unreadCount : null,
     },
-    { label: "Settings", href: "/settings", icon: "settings" },
+    { label: "Settings", href: scoped("/settings"), icon: "settings" },
   ];
 
   // 2. Business Navigation (Section 58)
   const businessNav = [
-    { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
+    { label: "Dashboard", href: scoped("/dashboard"), icon: "dashboard" },
     {
       label: "Applications",
-      href: "/applications",
+      href: scoped("/applications"),
       icon: "description",
     },
-    { label: "Certificates", href: "/certificates", icon: "verified" },
-    { label: "Instruments", href: "/instruments", icon: "straighten" },
+    { label: "Certificates", href: scoped("/certificates"), icon: "verified" },
+    { label: "Instruments", href: scoped("/instruments"), icon: "straighten" },
     {
       label: "Notifications",
-      href: "/notifications",
+      href: scoped("/notifications"),
       icon: "notifications",
       badgeCount: unreadCount > 0 ? unreadCount : null,
     },
-    { label: "Settings", href: "/settings", icon: "settings" },
+    { label: "Settings", href: scoped("/settings"), icon: "settings" },
   ];
 
   // 3. LMO Navigation (Section 58)
   const lmoNav = [
-    { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
-    { label: "Inspections", href: "/inspections", icon: "assignment_turned_in" },
-    { label: "Verification Details", href: "/lmo/verification-details", icon: "fact_check" },
+    { label: "Dashboard", href: scoped("/dashboard"), icon: "dashboard" },
+    { label: "Inspections", href: scoped("/inspections"), icon: "assignment_turned_in" },
+    { label: "Verification Details", href: scoped("/verification-details"), icon: "fact_check" },
     {
       label: "Notifications",
-      href: "/notifications",
+      href: scoped("/notifications"),
       icon: "notifications",
       badgeCount: unreadCount > 0 ? unreadCount : null,
     },
-    { label: "Settings", href: "/settings", icon: "settings" },
+    { label: "Settings", href: scoped("/settings"), icon: "settings" },
   ];
 
   const visibleItems =
@@ -114,7 +117,7 @@ export default function SideNavBar() {
           </span>
           {userRole === "admin" && (
             <span className="text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-mono-code font-bold">
-              {district?.name || currentUser?.districtName || "Ajmer"}
+              {district?.name || currentUser?.districtName || currentUser?.district_id || "District"}
             </span>
           )}
         </div>
@@ -122,7 +125,7 @@ export default function SideNavBar() {
         {visibleItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            (!item.href.endsWith("/dashboard") && pathname.startsWith(item.href));
 
           return (
             <Link
@@ -170,7 +173,7 @@ export default function SideNavBar() {
       <div className="p-3 border-t border-slate-200 shrink-0">
         {userRole === "admin" && (
           <Link
-            href="/admin/awaiting-certificates"
+            href={scoped("/verify")}
             className="w-full bg-slate-900 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined text-[18px]">fact_check</span>
@@ -180,7 +183,7 @@ export default function SideNavBar() {
 
         {userRole === "business" && (
           <Link
-            href="/applications/apply"
+            href={scoped("/applications/apply")}
             className="w-full bg-slate-900 text-white text-xs font-semibold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined text-[18px]">add_circle</span>
@@ -190,7 +193,7 @@ export default function SideNavBar() {
 
         {userRole === "lmo" && (
           <Link
-            href="/inspections"
+            href={scoped("/inspections")}
             className="w-full bg-slate-900 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-2xs"
           >
             <span className="material-symbols-outlined text-[18px]">calendar_today</span>
@@ -212,32 +215,34 @@ export default function SideNavBar() {
                   : "bg-purple-100 text-purple-800 border border-purple-200"
               }`}
             >
-              {userRole === "business" ? "SB" : userRole === "lmo" ? "RK" : "AC"}
+                {(currentUser?.name || currentUser?.displayName || "U")
+                  .split(" ")
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join("")
+                  .toUpperCase()}
             </div>
             <div className="truncate">
               <p className="text-xs font-bold text-slate-900 truncate">
-                {userRole === "business"
-                  ? "Shree Balaji Traders"
-                  : userRole === "lmo"
-                  ? "Rajesh Kumar (LMO)"
-                  : "Dr. R. K. Sharma"}
+                {currentUser?.businessName || currentUser?.name || currentUser?.displayName || "Signed-in user"}
               </p>
               <p className="text-[10px] text-slate-500 uppercase font-semibold">
-                {userRole === "business"
-                  ? "Ajmer Merchant"
-                  : userRole === "lmo"
-                  ? "Ajmer City Zone"
-                  : "Assistant Controller • Ajmer"}
+                {currentUser?.domainId || currentUser?.role || currentUser?.district_id}
               </p>
             </div>
           </div>
-          <Link
-            href="/login"
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+              router.push("/login");
+            }}
             className="w-7 h-7 rounded flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors"
-            title="Logout / Switch Account"
+            title="Logout"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
-          </Link>
+          </button>
         </div>
       </div>
     </aside>

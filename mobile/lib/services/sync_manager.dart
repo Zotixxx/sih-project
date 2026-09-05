@@ -7,9 +7,9 @@ const apiBaseUrl = String.fromEnvironment(
   'METRIX_API_BASE_URL',
   defaultValue: 'http://10.0.2.2:5001/api',
 );
-const officerId = String.fromEnvironment(
-  'METRIX_LMO_ID',
-  defaultValue: 'LMO-AJM-021',
+const supabaseAccessToken = String.fromEnvironment(
+  'METRIX_SUPABASE_ACCESS_TOKEN',
+  defaultValue: '',
 );
 
 class SyncManager {
@@ -37,11 +37,18 @@ class SyncManager {
       }
 
       onProgress?.call('Syncing ${unsynced.length} offline records with central server...');
+      if (supabaseAccessToken.isEmpty) {
+        throw Exception('METRIX_SUPABASE_ACCESS_TOKEN is required for authenticated sync.');
+      }
+
+      final authHeaders = {
+        'Authorization': 'Bearer $supabaseAccessToken',
+      };
 
       for (var insp in unsynced) {
         final startResponse = await http.post(
           Uri.parse('$apiBaseUrl/inspections/${insp.id}/start'),
-          headers: {'x-user-id': officerId},
+          headers: authHeaders,
         );
         if (startResponse.statusCode != 200 && startResponse.statusCode != 400) {
           throw Exception('Could not start ${insp.id}: HTTP ${startResponse.statusCode}');
@@ -51,7 +58,7 @@ class SyncManager {
           Uri.parse('$apiBaseUrl/inspections/${insp.id}/submit'),
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': officerId,
+            ...authHeaders,
           },
           body: jsonEncode({
             'inspectionDate': DateTime.now().toIso8601String().split('T').first,

@@ -9,13 +9,12 @@ import Modal from "@/components/ui/Modal";
 import CertificatePreviewModal from "@/components/certificates/CertificatePreviewModal";
 import { useMetrixStore } from "@/lib/store";
 import { metrixApi } from "@/lib/api";
-import { formatDate } from "@/lib/utils";
+import { formatDate, getNormalizedChecklist } from "@/lib/utils";
 
 export default function VerifyPage() {
   const {
     inspections,
     applications,
-    certificates,
     currentUser,
     district,
     approveInspection,
@@ -35,6 +34,7 @@ export default function VerifyPage() {
   const [recordSearchQuery, setRecordSearchQuery] = useState("");
   const [apiSearchResults, setApiSearchResults] = useState(null);
   const [isSearchingApi, setIsSearchingApi] = useState(false);
+  const [searchError, setSearchError] = useState("");
   const [viewingCertificate, setViewingCertificate] = useState(null);
 
   // Filter applications waiting for Assistant Controller final sanction
@@ -49,10 +49,10 @@ export default function VerifyPage() {
           ...a,
           inspection: insp,
           ownerName: a.businessName,
-          officer: a.assignedLmoName || insp?.officerName || insp?.officer || "Field LMO",
+          officer: a.assignedLmoName || insp?.officerName || insp?.officer || "Assigned LMO",
           officerBadge: insp?.officerBadge || a.assignedLmoId,
           inspectionId: insp?.id || a.inspectionId,
-          sealNumber: insp?.sealNumber || a.sealNumber || "SEAL-RAJ-2026",
+          sealNumber: insp?.sealNumber || a.sealNumber || "Not submitted",
           inspectionDate: insp?.inspectionDate || a.inspectionDate,
         };
       })
@@ -83,9 +83,13 @@ export default function VerifyPage() {
         const res = await metrixApi.searchCertificates(recordSearchQuery.trim());
         if (isMounted && res?.data) {
           setApiSearchResults(res.data);
+          setSearchError("");
         }
       } catch (err) {
-        console.warn("Backend certificate search fallback:", err);
+        if (isMounted) {
+          setApiSearchResults([]);
+          setSearchError(err.message || "Certificate search failed.");
+        }
       } finally {
         if (isMounted) setIsSearchingApi(false);
       }
@@ -99,20 +103,8 @@ export default function VerifyPage() {
 
   const searchResults = useMemo(() => {
     if (!recordSearchQuery.trim()) return [];
-    if (apiSearchResults !== null) return apiSearchResults;
-
-    const q = recordSearchQuery.toLowerCase().trim();
-    return (certificates || []).filter((cert) => {
-      return (
-        cert.id?.toLowerCase().includes(q) ||
-        cert.certificateNumber?.toLowerCase().includes(q) ||
-        cert.ownerName?.toLowerCase().includes(q) ||
-        cert.businessName?.toLowerCase().includes(q) ||
-        cert.instrumentName?.toLowerCase().includes(q) ||
-        cert.serialNumber?.toLowerCase().includes(q)
-      );
-    });
-  }, [recordSearchQuery, apiSearchResults, certificates]);
+    return apiSearchResults || [];
+  }, [recordSearchQuery, apiSearchResults]);
 
   // Handle Final Approval & Automatic Certificate Issuance
   const handleApprove = async () => {
@@ -156,7 +148,11 @@ export default function VerifyPage() {
     }
   };
 
-  const districtName = district?.name || currentUser?.districtName || "Ajmer";
+  const districtName = district?.name || currentUser?.districtName || currentUser?.district_id || "District";
+  const selectedMeasurements = selectedApp?.inspection?.measurements || [];
+  const selectedChecklist = selectedApp ? getNormalizedChecklist(selectedApp.inspection) : [];
+  const allMeasurementsPassed =
+    selectedMeasurements.length > 0 && selectedMeasurements.every((measurement) => measurement.result !== "FAIL");
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
@@ -322,6 +318,10 @@ export default function VerifyPage() {
                 <div className="bg-white border border-slate-200 rounded-xl shadow-2xs overflow-hidden">
                   {isSearchingApi ? (
                     <div className="p-8 text-center text-xs text-slate-500">Searching records...</div>
+                  ) : searchError ? (
+                    <div className="p-8 text-center text-xs text-rose-600">
+                      {searchError}
+                    </div>
                   ) : searchResults.length === 0 ? (
                     <div className="p-8 text-center text-xs text-slate-500">
                       No matching certificate records found for &quot;{recordSearchQuery}&quot;.
@@ -462,31 +462,70 @@ export default function VerifyPage() {
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">GPS Coordinates</span>
-                  <span className="font-mono-code text-slate-700">{selectedApp.inspection?.gpsCoords || "26.4499° N, 74.6399° E"}</span>
+                  <span className="font-mono-code text-slate-700">{selectedApp.inspection?.gpsCoords || "Not submitted"}</span>
                 </div>
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Verification Result</span>
-                  <span className="font-bold text-emerald-700">PASSED &amp; STAMPED</span>
+                  <span className={`font-bold ${allMeasurementsPassed ? "text-emerald-700" : "text-amber-700"}`}>
+                    {allMeasurementsPassed ? "PASSED" : "REVIEW REQUIRED"}
+                  </span>
                 </div>
               </div>
 
               {/* Checklist & Measurements */}
               <div className="space-y-2 pt-1">
                 <span className="text-[11px] font-bold text-slate-700 block">Physical Checklist &amp; Measurements:</span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
-                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded flex items-center gap-2 text-emerald-900">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-700">check_circle</span>
-                    Visual Plaque &amp; Model Approval: Passed
+                {selectedChecklist.length === 0 && selectedMeasurements.length === 0 ? (
+                  <div className="p-3 rounded-lg border border-slate-200 bg-slate-50 text-slate-500">
+                    No checklist or measurement details were submitted.
                   </div>
-                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded flex items-center gap-2 text-emerald-900">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-700">check_circle</span>
-                    Zero Setting &amp; Leveling: Verified
+                ) : (
+                  <div className="space-y-3">
+                    {selectedChecklist.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                        {selectedChecklist.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`p-2.5 border rounded flex items-center gap-2 ${
+                              item.passed
+                                ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                                : "bg-rose-50 border-rose-200 text-rose-900"
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">
+                              {item.passed ? "check_circle" : "cancel"}
+                            </span>
+                            {item.label}: {item.status}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {selectedMeasurements.length > 0 && (
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-left text-[11px]">
+                          <thead className="bg-slate-50 text-slate-500 uppercase font-bold">
+                            <tr>
+                              <th className="px-3 py-2">Test Load</th>
+                              <th className="px-3 py-2">Observed</th>
+                              <th className="px-3 py-2">MPE</th>
+                              <th className="px-3 py-2 text-right">Result</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {selectedMeasurements.map((measurement, index) => (
+                              <tr key={`${measurement.testLoad}-${index}`}>
+                                <td className="px-3 py-2 font-mono-code font-bold">{measurement.testLoad}</td>
+                                <td className="px-3 py-2">{measurement.observed || measurement.indicatedWeight}</td>
+                                <td className="px-3 py-2">{measurement.mpe || measurement.mpeLimit}</td>
+                                <td className="px-3 py-2 text-right font-bold">{measurement.result}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
-                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded flex items-center gap-2 text-emerald-900">
-                    <span className="material-symbols-outlined text-[16px] text-emerald-700">check_circle</span>
-                    Load Error Test: Within MPE Tolerance
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Remarks */}

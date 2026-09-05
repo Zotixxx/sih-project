@@ -1,25 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import PublicHeader from "@/components/layout/PublicHeader";
 import StatTicker from "@/components/shared/StatTicker";
 import Badge from "@/components/ui/Badge";
 
 export default function LandingPage() {
-  const router = useRouter();
-  const [certSearch, setCertSearch] = useState("");
-
-  const handleVerifySubmit = (e) => {
-    e.preventDefault();
-    if (certSearch.trim()) {
-      router.push(`/verify/${encodeURIComponent(certSearch.trim())}`);
-    } else {
-      router.push("/verify");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col">
       {/* Top Public Navbar */}
@@ -50,44 +37,16 @@ export default function LandingPage() {
                 MetriX digitizes the complete lifecycle of weighing and measuring instruments—from registration, scheduling, and geotagged field verification to tamper-proof cryptographic certificates and instant public QR validation.
               </p>
 
-              {/* Instant Verification Search Box */}
-              <form
-                onSubmit={handleVerifySubmit}
-                className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-2 max-w-xl"
-              >
-                <div className="relative flex-1 flex items-center">
-                  <span className="material-symbols-outlined absolute left-3 text-slate-400 text-[20px]">
-                    qr_code_scanner
-                  </span>
-                  <input
-                    type="text"
-                    value={certSearch}
-                    onChange={(e) => setCertSearch(e.target.value)}
-                    placeholder="Enter Certificate ID (e.g. LM-DEL-2026-00114)"
-                    className="w-full bg-transparent pl-10 pr-3 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="bg-slate-900 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 shadow-2xs shrink-0"
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    verified
-                  </span>
-                  Verify Instantly
-                </button>
-              </form>
-
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Link
-                  href="/dashboard"
+                  href="/login"
                   className="px-5 py-2.5 rounded-lg bg-slate-900 text-white text-xs sm:text-sm font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm"
                 >
                   <span className="material-symbols-outlined text-[18px]">
                     dashboard
                   </span>
-                  Open Business Dashboard
+                  Portal Login
                 </Link>
                 <Link
                   href="/login"
@@ -123,7 +82,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right public verification entry point */}
+            {/* Right authenticated workflow panel */}
             <div className="lg:col-span-5 relative">
               <div className="bg-white border-2 border-slate-900 rounded-xl p-6 shadow-xl relative transition-transform duration-300 hover:scale-[1.01]">
                 <div className="flex items-start justify-between border-b border-slate-200 pb-4 mb-4">
@@ -142,14 +101,14 @@ export default function LandingPage() {
                       </p>
                     </div>
                   </div>
-                  <Badge status="PENDING" customLabel="Live lookup" />
+                  <Badge status="IN_PROGRESS" customLabel="API workflow" />
                 </div>
 
                 <div className="min-h-[220px] flex flex-col items-center justify-center text-center gap-3">
-                  <span className="material-symbols-outlined text-[48px] text-slate-300">qr_code_scanner</span>
-                  <h4 className="text-base font-bold text-slate-900">Verify an official certificate</h4>
+                  <span className="material-symbols-outlined text-[48px] text-slate-300">rule_settings</span>
+                  <h4 className="text-base font-bold text-slate-900">One controlled verification lifecycle</h4>
                   <p className="text-xs leading-relaxed text-slate-500 max-w-xs">
-                    Enter a certificate ID above to retrieve its current record from the authority API.
+                    Businesses, Assistant Controllers, and LMOs work against the same Supabase-backed application, inspection, and certificate records.
                   </p>
                 </div>
               </div>
@@ -281,10 +240,10 @@ export default function LandingPage() {
                 </ul>
               </div>
               <Link
-                href="/dashboard"
+                href="/login"
                 className="mt-6 w-full py-2.5 rounded-lg bg-slate-900 text-white font-bold text-xs text-center hover:bg-slate-800 transition-colors"
               >
-                Access Business Portal →
+                Access Business Portal
               </Link>
             </div>
 
@@ -327,7 +286,7 @@ export default function LandingPage() {
                 href="/login"
                 className="mt-6 w-full py-2.5 rounded-lg bg-slate-900 text-white font-bold text-xs text-center hover:bg-slate-800 transition-colors"
               >
-                Open LMO Duty Portal →
+                Open LMO Duty Portal
               </Link>
             </div>
 
@@ -367,10 +326,10 @@ export default function LandingPage() {
                 </ul>
               </div>
               <Link
-                href="/admin"
+                href="/login"
                 className="mt-6 w-full py-2.5 rounded-lg bg-slate-900 text-white font-bold text-xs text-center hover:bg-slate-800 transition-colors"
               >
-                Enter Admin Portal →
+                Enter Admin Portal
               </Link>
             </div>
           </div>
@@ -403,22 +362,22 @@ export default function LandingPage() {
               </h5>
               <ul className="text-xs text-slate-400 space-y-2">
                 <li>
-                  <Link href="/dashboard" className="hover:text-white transition-colors">
+                  <Link href="/login" className="hover:text-white transition-colors">
                     Business Dashboard
                   </Link>
                 </li>
                 <li>
-                  <Link href="/instruments" className="hover:text-white transition-colors">
+                  <Link href="/login" className="hover:text-white transition-colors">
                     Instrument Management
                   </Link>
                 </li>
                 <li>
-                  <Link href="/applications/apply" className="hover:text-white transition-colors">
+                  <Link href="/login" className="hover:text-white transition-colors">
                     Apply for Verification
                   </Link>
                 </li>
                 <li>
-                  <Link href="/certificates" className="hover:text-white transition-colors">
+                  <Link href="/login" className="hover:text-white transition-colors">
                     Certificates Vault
                   </Link>
                 </li>
@@ -431,22 +390,17 @@ export default function LandingPage() {
               </h5>
               <ul className="text-xs text-slate-400 space-y-2">
                 <li>
-                  <Link href="/verify" className="hover:text-white transition-colors">
-                    Public QR Verification Portal
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/admin" className="hover:text-white transition-colors">
+                  <Link href="/login" className="hover:text-white transition-colors">
                     Officer Scheduling &amp; Allocation
                   </Link>
                 </li>
                 <li>
-                  <Link href="/inspections" className="hover:text-white transition-colors">
+                  <Link href="/login" className="hover:text-white transition-colors">
                     Inspection Evidence &amp; Geotags
                   </Link>
                 </li>
                 <li>
-                  <Link href="/notifications" className="hover:text-white transition-colors">
+                  <Link href="/login" className="hover:text-white transition-colors">
                     Expiry Alert System
                   </Link>
                 </li>

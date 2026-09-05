@@ -151,17 +151,6 @@ export default function PublicVerifyInfoPage() {
               </div>
             </div>
 
-            {/* Sample link for testing/demonstration on PC */}
-            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-              <span>Testing without a physical scanner?</span>
-              <Link
-                href="/verify/CERT-AJM-0523"
-                className="text-slate-900 font-bold hover:underline flex items-center gap-1"
-              >
-                Preview Sample Verified Certificate (Ajmer District)
-                <span aria-hidden="true" className="material-symbols-outlined text-[14px]">arrow_forward</span>
-              </Link>
-            </div>
           </div>
         </main>
       </div>

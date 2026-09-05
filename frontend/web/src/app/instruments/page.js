@@ -8,7 +8,16 @@ import TopNavBar from "@/components/layout/TopNavBar";
 import Badge from "@/components/ui/Badge";
 import QRCodeModal from "@/components/ui/QRCodeModal";
 import { useMetrixStore } from "@/lib/store";
+import { portalPath } from "@/lib/routes";
 import { formatDate } from "@/lib/utils";
+
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
+    reader.onerror = () => reject(reader.error || new Error("Could not read purchase bill."));
+    reader.readAsDataURL(file);
+  });
 
 function InstrumentsContent() {
   const searchParams = useSearchParams();
@@ -17,6 +26,7 @@ function InstrumentsContent() {
 
   const { instruments, certificates, currentUser, userRole, updateInstrument } = useMetrixStore();
   const isBusiness = userRole === "business" || currentUser?.role === "BUSINESS";
+  const href = (path) => portalPath(currentUser, path);
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
   const [categoryFilter, setCategoryFilter] = useState("ALL");
@@ -26,22 +36,9 @@ function InstrumentsContent() {
 
   // Business isolation: Only see own instruments
   const userInstruments = useMemo(() => {
-    if (isBusiness) {
-      const businessId =
-        currentUser?.business_id ||
-        (currentUser?.id?.startsWith("BIZ-")
-          ? currentUser.id.replace(/^BIZ-/, "BUS-")
-          : currentUser?.id);
-      return (instruments || []).filter(
-        (inst) =>
-          inst.businessId === businessId ||
-          inst.business_id === businessId ||
-          inst.ownerName?.toLowerCase().includes(currentUser?.name?.toLowerCase()) ||
-          inst.businessName?.toLowerCase().includes(currentUser?.businessName?.toLowerCase())
-      );
-    }
+    if (isBusiness) return instruments || [];
     return instruments || [];
-  }, [instruments, isBusiness, currentUser]);
+  }, [instruments, isBusiness]);
 
   // Filter instruments
   const filteredInstruments = useMemo(() => {
@@ -84,16 +81,16 @@ function InstrumentsContent() {
     const file = e.target.files?.[0];
     if (!file || !selectedInstrument) return;
 
-    const billData = {
-      documentId: `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
-      fileName: file.name,
-      fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-      fileType: file.type || "application/pdf",
-      uploadedDate: new Date().toISOString().split("T")[0],
-      source: "INSTRUMENT",
-    };
-
     try {
+      const billData = {
+        fileName: file.name,
+        fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+        fileType: file.type || "application/pdf",
+        mimeType: file.type || "application/pdf",
+        base64: await fileToBase64(file),
+        uploadedDate: new Date().toISOString().split("T")[0],
+        source: "INSTRUMENT",
+      };
       const updated = await updateInstrument(selectedInstrument.id, {
         purchaseBill: billData,
       });
@@ -103,31 +100,6 @@ function InstrumentsContent() {
       }));
     } catch (err) {
       console.error("Failed to update bill:", err);
-    }
-  };
-
-  const handleAttachDefaultBill = async () => {
-    if (!selectedInstrument) return;
-    const sanitizedName = (selectedInstrument.name || "Instrument").replace(/[^a-zA-Z0-9]/g, "_");
-    const billData = {
-      documentId: `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
-      fileName: `${sanitizedName}_Purchase_Invoice.pdf`,
-      fileSize: "1.4 MB",
-      fileType: "application/pdf",
-      uploadedDate: new Date().toISOString().split("T")[0],
-      source: "INSTRUMENT",
-    };
-
-    try {
-      await updateInstrument(selectedInstrument.id, {
-        purchaseBill: billData,
-      });
-      setSelectedInstrument((prev) => ({
-        ...prev,
-        purchaseBill: billData,
-      }));
-    } catch (err) {
-      console.error("Failed to attach default bill:", err);
     }
   };
 
@@ -146,7 +118,7 @@ function InstrumentsContent() {
           </div>
 
           <Link
-            href="/instruments/new"
+            href={href("/instruments/new")}
             className="px-4 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-2xs self-start sm:self-auto"
           >
             <span className="material-symbols-outlined text-[18px]">add</span>
@@ -281,7 +253,7 @@ function InstrumentsContent() {
                         </button>
                       )}
                       <Link
-                        href={`/applications/apply?instrumentId=${inst.id}`}
+                        href={href(`/applications/apply?instrumentId=${inst.id}`)}
                         className="px-2.5 py-1 rounded bg-slate-900 text-white font-semibold text-[11px] hover:bg-slate-800 transition-colors inline-block"
                       >
                         Apply for Verification
@@ -454,14 +426,6 @@ function InstrumentsContent() {
                           onChange={handleBillUpload}
                         />
                       </label>
-                      <button
-                        type="button"
-                        onClick={handleAttachDefaultBill}
-                        className="px-2.5 py-1.5 rounded-md bg-white border border-slate-300 text-slate-700 font-semibold text-[11px] hover:bg-slate-50 transition-colors flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-[14px] text-emerald-600">receipt</span>
-                        Attach OEM Invoice
-                      </button>
                     </div>
                   </div>
                 )}
@@ -505,7 +469,7 @@ function InstrumentsContent() {
             {/* Drawer Bottom Actions */}
             <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center gap-3">
               <Link
-                href={`/applications/apply?instrumentId=${selectedInstrument.id}`}
+                href={href(`/applications/apply?instrumentId=${selectedInstrument.id}`)}
                 className="flex-1 py-2.5 rounded-lg bg-slate-900 text-white font-bold text-xs text-center hover:bg-slate-800 transition-colors"
               >
                 Apply for Verification
@@ -528,15 +492,6 @@ function InstrumentsContent() {
 }
 
 export default function InstrumentsPage() {
-  const { userRole, setUserRole } = useMetrixStore();
-
-  React.useEffect(() => {
-    // Ensure business persona when visiting My Instruments
-    if (userRole !== "business") {
-      setUserRole("business");
-    }
-  }, [userRole, setUserRole]);
-
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
       <SideNavBar />

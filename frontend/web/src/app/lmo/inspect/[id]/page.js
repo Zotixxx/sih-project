@@ -8,7 +8,16 @@ import TopNavBar from "@/components/layout/TopNavBar";
 import Badge from "@/components/ui/Badge";
 import { useMetrixStore } from "@/lib/store";
 import { metrixApi } from "@/lib/api";
+import { portalPath } from "@/lib/routes";
 import { formatDate } from "@/lib/utils";
+
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
+    reader.onerror = () => reject(reader.error || new Error("Could not read evidence file."));
+    reader.readAsDataURL(file);
+  });
 
 export default function LmoFieldInspectionPage({ params }) {
   const unwrappedParams = use(params);
@@ -16,6 +25,7 @@ export default function LmoFieldInspectionPage({ params }) {
   const inspectionId = decodeURIComponent(unwrappedParams.id);
 
   const { inspections, applications, currentUser, refreshData } = useMetrixStore();
+  const href = (path) => portalPath(currentUser, path);
 
   // Find inspection
   const inspection = useMemo(() => {
@@ -46,10 +56,10 @@ export default function LmoFieldInspectionPage({ params }) {
   const [stampingPlaqueValid, setStampingPlaqueValid] = useState(true);
 
   // Measurements
-  const [nominalLoad, setNominalLoad] = useState("5000 kg");
-  const [indicatedLoad, setIndicatedLoad] = useState("5002 kg");
-  const [observedError, setObservedError] = useState("+2 kg");
-  const [mpeAllowable, setMpeAllowable] = useState("±5 kg");
+  const [nominalLoad, setNominalLoad] = useState("");
+  const [indicatedLoad, setIndicatedLoad] = useState("");
+  const [observedError, setObservedError] = useState("");
+  const [mpeAllowable, setMpeAllowable] = useState("");
   const [tolerancePassed, setTolerancePassed] = useState(true);
 
   // Lead wire seal & Location
@@ -57,11 +67,13 @@ export default function LmoFieldInspectionPage({ params }) {
     inspection?.sealNumber || ""
   );
   const [gpsLocation, setGpsLocation] = useState(
-    inspection?.gpsCoords || "26.4499° N, 74.6399° E"
+    inspection?.gpsCoords || ""
   );
+  const [standardsUsed, setStandardsUsed] = useState("");
   const [inspectorRemarks, setInspectorRemarks] = useState(
-    inspection?.remarks || "Physical tests conducted using certified Class M1 test standards. Instrument conforms to Schedule VII limits."
+    inspection?.remarks || ""
   );
+  const [evidenceDocs, setEvidenceDocs] = useState([]);
 
   const handleStartInspection = async () => {
     if (!inspection) return;
@@ -74,6 +86,28 @@ export default function LmoFieldInspectionPage({ params }) {
     }
   };
 
+  const handleEvidenceUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const uploaded = await metrixApi.uploadDocument({
+        bucket: "inspection-evidence",
+        fileName: file.name,
+        mimeType: file.type || "image/jpeg",
+        base64: await fileToBase64(file),
+      });
+      setEvidenceDocs((prev) => [
+        ...prev,
+        {
+          documentId: uploaded.data.documentId,
+          fileName: uploaded.data.fileName,
+        },
+      ]);
+    } catch (error) {
+      alert("Error uploading evidence: " + error.message);
+    }
+  };
+
   const handleSubmitInspection = async (e) => {
     e.preventDefault();
     if (!inspection) return;
@@ -81,8 +115,10 @@ export default function LmoFieldInspectionPage({ params }) {
     try {
       await metrixApi.submitInspection(inspection.id, {
         sealNumber: appliedSealNumber,
+        standardsUsed,
         gpsCoordinates: gpsLocation,
         officerRemarks: inspectorRemarks,
+        evidenceDocumentIds: evidenceDocs.map((doc) => doc.documentId),
         measurements: [{
           testLoad: nominalLoad,
           indicatedWeight: indicatedLoad,
@@ -99,7 +135,7 @@ export default function LmoFieldInspectionPage({ params }) {
 
       await refreshData();
       alert("Field inspection submitted successfully! Application has moved to Awaiting Final Review.");
-      router.push("/lmo/verification-details");
+      router.push(href("/verification-details"));
     } catch (err) {
       alert("Error submitting inspection: " + err.message);
     } finally {
@@ -129,7 +165,7 @@ export default function LmoFieldInspectionPage({ params }) {
               Inspection ID &quot;{inspectionId}&quot; Not Found
             </h3>
             <Link
-              href="/inspections"
+              href={href("/inspections")}
               className="inline-block px-4 py-2 rounded-lg bg-slate-900 text-white font-bold text-xs"
             >
               ← Back to Inspections
@@ -175,7 +211,7 @@ export default function LmoFieldInspectionPage({ params }) {
                   {app?.businessName || inspection.ownerName} — {app?.instrumentName || inspection.instrumentName}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Scheduled: <strong>{formatDate(inspection.scheduledDate)}</strong> at <strong>{inspection.scheduledTime || "11:30 AM"}</strong>
+                  Scheduled: <strong>{formatDate(inspection.scheduledDate)}</strong>
                 </p>
               </div>
 
@@ -202,7 +238,7 @@ export default function LmoFieldInspectionPage({ params }) {
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Capacity / Range</span>
-                <span className="text-slate-800">{app?.capacity || inspection.capacity || "Standard"}</span>
+                <span className="text-slate-800">{app?.capacity || inspection.capacity || "Not recorded"}</span>
               </div>
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Establishment Location</span>
@@ -331,9 +367,13 @@ export default function LmoFieldInspectionPage({ params }) {
                 </div>
 
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between text-emerald-950 font-semibold">
-                  <span>Load error (+2 kg) is within Schedule VII allowable limit (±5 kg)</span>
+                  <span>
+                    {observedError && mpeAllowable
+                      ? `Load error (${observedError}) ${tolerancePassed ? "is within" : "exceeds"} allowable limit (${mpeAllowable})`
+                      : "Enter measurement values and mark the result."}
+                  </span>
                   <span className="px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 font-bold text-[10px]">
-                    MPE PASSED
+                    {tolerancePassed ? "MPE PASSED" : "MPE FAILED"}
                   </span>
                 </div>
               </div>
@@ -355,6 +395,19 @@ export default function LmoFieldInspectionPage({ params }) {
                       onChange={(e) => setAppliedSealNumber(e.target.value)}
                       placeholder="e.g. SEAL-RAJ-99412"
                       className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs text-slate-900 font-mono-code font-bold focus:outline-none"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-700">Certified Standards Used *</label>
+                    <input
+                      type="text"
+                      value={standardsUsed}
+                      disabled={isAlreadySubmitted}
+                      onChange={(e) => setStandardsUsed(e.target.value)}
+                      placeholder="e.g. M1 test weights certificate number"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none"
                       required
                     />
                   </div>
@@ -385,11 +438,41 @@ export default function LmoFieldInspectionPage({ params }) {
                 </div>
               </div>
 
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-2xs space-y-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-slate-700 text-[18px]">photo_camera</span>
+                  4. Evidence Photos / Documents
+                </h3>
+                {!isAlreadySubmitted && (
+                  <label className="cursor-pointer px-3 py-2 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors inline-flex items-center gap-1.5 shadow-2xs">
+                    <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                    Upload Evidence
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp"
+                      onChange={handleEvidenceUpload}
+                    />
+                  </label>
+                )}
+                {evidenceDocs.length === 0 ? (
+                  <p className="text-xs text-slate-500">No evidence files attached.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {evidenceDocs.map((doc) => (
+                      <div key={doc.documentId} className="p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700">
+                        {doc.fileName}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Action Buttons */}
               {!isAlreadySubmitted && (
                 <div className="flex items-center justify-end gap-3 pt-2">
                   <Link
-                    href="/inspections"
+                    href={href("/inspections")}
                     className="px-4 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50"
                   >
                     Cancel

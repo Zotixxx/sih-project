@@ -1,5 +1,5 @@
 // MetriX Central Role Definitions
-// STRICT SPECIFICATION: Exactly 4 roles exist in the system. GATC has been removed.
+// STRICT SPECIFICATION: Exactly 4 roles exist in the system.
 
 export const ROLES = {
   BUSINESS: "BUSINESS",

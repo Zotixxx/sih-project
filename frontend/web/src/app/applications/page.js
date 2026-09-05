@@ -8,6 +8,7 @@ import TopNavBar from "@/components/layout/TopNavBar";
 import Badge from "@/components/ui/Badge";
 import Modal from "@/components/ui/Modal";
 import { useMetrixStore } from "@/lib/store";
+import { portalPath } from "@/lib/routes";
 import { formatDate } from "@/lib/utils";
 import { exportToCSV } from "@/lib/exportUtils";
 
@@ -24,12 +25,14 @@ export default function ApplicationsPage() {
     rejectApplication,
     assignLmo,
   } = useMetrixStore();
+  const href = (path) => portalPath(currentUser, path);
 
   const isBusiness = userRole === "business" || currentUser?.role === "BUSINESS";
   const isAssistantController =
     userRole === "admin" ||
     currentUser?.role === "ASSISTANT_CONTROLLER" ||
     currentUser?.role === "SYSTEM_ADMIN";
+  const districtLabel = currentUser?.districtName || currentUser?.district_id || "District";
 
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
@@ -42,8 +45,7 @@ export default function ApplicationsPage() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [assigningApp, setAssigningApp] = useState(null);
   const [selectedOfficer, setSelectedOfficer] = useState("");
-  const [scheduledDate, setScheduledDate] = useState("2026-09-03");
-  const [scheduledTime, setScheduledTime] = useState("11:30 AM");
+  const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split("T")[0]);
   const [selectedImage, setSelectedImage] = useState(null);
 
   // Distinct Instrument Types for Filter
@@ -55,18 +57,6 @@ export default function ApplicationsPage() {
   // Filtered Applications
   const filteredApplications = useMemo(() => {
     return (applications || [])
-      .filter((app) => {
-        // Business isolation: Only see own applications
-        if (isBusiness) {
-          return (
-            app.businessId === currentUser?.id ||
-            app.business_id === currentUser?.id ||
-            app.businessName?.toLowerCase().includes(currentUser?.name?.toLowerCase()) ||
-            app.businessName?.toLowerCase().includes(currentUser?.businessName?.toLowerCase())
-          );
-        }
-        return true;
-      })
       .filter((app) => {
         // Status filter
         if (statusFilter !== "ALL" && app.status !== statusFilter) return false;
@@ -87,7 +77,12 @@ export default function ApplicationsPage() {
         }
         return true;
       });
-  }, [applications, isBusiness, currentUser, statusFilter, typeFilter, lmoFilter, search]);
+  }, [applications, statusFilter, typeFilter, lmoFilter, search]);
+
+  const formatApplicationAddress = (app) =>
+    [app?.address, app?.city, app?.district || app?.district_id, app?.state, app?.pincode]
+      .filter(Boolean)
+      .join(", ") || "Not recorded";
 
   // Actions
   const handleAccept = async (app) => {
@@ -112,13 +107,12 @@ export default function ApplicationsPage() {
   const handleConfirmAssign = async (e) => {
     e.preventDefault();
     if (!assigningApp) return;
+    if (!selectedOfficer) return;
 
-    const officerId = selectedOfficer || (lmos[0]?.officerId || "LMO-AJM-021");
     await assignLmo({
       applicationId: assigningApp.id,
-      officerId,
+      officerId: selectedOfficer,
       scheduledDate,
-      scheduledTime,
     });
     setAssigningApp(null);
     if (viewingApp?.id === assigningApp.id) {
@@ -138,7 +132,7 @@ export default function ApplicationsPage() {
       "Assigned LMO": a.assignedLmoName,
       "Fee Paid": a.feePaid,
     }));
-    exportToCSV(`MetriX_Applications_Ajmer_${new Date().toISOString().split("T")[0]}.csv`, data);
+    exportToCSV(`MetriX_Applications_${districtLabel}_${new Date().toISOString().split("T")[0]}.csv`, data);
   };
 
   return (
@@ -146,9 +140,13 @@ export default function ApplicationsPage() {
       <SideNavBar />
 
       <div className="flex-1 ml-[260px] flex flex-col min-w-0">
-        <TopNavBar
-          title="Verification Applications Queue"
-          subtitle="Review statutory verification filings submitted by businesses across Ajmer District."
+          <TopNavBar
+          title={isBusiness ? "Applications" : "Verification Applications Queue"}
+          subtitle={
+            isBusiness
+              ? "Track your submitted verification applications and workflow history."
+              : `Review statutory verification filings submitted across ${districtLabel}.`
+          }
           breadcrumbs={[
             { label: "MetriX", href: "/dashboard" },
             { label: "Applications" },
@@ -161,7 +159,7 @@ export default function ApplicationsPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                  District Applications Registry (Ajmer)
+                  {isBusiness ? "My Applications" : `Applications Registry (${districtLabel})`}
                 </h3>
                 <p className="text-xs text-slate-500">
                   Showing {filteredApplications.length} of {applications.length} total filings
@@ -178,7 +176,7 @@ export default function ApplicationsPage() {
                 </button>
 
                 <Link
-                  href="/applications/apply"
+                  href={href("/applications/apply")}
                   className="px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
                 >
                   <span className="material-symbols-outlined text-[16px]">add</span>
@@ -210,7 +208,7 @@ export default function ApplicationsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Link
-                    href="/applications/apply?resumeDraft=true"
+                    href={href("/applications/apply?resumeDraft=true")}
                     className="px-3 py-1.5 rounded-lg bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs transition-colors flex items-center gap-1"
                   >
                     Continue Application
@@ -296,8 +294,8 @@ export default function ApplicationsPage() {
                 >
                   <option value="ALL">All Officers</option>
                   {(lmos || []).map((lmo) => (
-                      <option key={lmo.officerId || lmo.id} value={lmo.officerId || lmo.id}>
-                        {lmo.name} ({lmo.officerId || lmo.id})
+                      <option key={lmo.lmo_id || lmo.domainId || lmo.id} value={lmo.lmo_id || lmo.domainId || lmo.id}>
+                        {lmo.name} ({lmo.lmo_id || lmo.domainId || lmo.id})
                     </option>
                   ))}
                 </select>
@@ -347,7 +345,7 @@ export default function ApplicationsPage() {
                       <tr
                         key={app.id}
                         className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
-                        onClick={() => router.push(`/applications/${app.id}`)}
+                        onClick={() => router.push(href(`/applications/${app.id}`))}
                       >
                         <td className="py-3.5 px-4 font-mono-code font-bold text-slate-900 group-hover:text-blue-900">
                           {app.id}
@@ -391,7 +389,7 @@ export default function ApplicationsPage() {
                         <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1.5">
                             <Link
-                              href={`/applications/${app.id}`}
+                              href={href(`/applications/${app.id}`)}
                               className="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-[11px] hover:bg-slate-800 transition-colors shadow-2xs inline-block"
                             >
                               View Details
@@ -544,7 +542,7 @@ export default function ApplicationsPage() {
                 <div className="sm:col-span-2">
                   <span className="text-slate-400 text-[10px] uppercase font-bold block">Business Premises Address</span>
                   <p className="font-medium text-slate-800">
-                    {viewingApp.address}, District {viewingApp.district || "Ajmer"}, {viewingApp.state || "Rajasthan"} - {viewingApp.pincode || "305001"}
+                    {formatApplicationAddress(viewingApp)}
                   </p>
                 </div>
               </div>
@@ -749,15 +747,16 @@ export default function ApplicationsPage() {
         >
           <form onSubmit={handleConfirmAssign} className="space-y-4 text-xs">
             <div className="space-y-1.5">
-              <label className="font-semibold text-slate-700">Select Ajmer District LMO Officer</label>
+              <label className="font-semibold text-slate-700">Select LMO Officer</label>
               <select
                 value={selectedOfficer}
                 onChange={(e) => setSelectedOfficer(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
                 required
               >
+                <option value="">Select LMO</option>
                 {(lmos || []).map((lmo) => {
-                  const officerId = lmo.officerId || lmo.id;
+                  const officerId = lmo.lmo_id || lmo.domainId || lmo.officerId || lmo.id;
                   return (
                     <option key={officerId} value={officerId}>
                       {lmo.name} ({officerId}) — {lmo.jurisdiction || ""} [Active: {lmo.activeWorkload || 0}]
@@ -767,7 +766,7 @@ export default function ApplicationsPage() {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <div className="space-y-1.5">
                 <label className="font-semibold text-slate-700">Scheduled Inspection Date</label>
                 <input
@@ -778,25 +777,11 @@ export default function ApplicationsPage() {
                   required
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="font-semibold text-slate-700">Time Slot</label>
-                <select
-                  value={scheduledTime}
-                  onChange={(e) => setScheduledTime(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
-                >
-                  <option>10:00 AM</option>
-                  <option>11:30 AM</option>
-                  <option>02:00 PM</option>
-                  <option>04:00 PM</option>
-                </select>
-              </div>
             </div>
 
             <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-600">
               <span className="font-bold text-slate-900 block">Inspection Premises Location:</span>
-              {assigningApp.address || "Ajmer Commercial Area"}
+              {assigningApp.verificationLocation?.address || assigningApp.location || "Location will be taken from the application."}
             </div>
           </form>
         </Modal>

@@ -4,19 +4,22 @@ import React, { useState } from "react";
 import Link from "next/link";
 import SideNavBar from "@/components/layout/SideNavBar";
 import TopNavBar from "@/components/layout/TopNavBar";
+import { metrixApi } from "@/lib/api";
+import { portalPath } from "@/lib/routes";
 import { useMetrixStore } from "@/lib/store";
 
+const fileToBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || "").split(",")[1] || "");
+    reader.onerror = () => reject(reader.error || new Error("Could not read document."));
+    reader.readAsDataURL(file);
+  });
+
 export default function SettingsPage() {
-  const { userRole, district, resetToDefault } = useMetrixStore();
+  const { userRole, district, currentUser, lmos } = useMetrixStore();
 
-  const [savedSuccess, setSavedSuccess] = useState(false);
-
-  const handleResetData = () => {
-    if (confirm("Reset MetriX prototype data to default Ajmer District initial state?")) {
-      resetToDefault();
-      alert("MetriX database reset to default Ajmer District seed state.");
-    }
-  };
+  const districtName = district?.name || currentUser?.districtName || currentUser?.district_id || "District";
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
@@ -33,9 +36,9 @@ export default function SettingsPage() {
           }
           subtitle={
             userRole === "admin"
-              ? "Supervising Officer Profile • Office of the Assistant Controller, Ajmer District, Rajasthan"
+              ? `Supervising Officer Profile • Office of the Assistant Controller, ${districtName}`
               : userRole === "lmo"
-              ? "Ajmer Field Officer Credentials & Duty Jurisdiction"
+              ? `${districtName} Field Officer Credentials & Duty Jurisdiction`
               : "Registered Commercial Merchant Information"
           }
           breadcrumbs={[
@@ -52,15 +55,6 @@ export default function SettingsPage() {
         />
 
         <main className="p-6 sm:p-8 max-w-4xl w-full mx-auto space-y-6">
-          {savedSuccess && (
-            <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-semibold text-emerald-900 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[20px] text-emerald-600">
-                check_circle
-              </span>
-              Configuration and profile updated successfully!
-            </div>
-          )}
-
           {/* =========================================================================
               DISTRICT ADMIN / ASSISTANT CONTROLLER PROFILE
              ========================================================================= */}
@@ -76,7 +70,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <span className="px-2.5 py-1 rounded bg-purple-100 text-purple-900 font-bold text-[11px]">
-                  District Admin (Ajmer)
+                  District Admin
                 </span>
               </div>
 
@@ -84,30 +78,30 @@ export default function SettingsPage() {
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <span className="text-slate-400 text-[10px] uppercase font-bold">Officer Name</span>
-                  <p className="font-bold text-slate-900 text-sm">Dr. R. K. Sharma</p>
-                  <p className="text-slate-500 text-[11px]">Assistant Controller of Legal Metrology</p>
+                  <p className="font-bold text-slate-900 text-sm">{currentUser?.name || currentUser?.displayName || "Assistant Controller"}</p>
+                  <p className="text-slate-500 text-[11px]">{currentUser?.designation || "Assistant Controller of Legal Metrology"}</p>
                 </div>
 
                 <div className="space-y-1">
                   <span className="text-slate-400 text-[10px] uppercase font-bold">Badge / Authority ID</span>
-                  <p className="font-mono-code font-bold text-slate-900 text-sm">AC-AJM-001</p>
-                  <p className="text-emerald-700 text-[11px] font-bold">✓ Chief District Certificate Sanctioning Authority</p>
+                  <p className="font-mono-code font-bold text-slate-900 text-sm">{currentUser?.domainId || currentUser?.ac_id || currentUser?.id}</p>
+                  <p className="text-emerald-700 text-[11px] font-bold">District certificate sanctioning authority</p>
                 </div>
 
                 <div className="space-y-1">
                   <span className="text-slate-400 text-[10px] uppercase font-bold">Official Email</span>
-                  <p className="font-medium text-slate-800">ac.ajmer@metrix.gov.in</p>
+                  <p className="font-medium text-slate-800">{currentUser?.email || "Not recorded"}</p>
                 </div>
 
                 <div className="space-y-1">
                   <span className="text-slate-400 text-[10px] uppercase font-bold">Contact Phone</span>
-                  <p className="font-medium text-slate-800">+91 94140 11001</p>
+                  <p className="font-medium text-slate-800">{currentUser?.phone || "Not recorded"}</p>
                 </div>
 
                 <div className="sm:col-span-2 space-y-1">
                   <span className="text-slate-400 text-[10px] uppercase font-bold">District Headquarters Office Address</span>
                   <p className="font-medium text-slate-800">
-                    Collectorate Compound, Kutchery Road, Ajmer, Rajasthan - 305001
+                    {district?.controllerOffice || `Office of the Assistant Controller, ${districtName}`}
                   </p>
                 </div>
               </div>
@@ -115,38 +109,25 @@ export default function SettingsPage() {
               {/* Territorial Sub-Divisions */}
               <div className="space-y-3">
                 <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider text-slate-500">
-                  Supervised Ajmer District Sub-Divisions &amp; Zones
+                  Supervised LMOs
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                  {[
-                    { zone: "Ajmer City", lmo: "Rajesh Kumar (LMO-AJM-021)" },
-                    { zone: "Kishangarh", lmo: "Priya Sharma (LMO-AJM-014)" },
-                    { zone: "Beawar Hub", lmo: "Vikram Singh (LMO-AJM-033)" },
-                    { zone: "Nasirabad", lmo: "Amit Meena (LMO-AJM-008)" },
-                    { zone: "Pushkar Rural", lmo: "Sunita Rao (LMO-AJM-005)" },
-                  ].map((z, idx) => (
+                  {(lmos || []).map((z, idx) => (
                     <div key={idx} className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-center">
-                      <p className="font-bold text-slate-900 text-xs">{z.zone}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">{z.lmo}</p>
+                      <p className="font-bold text-slate-900 text-xs">{z.jurisdiction || "Jurisdiction"}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5 truncate">{z.name} ({z.domainId || z.lmo_id})</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Compliance & Reset */}
+              {/* Compliance */}
               <div className="pt-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <span className="text-slate-500 text-xs">District Compliance: </span>
-                  <strong className="text-emerald-700 font-bold">98.4% (Target: 95.0%)</strong>
+                  <strong className="text-slate-500 font-bold">Not available</strong>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleResetData}
-                  className="px-4 py-2 rounded-lg border border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold transition-colors"
-                >
-                  Reset Prototype Data to Initial State
-                </button>
               </div>
             </div>
           )}
@@ -164,23 +145,14 @@ export default function SettingsPage() {
           {userRole === "lmo" && (
             <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs space-y-4 text-xs">
               <h3 className="text-base font-bold text-slate-900">
-                Rajesh Kumar (LMO) Profile
+                {currentUser?.name || currentUser?.displayName || "LMO"} Profile
               </h3>
               <p className="text-slate-600">
-                Designation: <strong>Legal Metrology Officer (Inspector)</strong> • District: <strong>Ajmer, Rajasthan</strong>
+                Designation: <strong>{currentUser?.designation || "Legal Metrology Officer"}</strong> • District: <strong>{districtName}</strong>
               </p>
               <p className="text-slate-500">
-                Jurisdiction: Commercial Verification &amp; Inspection Division, Zone 1 (Ajmer City &amp; Kishangarh Hub).
+                Jurisdiction: {currentUser?.jurisdiction || "Not recorded"}.
               </p>
-              <div className="pt-4 border-t border-slate-200 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleResetData}
-                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold"
-                >
-                  Reset Prototype State
-                </button>
-              </div>
             </div>
           )}
         </main>
@@ -190,33 +162,29 @@ export default function SettingsPage() {
 }
 
 function BusinessProfileSettings() {
-  const { currentUser, businessProfile, updateBusinessProfile, resetToDefault } = useMetrixStore();
+  const { currentUser, businessProfile, updateBusinessProfile } = useMetrixStore();
+  const href = (path) => portalPath(currentUser, path);
 
   const [formData, setFormData] = useState({
     businessName: businessProfile?.businessName || businessProfile?.name || currentUser?.name || "",
-    businessType: businessProfile?.businessType || "Private Limited",
-    gstin: businessProfile?.gstin || "08AAACB1234A1Z5",
-    pan: businessProfile?.pan || "AAACB1234A",
-    registrationNumber: businessProfile?.registrationNumber || "RJ-AJM-LM-2021-00892",
-    ownerName: businessProfile?.ownerName || businessProfile?.contactPerson || "Ramesh Kumar Agarwal",
-    phone: businessProfile?.phone || currentUser?.phone || "+91 98290 11223",
-    email: businessProfile?.email || currentUser?.email || "ramesh@shreebalajitraders.com",
-    address: businessProfile?.address || "Plot 12, Krishi Mandi Commercial Yard",
-    city: businessProfile?.city || "Ajmer",
-    district: businessProfile?.district || "Ajmer",
-    state: businessProfile?.state || "Rajasthan",
-    pincode: businessProfile?.pincode || "305001",
-    turnover: businessProfile?.turnover || "₹ 4.8 Crore",
-    natureOfBusiness: businessProfile?.natureOfBusiness || "Agricultural Trade, Grain Processing & Warehousing",
-    businessCategory: businessProfile?.businessCategory || "Commercial Trading & Warehousing",
+    businessType: businessProfile?.businessType || "",
+    gstin: businessProfile?.gstin || "",
+    pan: businessProfile?.pan || "",
+    registrationNumber: businessProfile?.registrationNumber || "",
+    ownerName: businessProfile?.ownerName || businessProfile?.contactPerson || "",
+    phone: businessProfile?.phone || currentUser?.phone || "",
+    email: businessProfile?.email || currentUser?.email || "",
+    address: businessProfile?.address || "",
+    city: businessProfile?.city || "",
+    district: businessProfile?.district || businessProfile?.district_id || "",
+    state: businessProfile?.state || "",
+    pincode: businessProfile?.pincode || "",
+    turnover: businessProfile?.turnover || "",
+    natureOfBusiness: businessProfile?.natureOfBusiness || "",
+    businessCategory: businessProfile?.businessCategory || "",
   });
 
-  const [documents, setDocuments] = useState(
-    businessProfile?.documents || [
-      { id: "DOC-GST-01", name: "GST_Registration_Certificate.pdf", size: "1.2 MB", type: "GST Certificate" },
-      { id: "DOC-REG-02", name: "Trade_License_Krishi_Mandi.pdf", size: "850 KB", type: "Trade License" },
-    ]
-  );
+  const [documents, setDocuments] = useState(businessProfile?.documents || []);
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -235,7 +203,7 @@ function BusinessProfileSettings() {
         email: businessProfile.email || prev.email,
         address: businessProfile.address || prev.address,
         city: businessProfile.city || prev.city,
-        district: businessProfile.district || prev.district,
+        district: businessProfile.district_id || businessProfile.district || prev.district,
         state: businessProfile.state || prev.state,
         pincode: businessProfile.pincode || prev.pincode,
         turnover: businessProfile.turnover || prev.turnover,
@@ -256,22 +224,39 @@ function BusinessProfileSettings() {
   const missingFields = [];
   if (!formData.businessName.trim()) missingFields.push("Business Name");
   if (!formData.gstin.trim()) missingFields.push("GST Number");
+  if (!formData.ownerName.trim()) missingFields.push("Applicant / Owner Name");
+  if (!formData.email.trim()) missingFields.push("Email");
   if (!formData.address.trim()) missingFields.push("Address");
+  if (!formData.city.trim()) missingFields.push("City");
+  if (!formData.district.trim()) missingFields.push("District");
+  if (!formData.state.trim()) missingFields.push("State");
+  if (!formData.pincode.trim()) missingFields.push("PIN Code");
   if (!formData.phone.trim()) missingFields.push("Phone Number");
   const isComplete = missingFields.length === 0;
 
-  const handleDocUpload = (e) => {
+  const handleDocUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setDocuments((prev) => [
-        ...prev,
-        {
-          id: `DOC-BIZ-${Date.now()}`,
-          name: file.name,
-          size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
-          type: "Supporting Document",
-        },
-      ]);
+      try {
+        const uploaded = await metrixApi.uploadDocument({
+          bucket: "business-documents",
+          fileName: file.name,
+          mimeType: file.type || "application/pdf",
+          base64: await fileToBase64(file),
+        });
+        setDocuments((prev) => [
+          ...prev,
+          {
+            id: uploaded.data.documentId,
+            documentId: uploaded.data.documentId,
+            name: uploaded.data.fileName,
+            size: `${(uploaded.data.fileSize / 1024 / 1024).toFixed(1)} MB`,
+            type: uploaded.data.fileType,
+          },
+        ]);
+      } catch (error) {
+        alert("Error uploading document: " + error.message);
+      }
     }
   };
 
@@ -341,7 +326,7 @@ function BusinessProfileSettings() {
 
         {isComplete && (
           <Link
-            href="/instruments"
+            href={href("/instruments")}
             className="shrink-0 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors"
           >
             Go to Instruments
@@ -408,7 +393,7 @@ function BusinessProfileSettings() {
                 type="text"
                 value={formData.gstin}
                 onChange={(e) => setFormData({ ...formData, gstin: e.target.value.toUpperCase() })}
-                placeholder="e.g. 08AAACB1234A1Z5"
+                placeholder="e.g. 00AAAAA0000A0Z0"
                 required
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 uppercase font-mono-code focus:outline-none focus:border-slate-900 focus:bg-white"
               />
@@ -509,7 +494,7 @@ function BusinessProfileSettings() {
                 type="text"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                placeholder="Ajmer"
+                placeholder="Assigned by department"
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
               />
             </div>
@@ -519,9 +504,9 @@ function BusinessProfileSettings() {
               <input
                 type="text"
                 value={formData.district}
-                onChange={(e) => setFormData({ ...formData, district: e.target.value })}
-                placeholder="Ajmer"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
+                readOnly
+                placeholder="Assigned by department"
+                className="w-full bg-slate-100 border border-slate-300 rounded-lg px-3 py-2 text-slate-500"
               />
             </div>
 
@@ -531,7 +516,7 @@ function BusinessProfileSettings() {
                 type="text"
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                placeholder="Rajasthan"
+                placeholder="State"
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
               />
             </div>
@@ -542,7 +527,7 @@ function BusinessProfileSettings() {
                 type="text"
                 value={formData.pincode}
                 onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                placeholder="305001"
+                placeholder="PIN code"
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
               />
             </div>
@@ -642,19 +627,7 @@ function BusinessProfileSettings() {
         </div>
 
         {/* Form Actions */}
-        <div className="pt-6 border-t border-slate-200 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm("Reset data to default prototype state?")) {
-                resetToDefault();
-              }
-            }}
-            className="text-slate-500 hover:text-slate-700 text-xs font-semibold"
-          >
-            Reset to Default
-          </button>
-
+        <div className="pt-6 border-t border-slate-200 flex items-center justify-end">
           <button
             type="submit"
             disabled={isSaving}

@@ -1,16 +1,17 @@
 {
   "name": "metrix-backend",
   "version": "1.0.0",
-  "description": "MetriX Legal Metrology Backend API Server with Ajmer District Mock/Persistent Data",
+  "description": "MetriX Legal Metrology backend API using Supabase Auth, PostgreSQL, and Storage",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
+    "import:districts": "node scripts/import-districts.mjs",
     "test": "node test_e2e_scenarios.js"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
+    "@supabase/supabase-js": "^2.115.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",

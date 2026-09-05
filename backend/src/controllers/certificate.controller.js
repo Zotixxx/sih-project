@@ -6,7 +6,7 @@ export const certificateController = {
       const certificates = await certificateService.getCertificates(req.user);
       return res.json({ success: true, data: certificates });
     } catch (error) {
-      return res.status(500).json({
+      return res.status(error.statusCode || 500).json({
         success: false,
         error: { code: "CERT_FETCH_ERROR", message: error.message },
       });
@@ -31,7 +31,7 @@ export const certificateController = {
       const results = await certificateService.searchCertificates(query, req.user);
       return res.json({ success: true, data: results });
     } catch (error) {
-      return res.status(500).json({
+      return res.status(error.statusCode || 500).json({
         success: false,
         error: { code: "SEARCH_ERROR", message: error.message },
       });

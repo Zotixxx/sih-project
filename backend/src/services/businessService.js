@@ -1,38 +1,48 @@
 import { businessRepository } from "../repositories/businessRepository.js";
 import { ROLES } from "../constants/roles.js";
+import { unprocessable } from "../utils/errors.js";
+
+const requiredProfileFields = [
+  ["Business Name", (business) => business?.name || business?.businessName],
+  ["GSTIN", (business) => business?.gstin],
+  ["Applicant/Owner Name", (business) => business?.contactPerson || business?.ownerName],
+  ["Phone", (business) => business?.phone],
+  ["Email", (business) => business?.email],
+  ["Address", (business) => business?.address],
+  ["City", (business) => business?.city],
+  ["District", (business) => business?.district_id],
+  ["State", (business) => business?.state],
+  ["PIN Code", (business) => business?.pincode],
+];
+
+const getMissingFields = (business) =>
+  requiredProfileFields
+    .filter(([, getter]) => !getter(business))
+    .map(([label]) => label);
 
 export const businessService = {
   getProfile: async (user) => {
-    // Find business matching user ID or email or district
-    let business = await businessRepository.getById(user.business_id || user.id);
-    if (!business) {
-      business = await businessRepository.getById(user.email);
-    }
+    let business = await businessRepository.getByUserId(user.auth_user_id || user.id);
     if (!business && user.role === ROLES.BUSINESS) {
-      // Return user profile as initial business data
       business = {
         id: user.business_id || user.id,
-        district_id: user.district_id || "AJM",
+        district_id: user.district_id || "",
         name: user.name || "",
         businessName: user.name || "",
         gstin: user.gstin || "",
         phone: user.phone || "",
         email: user.email || "",
         address: user.address || "",
-        city: user.city || "Ajmer",
-        state: user.state || "Rajasthan",
-        pincode: user.pincode || "305001",
+        city: user.city || "",
+        state: user.state || "",
+        pincode: user.pincode || "",
         turnover: "",
         natureOfBusiness: "",
         documents: [],
       };
     }
 
-    const missingFields = [];
-    if (!business?.name && !business?.businessName) missingFields.push("Business Name");
-    if (!business?.gstin) missingFields.push("GSTIN");
-    if (!business?.address) missingFields.push("Address");
-    if (!business?.phone) missingFields.push("Phone");
+    const missingFields = getMissingFields(business);
 
     return {
       ...business,
@@ -42,21 +52,36 @@ export const businessService = {
   },
 
   updateProfile: async (user, profileData) => {
-    const businessId = user.business_id || user.id;
-    const existing = await businessRepository.getById(businessId) || {};
+    if (user.role !== ROLES.BUSINESS && user.role !== ROLES.SYSTEM_ADMIN) {
+      const err = new Error("Forbidden: Only business accounts can update business profile information.");
+      err.statusCode = 403;
+      throw err;
+    }
+
+    const businessId = user.business_id || profileData.business_id || profileData.businessId;
+    if (!businessId) {
+      const err = new Error("Business domain ID is required. Create the business role record in Supabase first.");
+      err.statusCode = 422;
+      throw err;
+    }
+
+    const existing = await businessRepository.getByUserId(user.auth_user_id || user.id) || {};
+
+    const districtId = existing.district_id || user.district_id;
+    if (!districtId) {
+      throw unprocessable("A business district_id must be set in Supabase before the profile can be completed.");
+    }
 
     const updated = await businessRepository.update(businessId, {
       ...existing,
       ...profileData,
-      district_id: profileData.district_id || existing.district_id || user.district_id || "AJM",
+      district_id: user.role === ROLES.SYSTEM_ADMIN ? profileData.district_id || districtId : districtId,
       email: profileData.email || existing.email || user.email,
+      user_id: user.auth_user_id || user.id,
+      business_id: businessId,
     });
 
-    const missingFields = [];
-    if (!updated?.name && !updated?.businessName) missingFields.push("Business Name");
-    if (!updated?.gstin) missingFields.push("GSTIN");
-    if (!updated?.address) missingFields.push("Address");
-    if (!updated?.phone) missingFields.push("Phone");
+    const missingFields = getMissingFields(updated);
 
     return {
       ...updated,

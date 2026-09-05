@@ -19,6 +19,8 @@ export default function CertificatePreviewModal({ certificate, isOpen, onClose }
     typeof window !== "undefined"
       ? `${window.location.origin}/verify/${certificate.id || certificate.certificateNumber}`
       : `http://localhost:3000/verify/${certificate.id || certificate.certificateNumber}`;
+  const districtLabel = certificate.district || certificate.district_id || "District";
+  const issuingAuthority = certificate.issuingAuthority || "Directorate of Legal Metrology";
 
   return (
     <Modal
@@ -73,7 +75,7 @@ export default function CertificatePreviewModal({ certificate, isOpen, onClose }
         {/* Header Header */}
         <div className="text-center border-b-2 border-slate-900 pb-4 mb-6">
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-600">
-            GOVERNMENT OF RAJASTHAN
+            LEGAL METROLOGY DEPARTMENT
           </p>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase mt-0.5">
             Directorate of Legal Metrology
@@ -120,7 +122,7 @@ export default function CertificatePreviewModal({ certificate, isOpen, onClose }
             </p>
             <p>
               <span className="text-slate-500">Premises:</span>{" "}
-              <strong className="text-slate-900">{certificate.businessAddress || "Ajmer, Rajasthan"}</strong>
+              <strong className="text-slate-900">{certificate.businessAddress || certificate.location || "Not recorded"}</strong>
             </p>
             <p>
               <span className="text-slate-500">Statutory Seal Number:</span>{" "}
@@ -128,7 +130,7 @@ export default function CertificatePreviewModal({ certificate, isOpen, onClose }
             </p>
             <p>
               <span className="text-slate-500">Issuing Authority:</span>{" "}
-              <strong className="text-slate-900">{certificate.issuingAuthority || "Directorate of Legal Metrology, Rajasthan"}</strong>
+              <strong className="text-slate-900">{issuingAuthority}</strong>
             </p>
           </div>
         </div>
@@ -176,13 +178,13 @@ export default function CertificatePreviewModal({ certificate, isOpen, onClose }
               [DIGITALLY SANCTIONED &amp; SEALED]
             </div>
             <p className="font-bold text-xs text-slate-900">
-              {certificate.approvingOfficer || "Dr. R. K. Sharma (Assistant Controller)"}
+              {certificate.approvingOfficer || "Assistant Controller"}
             </p>
             <p className="text-[10px] text-slate-600">
               Verifying LMO: {certificate.verifyingOfficer}
             </p>
             <p className="text-[10px] font-semibold text-slate-500">
-              Ajmer District, Government of Rajasthan
+              {districtLabel}
             </p>
           </div>
         </div>
