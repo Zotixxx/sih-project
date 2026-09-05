@@ -74,6 +74,12 @@ export const inspectionService = {
       }
     }
 
+    if (inspection.status !== INSPECTION_STATUS.ASSIGNED && inspection.status !== INSPECTION_STATUS.RETURNED) {
+      const err = new Error(`Invalid transition: Inspection must be assigned before starting. Current status: '${inspection.status}'.`);
+      err.statusCode = 400;
+      throw err;
+    }
+
     const updated = await inspectionRepository.update(id, {
       status: INSPECTION_STATUS.IN_PROGRESS,
       startedDate: new Date().toISOString(),
@@ -124,6 +130,12 @@ export const inspectionService = {
         err.statusCode = 403;
         throw err;
       }
+    }
+
+    if (inspection.status !== INSPECTION_STATUS.IN_PROGRESS) {
+      const err = new Error(`Invalid transition: Inspection must be in progress before submission. Current status: '${inspection.status}'.`);
+      err.statusCode = 400;
+      throw err;
     }
 
     const inspectionDate = data.inspectionDate || new Date().toISOString().split("T")[0];

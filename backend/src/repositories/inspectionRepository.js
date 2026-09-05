@@ -19,12 +19,14 @@ export const inspectionRepository = {
   },
   create: async (inspectionData) => {
     db.inspections.unshift(inspectionData);
+    db.persist();
     return inspectionData;
   },
   update: async (id, updateData) => {
     const index = db.inspections.findIndex((i) => i.id === id);
     if (index === -1) return null;
     db.inspections[index] = { ...db.inspections[index], ...updateData };
+    db.persist();
     return db.inspections[index];
   },
 };

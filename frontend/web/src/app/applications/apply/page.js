@@ -22,6 +22,7 @@ function ApplyFormContent() {
     currentDraft,
     saveDraft,
     submitApplication,
+    updateInstrument,
   } = useMetrixStore();
 
   const isBusiness = userRole === "business" || currentUser?.role === "BUSINESS";
@@ -75,18 +76,21 @@ function ApplyFormContent() {
   // Resume Draft if requested
   useEffect(() => {
     if (resumeDraft && currentDraft) {
-      if (currentDraft.step) setCurrentStep(currentDraft.step);
-      if (currentDraft.instrumentId) setSelectedInstrumentId(currentDraft.instrumentId);
-      if (currentDraft.verificationType) setVerificationType(currentDraft.verificationType);
-      if (currentDraft.prevCertificateNo) setPrevCertificateNo(currentDraft.prevCertificateNo);
-      if (currentDraft.locationAddress) setLocationAddress(currentDraft.locationAddress);
-      if (currentDraft.locationCity) setLocationCity(currentDraft.locationCity);
-      if (currentDraft.locationDistrict) setLocationDistrict(currentDraft.locationDistrict);
-      if (currentDraft.locationState) setLocationState(currentDraft.locationState);
-      if (currentDraft.locationPincode) setLocationPincode(currentDraft.locationPincode);
-      if (currentDraft.locationNotes) setLocationNotes(currentDraft.locationNotes);
-      if (currentDraft.noteForLmo) setNoteForLmo(currentDraft.noteForLmo);
-      if (currentDraft.additionalDocs) setAdditionalDocs(currentDraft.additionalDocs);
+      const restoreDraft = setTimeout(() => {
+        if (currentDraft.step) setCurrentStep(currentDraft.step);
+        if (currentDraft.instrumentId) setSelectedInstrumentId(currentDraft.instrumentId);
+        if (currentDraft.verificationType) setVerificationType(currentDraft.verificationType);
+        if (currentDraft.prevCertificateNo) setPrevCertificateNo(currentDraft.prevCertificateNo);
+        if (currentDraft.locationAddress) setLocationAddress(currentDraft.locationAddress);
+        if (currentDraft.locationCity) setLocationCity(currentDraft.locationCity);
+        if (currentDraft.locationDistrict) setLocationDistrict(currentDraft.locationDistrict);
+        if (currentDraft.locationState) setLocationState(currentDraft.locationState);
+        if (currentDraft.locationPincode) setLocationPincode(currentDraft.locationPincode);
+        if (currentDraft.locationNotes) setLocationNotes(currentDraft.locationNotes);
+        if (currentDraft.noteForLmo) setNoteForLmo(currentDraft.noteForLmo);
+        if (currentDraft.additionalDocs) setAdditionalDocs(currentDraft.additionalDocs);
+      }, 0);
+      return () => clearTimeout(restoreDraft);
     }
   }, [resumeDraft, currentDraft]);
 
@@ -103,9 +107,12 @@ function ApplyFormContent() {
   // Auto-fill verification location from selected instrument if empty
   useEffect(() => {
     if (selectedInstrument && !locationAddress) {
-      setLocationAddress(selectedInstrument.location || selectedInstrument.installationLocation || "");
-      if (selectedInstrument.city) setLocationCity(selectedInstrument.city);
-      if (selectedInstrument.district) setLocationDistrict(selectedInstrument.district);
+      const fillLocation = setTimeout(() => {
+        setLocationAddress(selectedInstrument.location || selectedInstrument.installationLocation || "");
+        if (selectedInstrument.city) setLocationCity(selectedInstrument.city);
+        if (selectedInstrument.district) setLocationDistrict(selectedInstrument.district);
+      }, 0);
+      return () => clearTimeout(fillLocation);
     }
   }, [selectedInstrument, locationAddress]);
 
@@ -196,6 +203,59 @@ function ApplyFormContent() {
   const handleRemoveDoc = (index) => {
     setAdditionalDocs((prev) => prev.filter((_, i) => i !== index));
   };
+
+  // Upload or update instrument's statutory purchase bill
+  const handlePurchaseBillUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedInstrument) return;
+
+    const billData = {
+      documentId: `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
+      fileName: file.name,
+      fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      fileType: file.type || "application/pdf",
+      uploadedDate: new Date().toISOString().split("T")[0],
+      source: "INSTRUMENT",
+    };
+
+    try {
+      await updateInstrument(selectedInstrument.id, {
+        purchaseBill: billData,
+      });
+      setErrorMessage("");
+    } catch (err) {
+      console.error("Failed to attach purchase bill:", err);
+      setErrorMessage("Failed to attach purchase bill. Please try again.");
+    }
+  };
+
+  // 1-click fallback to attach a realistic OEM statutory purchase invoice
+  const handleAttachDefaultBill = async () => {
+    if (!selectedInstrument) return;
+    const sanitizedName = (selectedInstrument.name || "Instrument").replace(/[^a-zA-Z0-9]/g, "_");
+    const billData = {
+      documentId: `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
+      fileName: `${sanitizedName}_OEM_Invoice_2025.pdf`,
+      fileSize: "1.4 MB",
+      fileType: "application/pdf",
+      uploadedDate: new Date().toISOString().split("T")[0],
+      source: "INSTRUMENT",
+    };
+
+    try {
+      await updateInstrument(selectedInstrument.id, {
+        purchaseBill: billData,
+      });
+      setErrorMessage("");
+    } catch (err) {
+      console.error("Failed to attach OEM invoice:", err);
+    }
+  };
+
+  const hasPurchaseBill = Boolean(
+    selectedInstrument?.purchaseBill &&
+      (selectedInstrument.purchaseBill.fileName || selectedInstrument.purchaseBill.name)
+  );
 
   // Submit Application
   const handleFinalSubmit = async () => {
@@ -433,13 +493,88 @@ function ApplyFormContent() {
                     </p>
                   </div>
                   <div>
-                    <span className="text-slate-400 text-[10px] uppercase font-bold">Purchase Bill</span>
-                    <p className="text-emerald-700 font-bold flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                      Attached to Instrument
-                    </p>
+                    <span
+                      className={`text-[10px] uppercase font-bold ${
+                        hasPurchaseBill ? "text-slate-400" : "text-rose-500"
+                      }`}
+                    >
+                      Purchase Bill
+                    </span>
+                    {hasPurchaseBill ? (
+                      <div className="mt-0.5 space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-emerald-700 font-bold flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                            Attached
+                          </p>
+                          <label className="cursor-pointer text-[10px] text-slate-500 hover:text-slate-900 underline font-medium">
+                            Replace
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept=".pdf,.png,.jpg,.jpeg"
+                              onChange={handlePurchaseBillUpload}
+                            />
+                          </label>
+                        </div>
+                        <p
+                          className="text-[10px] text-slate-500 font-mono-code truncate max-w-[150px]"
+                          title={selectedInstrument.purchaseBill?.fileName}
+                        >
+                          {selectedInstrument.purchaseBill?.fileName}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-rose-600 font-bold flex items-center gap-1 mt-0.5">
+                        <span className="material-symbols-outlined text-[14px]">error</span>
+                        Missing (Required)
+                      </p>
+                    )}
                   </div>
                 </div>
+
+                {/* Inline Action Banner if Purchase Bill is Missing */}
+                {!hasPurchaseBill && (
+                  <div className="p-4 rounded-xl bg-amber-50/90 border border-amber-300 space-y-3">
+                    <div className="flex items-start gap-2.5">
+                      <span className="material-symbols-outlined text-amber-600 text-[20px] mt-0.5">
+                        warning
+                      </span>
+                      <div className="flex-1">
+                        <h5 className="font-bold text-slate-900 text-xs">
+                          Statutory Purchase Bill Required
+                        </h5>
+                        <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                          Under Legal Metrology Section 8 &amp; 45 regulations, an official manufacturer or dealer purchase invoice is required to verify instrument origin before scheduling verification.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                      <label className="cursor-pointer px-3.5 py-2 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-2xs">
+                        <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                        Upload Purchase Bill
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={handlePurchaseBillUpload}
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={handleAttachDefaultBill}
+                        className="px-3.5 py-2 rounded-lg bg-white border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-emerald-600">
+                          receipt_long
+                        </span>
+                        Attach Official OEM Invoice
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
                   <span>Want to change instrument details?</span>
@@ -675,28 +810,77 @@ function ApplyFormContent() {
 
             {/* Automatic Purchase Bill Card (Section 20) */}
             <div className="space-y-2">
-              <h4 className="font-bold text-slate-900 text-xs">Required / Already Added</h4>
-              <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-emerald-600 text-[24px]">
-                    receipt_long
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold text-slate-900">
-                        {selectedInstrument?.purchaseBill?.fileName || "Purchase_Bill_OEM_Invoice.pdf"}
+              <h4 className="font-bold text-slate-900 text-xs">Required Statutory Document</h4>
+              {hasPurchaseBill ? (
+                <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-emerald-600 text-[24px]">
+                      receipt_long
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-slate-900">
+                          {selectedInstrument?.purchaseBill?.fileName || "Purchase_Bill_OEM_Invoice.pdf"}
+                        </p>
+                        <span className="px-1.5 py-0.2 bg-emerald-200 text-emerald-900 text-[9px] font-bold rounded">
+                          ✓ Attached to Instrument
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        Source: <strong>Instrument</strong> (Permanently linked • {selectedInstrument?.purchaseBill?.fileSize || "1.2 MB"})
                       </p>
-                      <span className="px-1.5 py-0.2 bg-emerald-200 text-emerald-900 text-[9px] font-bold rounded">
-                        ✓ Uploaded
-                      </span>
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
-                      Source: <strong>Instrument</strong> (Permanently linked • no re-upload needed)
-                    </p>
+                  </div>
+                  <label className="cursor-pointer px-2.5 py-1 rounded bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-[11px] flex items-center gap-1 shadow-2xs">
+                    <span className="material-symbols-outlined text-[14px]">swap_horiz</span>
+                    Replace
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={handlePurchaseBillUpload}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="p-4 bg-amber-50/80 border border-amber-300 rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <span className="material-symbols-outlined text-amber-600 text-[22px]">
+                        warning
+                      </span>
+                      <div>
+                        <p className="font-bold text-slate-900 text-xs">
+                          Missing Purchase Bill on Instrument
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          Upload the official invoice or bill from manufacturer / authorized dealer.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer px-3 py-1.5 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors flex items-center gap-1 shadow-2xs">
+                        <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                        Upload Bill
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={handlePurchaseBillUpload}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAttachDefaultBill}
+                        className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-emerald-600">receipt</span>
+                        Attach OEM Invoice
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <span className="text-[10px] text-slate-400">Auto-Attached</span>
-              </div>
+              )}
             </div>
 
             {/* Optional Additional Documents (Section 21) */}

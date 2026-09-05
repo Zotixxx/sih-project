@@ -72,8 +72,8 @@ export default function VerifyPage() {
   // Handle on-demand search for completed records (Section 40)
   useEffect(() => {
     if (!recordSearchQuery.trim()) {
-      setApiSearchResults(null);
-      return;
+      const clearResults = setTimeout(() => setApiSearchResults(null), 0);
+      return () => clearTimeout(clearResults);
     }
 
     let isMounted = true;
@@ -311,27 +311,9 @@ export default function VerifyPage() {
                     type="text"
                     value={recordSearchQuery}
                     onChange={(e) => setRecordSearchQuery(e.target.value)}
-                    placeholder="Enter Certificate ID (e.g. LM-AJM-2026-000114), Business Name, or Serial Number..."
+                    placeholder="Enter Certificate ID, Business Name, or Serial Number..."
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white transition-colors"
                   />
-                </div>
-                {/* Sample Search Chips */}
-                <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                  <span className="text-slate-400 text-[11px] font-bold uppercase">Quick Samples:</span>
-                  {[
-                    "LM-AJM-2026",
-                    "Shree Balaji",
-                    "Pushkar",
-                    "SN-983421",
-                  ].map((sample) => (
-                    <button
-                      key={sample}
-                      onClick={() => setRecordSearchQuery(sample)}
-                      className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono-code font-bold text-[11px]"
-                    >
-                      🔍 {sample}
-                    </button>
-                  ))}
                 </div>
               </div>
 

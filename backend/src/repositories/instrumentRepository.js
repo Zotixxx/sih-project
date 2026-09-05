@@ -21,6 +21,7 @@ export const instrumentRepository = {
   },
   create: async (instrumentData) => {
     db.instruments.unshift(instrumentData);
+    db.persist();
     return instrumentData;
   },
   update: async (id, updateData) => {
@@ -29,6 +30,7 @@ export const instrumentRepository = {
     );
     if (index === -1) return null;
     db.instruments[index] = { ...db.instruments[index], ...updateData, updatedAt: new Date().toISOString() };
+    db.persist();
     return db.instruments[index];
   },
 };

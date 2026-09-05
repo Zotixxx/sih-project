@@ -263,7 +263,7 @@ class CertificatePreviewScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.between,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.slate500)),
           Text(value, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.slate700)),

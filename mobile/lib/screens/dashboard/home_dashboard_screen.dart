@@ -253,7 +253,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
           // Section Header
           Row(
-            mainAxisAlignment: MainAxisAlignment.between,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'Today\'s Field Itinerary',
@@ -371,7 +371,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.between,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
@@ -438,7 +438,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               const Divider(height: 1, color: Color(0xFFF1F5F9)),
               const SizedBox(height: 8),
               Row(
-                mainAxisAlignment: MainAxisAlignment.between,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [

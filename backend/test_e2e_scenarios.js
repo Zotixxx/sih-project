@@ -33,7 +33,7 @@ async function runAllTests() {
   console.log("=======================================================\n");
 
   // Step 0: Reset Database to clean seed
-  const resetRes = await request("/reset", "POST");
+  const resetRes = await request("/reset", "POST", null, "SYS-ADMIN-001");
   assert(resetRes.status === 200, "Database reset to initial multi-district state");
 
   // TEST 1: Full Lifecycle Workflow in Ajmer
@@ -107,6 +107,7 @@ async function runAllTests() {
   );
   assert(approveRes.status === 200, "Assistant Controller approved application and issued certificate");
   const issuedCert = approveRes.data.data;
+  assert(issuedCert.id === "APP-AJM-002", "Certificate ID remains equal to the application ID");
   assert(Boolean(issuedCert.certificateNumber), `Issued Certificate ID: ${issuedCert.certificateNumber}`);
   assert(Boolean(issuedCert.securityHash), `Cryptographic SHA-256 Hash: ${issuedCert.securityHash.substring(0, 16)}...`);
   assert(Boolean(issuedCert.qrVerificationToken), `QR Verification Token: ${issuedCert.qrVerificationToken}`);

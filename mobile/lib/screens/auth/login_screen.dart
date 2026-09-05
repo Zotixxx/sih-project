@@ -1,8 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../providers/app_state.dart';
+import 'package:http/http.dart' as http;
 import '../../theme/app_theme.dart';
 import '../dashboard/home_dashboard_screen.dart';
+
+const apiBaseUrl = String.fromEnvironment(
+  'METRIX_API_BASE_URL',
+  defaultValue: 'http://10.0.2.2:5001/api',
+);
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -12,18 +17,36 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _badgeController = TextEditingController(text: 'LMO-104-DL');
-  final _pinController = TextEditingController(text: '9482');
+  final _badgeController = TextEditingController(text: 'LMO-AJM-021');
+  final _pinController = TextEditingController();
   bool _isLoading = false;
+  String? _errorMessage;
 
-  void _handleLogin() async {
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeDashboardScreen()),
+  Future<void> _handleLogin() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'userId': _badgeController.text.trim()}),
       );
+      if (response.statusCode != 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        throw Exception(body['error']?['message'] ?? 'Unable to authenticate officer.');
+      }
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeDashboardScreen()),
+        );
+      }
+    } catch (error) {
+      if (mounted) setState(() => _errorMessage = error.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -143,6 +166,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           prefixIcon: Icon(Icons.badge_outlined, size: 20),
                         ),
                       ),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 8),
+                        Text(_errorMessage!, style: const TextStyle(color: AppTheme.roseError, fontSize: 12)),
+                      ],
                       const SizedBox(height: 16),
 
                       // PIN Input

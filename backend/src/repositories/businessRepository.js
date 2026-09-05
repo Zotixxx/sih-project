@@ -32,6 +32,7 @@ export const businessRepository = {
         updatedAt: new Date().toISOString(),
       };
       db.businesses.push(newBiz);
+      db.persist();
       return newBiz;
     }
     db.businesses[index] = {
@@ -39,6 +40,7 @@ export const businessRepository = {
       ...updateData,
       updatedAt: new Date().toISOString(),
     };
+    db.persist();
     return db.businesses[index];
   },
 };

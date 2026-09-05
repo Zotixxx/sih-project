@@ -5,7 +5,8 @@ export const instrumentService = {
   getInstruments: async (user) => {
     if (user.role === ROLES.BUSINESS) {
       const businessId = user.business_id || user.id;
-      return await instrumentRepository.getByBusiness(businessId);
+      const instruments = await instrumentRepository.getByBusiness(businessId);
+      return instruments.filter((instrument) => instrument.visibleToBusiness !== false);
     }
     return await instrumentRepository.getByDistrict(user.district_id);
   },
@@ -102,10 +103,26 @@ export const instrumentService = {
   updateInstrument: async (id, user, data) => {
     const existing = await instrumentService.getInstrumentById(id, user);
 
+    let updatedPurchaseBill = existing.purchaseBill;
+    if (data.purchaseBill) {
+      updatedPurchaseBill = {
+        documentId:
+          data.purchaseBill.documentId ||
+          existing.purchaseBill?.documentId ||
+          `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
+        fileName: data.purchaseBill.fileName,
+        fileSize: data.purchaseBill.fileSize || "1.2 MB",
+        fileType: data.purchaseBill.fileType || "application/pdf",
+        uploadedDate:
+          data.purchaseBill.uploadedDate || new Date().toISOString().split("T")[0],
+        source: "INSTRUMENT",
+      };
+    }
+
     const updated = await instrumentRepository.update(id, {
       ...existing,
       ...data,
-      purchaseBill: data.purchaseBill || existing.purchaseBill,
+      purchaseBill: updatedPurchaseBill,
     });
 
     return updated;

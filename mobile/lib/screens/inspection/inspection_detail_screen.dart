@@ -242,7 +242,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.between,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Standard Mass: ${m.testLoad}',
@@ -338,7 +338,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.between,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,7 +385,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.between,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
                       'Photographic Evidence',
@@ -446,8 +446,6 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen>
 
   // TAB 5: Certification
   Widget _buildCertificationTab(AppState state, insp) {
-    final allChecklistPassed = insp.checklistItems.every((c) => c.passed);
-
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [

@@ -13,12 +13,14 @@ export const applicationRepository = {
   },
   create: async (applicationData) => {
     db.applications.unshift(applicationData);
+    db.persist();
     return applicationData;
   },
   update: async (id, updateData) => {
     const index = db.applications.findIndex((a) => a.id === id);
     if (index === -1) return null;
     db.applications[index] = { ...db.applications[index], ...updateData };
+    db.persist();
     return db.applications[index];
   },
 };

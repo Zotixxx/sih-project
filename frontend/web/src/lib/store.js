@@ -1,17 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import {
-  districtInfo,
-  initialBusinesses,
-  initialInstruments,
-  initialApplications,
-  initialLmos,
-  initialInspections,
-  initialCertificates,
-  initialNotifications,
-  initialAuditLogs,
-} from "./mockData";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { metrixApi } from "./api";
 
 const MetrixStoreContext = createContext(null);
@@ -90,23 +79,29 @@ export function MetrixStoreProvider({ children }) {
   const [isHydrated, setIsHydrated] = useState(false);
   const [currentUser, setCurrentUserState] = useState(DEFAULT_USERS[0]);
   const [userRole, setUserRoleState] = useState("admin"); // 'admin' | 'lmo' | 'business'
-  const [district, setDistrict] = useState(districtInfo);
+  const [district, setDistrict] = useState(null);
   const [dashboardStats, setDashboardStats] = useState(null);
-  const [businesses, setBusinesses] = useState(initialBusinesses);
-  const [instruments, setInstruments] = useState(initialInstruments);
-  const [applications, setApplications] = useState(initialApplications);
-  const [lmos, setLmos] = useState(initialLmos);
-  const [inspections, setInspections] = useState(initialInspections);
-  const [certificates, setCertificates] = useState(initialCertificates);
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const [auditLogs, setAuditLogs] = useState(initialAuditLogs);
+  const [businesses, setBusinesses] = useState([]);
+  const [instruments, setInstruments] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [lmos, setLmos] = useState([]);
+  const [inspections, setInspections] = useState([]);
+  const [certificates, setCertificates] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [businessProfile, setBusinessProfile] = useState(null);
   const [currentDraft, setCurrentDraft] = useState(null);
+  const currentUserRef = useRef(currentUser);
+  const refreshInFlightRef = useRef(false);
+  const initializedRef = useRef(false);
 
   // Sync with Backend API
-  const refreshData = useCallback(async (userToLoad = currentUser) => {
+  const refreshData = useCallback(async (userToLoad) => {
+    if (refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
+    const user = userToLoad || currentUserRef.current;
     try {
-      metrixApi.setUserId(userToLoad.id);
+      metrixApi.setUserId(user.id);
 
       const [dashRes, appsRes, lmosRes, inspsRes, certsRes, notifsRes, auditsRes, instsRes, bizRes, draftRes] =
         await Promise.allSettled([
@@ -167,31 +162,50 @@ export function MetrixStoreProvider({ children }) {
     } catch (err) {
       console.warn("Backend API sync warning:", err);
     } finally {
+      refreshInFlightRef.current = false;
       setIsHydrated(true);
     }
-  }, [currentUser]);
+  }, []);
 
   useEffect(() => {
-    refreshData(currentUser);
-  }, [refreshData, currentUser]);
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
-  // Hydrate from localStorage on client mount
-  useEffect(() => {
+    let initialUser = currentUserRef.current;
     try {
       const savedUser = localStorage.getItem("metrix_active_user");
       const savedRole = localStorage.getItem("metrix_active_role");
       if (savedUser && savedRole) {
-        const parsed = JSON.parse(savedUser);
-        setCurrentUserState(parsed);
-        setUserRoleState(savedRole);
-        metrixApi.setUserId(parsed.id);
+        initialUser = JSON.parse(savedUser);
+        currentUserRef.current = initialUser;
+        queueMicrotask(() => {
+          setCurrentUserState(initialUser);
+          setUserRoleState(savedRole);
+          metrixApi.setUserId(initialUser.id);
+        });
       }
     } catch (e) {
       console.warn("Could not load persona from localStorage:", e);
     }
-  }, []);
+
+    refreshData(initialUser);
+  }, [refreshData]);
+
+  const authenticate = async (userId) => {
+    const { user } = await metrixApi.login(userId);
+    const role = user.role === "ASSISTANT_CONTROLLER" || user.role === "SYSTEM_ADMIN"
+      ? "admin"
+      : user.role === "LMO" ? "lmo" : "business";
+    setCurrentUserState(user);
+    setUserRoleState(role);
+    localStorage.setItem("metrix_active_user", JSON.stringify(user));
+    localStorage.setItem("metrix_active_role", role);
+    await refreshData(user);
+    return user;
+  };
 
   const switchUser = (user) => {
+    currentUserRef.current = user;
     setCurrentUserState(user);
     let role = "business";
     if (user.role === "ASSISTANT_CONTROLLER" || user.role === "SYSTEM_ADMIN") {
@@ -216,6 +230,7 @@ export function MetrixStoreProvider({ children }) {
       return u.role === "BUSINESS";
     }) || DEFAULT_USERS[0];
 
+    currentUserRef.current = matched;
     setCurrentUserState(matched);
     try {
       localStorage.setItem("metrix_active_user", JSON.stringify(matched));
@@ -317,17 +332,35 @@ export function MetrixStoreProvider({ children }) {
     }
   };
 
-  // --- 7. Add Instrument with Purchase Bill ---
+  // --- 7. Add & Update Instrument with Purchase Bill ---
   const addInstrument = async (instrumentData) => {
     try {
       const res = await metrixApi.createInstrument(instrumentData);
+      if (!res?.data) {
+        throw new Error("The server did not return the saved instrument.");
+      }
+
+      setInstruments((prev) => [res.data, ...prev]);
+      await refreshData(currentUserRef.current);
+      return res.data;
+    } catch (err) {
+      console.error("Add instrument failed:", err);
+      throw err;
+    }
+  };
+
+  const updateInstrument = async (id, instrumentData) => {
+    try {
+      const res = await metrixApi.updateInstrument(id, instrumentData);
       if (res?.data) {
-        setInstruments((prev) => [res.data, ...prev]);
+        setInstruments((prev) =>
+          prev.map((inst) => (inst.id === id ? { ...inst, ...res.data } : inst))
+        );
         refreshData(currentUser);
         return res.data;
       }
     } catch (err) {
-      console.error("Add instrument failed:", err);
+      console.error("Update instrument API failed, using fallback:", err);
       throw err;
     }
   };
@@ -403,6 +436,7 @@ export function MetrixStoreProvider({ children }) {
       value={{
         isHydrated,
         currentUser,
+        authenticate,
         switchUser,
         userRole,
         setUserRole,
@@ -420,6 +454,7 @@ export function MetrixStoreProvider({ children }) {
         currentDraft,
         updateBusinessProfile,
         addInstrument,
+        updateInstrument,
         submitApplication,
         saveDraft,
         clearDraft,

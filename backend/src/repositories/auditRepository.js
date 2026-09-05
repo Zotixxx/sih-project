@@ -15,6 +15,7 @@ export const auditRepository = {
       ...auditData,
     };
     db.auditLogs.unshift(entry);
+    db.persist();
     return entry;
   },
 };

@@ -278,8 +278,8 @@ export default function ApplicationsPage() {
                   className="bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none"
                 >
                   <option value="ALL">All Instrument Types</option>
-                  {instrumentTypes.map((type) => (
-                    <option key={type} value={type}>
+                    {instrumentTypes.map((type) => (
+                      <option key={type || "unknown-instrument-type"} value={type}>
                       {type}
                     </option>
                   ))}
@@ -296,8 +296,8 @@ export default function ApplicationsPage() {
                 >
                   <option value="ALL">All Officers</option>
                   {(lmos || []).map((lmo) => (
-                    <option key={lmo.officerId} value={lmo.officerId}>
-                      {lmo.name} ({lmo.officerId})
+                      <option key={lmo.officerId || lmo.id} value={lmo.officerId || lmo.id}>
+                        {lmo.name} ({lmo.officerId || lmo.id})
                     </option>
                   ))}
                 </select>
@@ -756,11 +756,14 @@ export default function ApplicationsPage() {
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-xs text-slate-900 focus:outline-none focus:border-slate-900 focus:bg-white"
                 required
               >
-                {(lmos || []).map((lmo) => (
-                  <option key={lmo.officerId} value={lmo.officerId}>
-                    {lmo.name} ({lmo.officerId}) — {lmo.jurisdiction} [Active: {lmo.activeWorkload}]
-                  </option>
-                ))}
+                {(lmos || []).map((lmo) => {
+                  const officerId = lmo.officerId || lmo.id;
+                  return (
+                    <option key={officerId} value={officerId}>
+                      {lmo.name} ({officerId}) — {lmo.jurisdiction || ""} [Active: {lmo.activeWorkload || 0}]
+                    </option>
+                  );
+                })}
               </select>
             </div>
 

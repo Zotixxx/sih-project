@@ -1,4 +1,5 @@
 import { userRepository } from "../repositories/userRepository.js";
+import { createAuthToken } from "../middleware/auth.middleware.js";
 
 export const authController = {
   login: async (req, res) => {
@@ -15,7 +16,7 @@ export const authController = {
     return res.json({
       success: true,
       data: {
-        token: `mock-token-${user.id}`,
+        token: createAuthToken(user.id),
         user: {
           id: user.id,
           name: user.name,

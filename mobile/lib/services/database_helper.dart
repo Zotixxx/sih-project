@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/inspection_model.dart';
-import '../models/instrument_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();

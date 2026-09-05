@@ -21,12 +21,12 @@ class OfficerModel {
 
   factory OfficerModel.defaultOfficer() {
     return OfficerModel(
-      badgeId: 'LMO-104-DL',
-      name: 'Inspector Rajesh Sharma',
-      designation: 'Senior Legal Metrology Officer',
-      zone: 'South & South-East Delhi Enforcement Zone',
-      email: 'rajesh.sharma@metrix.gov.in',
-      phone: '+91 98101 23456',
+      badgeId: 'LMO-AJM-021',
+      name: 'Rajesh Kumar',
+      designation: 'Legal Metrology Officer',
+      zone: 'Ajmer City & Krishi Mandi Commercial Zone',
+      email: 'rajesh.kumar@lmo.raj.gov.in',
+      phone: '+91 94140 12345',
       totalInspections: 142,
       pendingSync: 2,
     );

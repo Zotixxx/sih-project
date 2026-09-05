@@ -63,7 +63,7 @@ class _SyncQueueScreenState extends State<SyncQueueScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.between,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

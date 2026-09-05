@@ -71,6 +71,7 @@ export const notificationRepository = {
       ...notificationData,
     };
     db.notifications.unshift(entry);
+    db.persist();
     return entry;
   },
 };

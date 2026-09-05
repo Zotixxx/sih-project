@@ -13,7 +13,12 @@ cd backend
 npm install
 node src/server.js
 ```
-*Runs on `http://localhost:5001/api`*
+*Runs on `http://localhost:5001/api` and stores state in `backend/src/data/metrix.sqlite`.*
+
+To reset local data to the seeded Ajmer/Jaipur dataset:
+```bash
+curl -X POST -H "x-user-id: SYS-ADMIN-001" http://localhost:5001/api/reset
+```
 
 ### Frontend Web Portal (Next.js)
 ```bash
@@ -22,6 +27,18 @@ npm install
 npm run dev
 ```
 *Runs on `http://localhost:3000`*
+
+### Automated backend checks
+```bash
+cd backend
+npm test
+```
+
+The test suite resets the local database and covers the complete Business -> Assistant
+Controller -> LMO -> Assistant Controller -> Certificate -> Public QR workflow, including
+district isolation, role authorization, ownership, drafts, document rules, and certificate
+ID consistency. Local login accepts the seeded user IDs listed below and returns a signed
+bearer token; the frontend uses that token for API requests.
 
 ---
 

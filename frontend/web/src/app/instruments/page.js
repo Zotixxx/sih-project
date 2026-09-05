@@ -15,7 +15,7 @@ function InstrumentsContent() {
   const initialStatusFilter = searchParams.get("status") || "ALL";
   const initialSearch = searchParams.get("search") || "";
 
-  const { instruments, certificates, currentUser, userRole } = useMetrixStore();
+  const { instruments, certificates, currentUser, userRole, updateInstrument } = useMetrixStore();
   const isBusiness = userRole === "business" || currentUser?.role === "BUSINESS";
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
@@ -27,10 +27,15 @@ function InstrumentsContent() {
   // Business isolation: Only see own instruments
   const userInstruments = useMemo(() => {
     if (isBusiness) {
+      const businessId =
+        currentUser?.business_id ||
+        (currentUser?.id?.startsWith("BIZ-")
+          ? currentUser.id.replace(/^BIZ-/, "BUS-")
+          : currentUser?.id);
       return (instruments || []).filter(
         (inst) =>
-          inst.businessId === currentUser?.id ||
-          inst.business_id === currentUser?.id ||
+          inst.businessId === businessId ||
+          inst.business_id === businessId ||
           inst.ownerName?.toLowerCase().includes(currentUser?.name?.toLowerCase()) ||
           inst.businessName?.toLowerCase().includes(currentUser?.businessName?.toLowerCase())
       );
@@ -72,6 +77,57 @@ function InstrumentsContent() {
     if (cert) {
       setSelectedCert(cert);
       setIsQrModalOpen(true);
+    }
+  };
+
+  const handleBillUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedInstrument) return;
+
+    const billData = {
+      documentId: `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
+      fileName: file.name,
+      fileSize: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+      fileType: file.type || "application/pdf",
+      uploadedDate: new Date().toISOString().split("T")[0],
+      source: "INSTRUMENT",
+    };
+
+    try {
+      const updated = await updateInstrument(selectedInstrument.id, {
+        purchaseBill: billData,
+      });
+      setSelectedInstrument((prev) => ({
+        ...prev,
+        purchaseBill: billData,
+      }));
+    } catch (err) {
+      console.error("Failed to update bill:", err);
+    }
+  };
+
+  const handleAttachDefaultBill = async () => {
+    if (!selectedInstrument) return;
+    const sanitizedName = (selectedInstrument.name || "Instrument").replace(/[^a-zA-Z0-9]/g, "_");
+    const billData = {
+      documentId: `DOC-PB-${Math.floor(10000 + Math.random() * 90000)}`,
+      fileName: `${sanitizedName}_Purchase_Invoice.pdf`,
+      fileSize: "1.4 MB",
+      fileType: "application/pdf",
+      uploadedDate: new Date().toISOString().split("T")[0],
+      source: "INSTRUMENT",
+    };
+
+    try {
+      await updateInstrument(selectedInstrument.id, {
+        purchaseBill: billData,
+      });
+      setSelectedInstrument((prev) => ({
+        ...prev,
+        purchaseBill: billData,
+      }));
+    } catch (err) {
+      console.error("Failed to attach default bill:", err);
     }
   };
 
@@ -340,27 +396,75 @@ function InstrumentsContent() {
 
               {/* Purchase Bill & Documents (Section 8, 10) */}
               <div className="space-y-2">
-                <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider text-slate-500">
-                  Supporting Purchase Document
-                </h4>
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="material-symbols-outlined text-emerald-600 text-[20px]">
-                      receipt_long
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-900 uppercase text-[11px] tracking-wider text-slate-500">
+                    Supporting Purchase Document
+                  </h4>
+                  {selectedInstrument.purchaseBill?.fileName && (
+                    <label className="cursor-pointer text-[10px] text-slate-600 hover:text-slate-900 font-semibold underline">
+                      Replace Bill
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        onChange={handleBillUpload}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {selectedInstrument.purchaseBill?.fileName ? (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <span className="material-symbols-outlined text-emerald-600 text-[20px]">
+                        receipt_long
+                      </span>
+                      <div>
+                        <p className="font-bold text-slate-900 text-xs truncate max-w-[200px]">
+                          {selectedInstrument.purchaseBill.fileName}
+                        </p>
+                        <p className="text-[10px] text-slate-500">
+                          {selectedInstrument.purchaseBill.fileSize || "1.2 MB"} • Uploaded {selectedInstrument.purchaseBill.uploadedDate || "Recently"}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                      Attached
                     </span>
-                    <div>
-                      <p className="font-bold text-slate-900 text-xs">
-                        {selectedInstrument.purchaseBill?.fileName || "Purchase_Bill_OEM_Invoice.pdf"}
-                      </p>
-                      <p className="text-[10px] text-slate-500">
-                        {selectedInstrument.purchaseBill?.fileSize || "1.2 MB"} • Source: Instrument
-                      </p>
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-amber-50/80 border border-amber-300 rounded-lg space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-amber-600 text-[18px]">
+                        warning
+                      </span>
+                      <p className="text-xs font-bold text-slate-900">No Purchase Bill Attached</p>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-snug">
+                      Statutory requirement: An invoice must be attached before this instrument can be verified.
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <label className="cursor-pointer px-2.5 py-1.5 rounded-md bg-slate-900 text-white font-bold text-[11px] hover:bg-slate-800 transition-colors flex items-center gap-1 shadow-2xs">
+                        <span className="material-symbols-outlined text-[14px]">upload_file</span>
+                        Upload Bill
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={handleBillUpload}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAttachDefaultBill}
+                        className="px-2.5 py-1.5 rounded-md bg-white border border-slate-300 text-slate-700 font-semibold text-[11px] hover:bg-slate-50 transition-colors flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-[14px] text-emerald-600">receipt</span>
+                        Attach OEM Invoice
+                      </button>
                     </div>
                   </div>
-                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                    Attached
-                  </span>
-                </div>
+                )}
               </div>
 
               {/* Verification & Stamping Officer */}

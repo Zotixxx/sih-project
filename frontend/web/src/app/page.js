@@ -5,17 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PublicHeader from "@/components/layout/PublicHeader";
 import StatTicker from "@/components/shared/StatTicker";
-import QRCodeModal from "@/components/ui/QRCodeModal";
 import Badge from "@/components/ui/Badge";
-import { initialCertificates } from "@/lib/mockData";
 
 export default function LandingPage() {
   const router = useRouter();
   const [certSearch, setCertSearch] = useState("");
-  const [selectedCert, setSelectedCert] = useState(null);
-  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
-
-  const sampleCert = initialCertificates[0];
 
   const handleVerifySubmit = (e) => {
     e.preventDefault();
@@ -129,10 +123,9 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right Interactive Certificate Preview */}
+            {/* Right public verification entry point */}
             <div className="lg:col-span-5 relative">
               <div className="bg-white border-2 border-slate-900 rounded-xl p-6 shadow-xl relative transition-transform duration-300 hover:scale-[1.01]">
-                {/* Government Header Stamp */}
                 <div className="flex items-start justify-between border-b border-slate-200 pb-4 mb-4">
                   <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center">
@@ -149,77 +142,15 @@ export default function LandingPage() {
                       </p>
                     </div>
                   </div>
-                  <Badge status="VALID" />
+                  <Badge status="PENDING" customLabel="Live lookup" />
                 </div>
 
-                {/* Instrument Metadata */}
-                <div className="space-y-2.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Certificate No:</span>
-                    <span className="font-mono-code font-bold text-slate-900">
-                      {sampleCert.certificateNumber}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Instrument:</span>
-                    <span className="font-semibold text-slate-900 text-right">
-                      {sampleCert.instrumentName}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Serial Number:</span>
-                    <span className="font-mono-code font-semibold text-slate-800">
-                      {sampleCert.serialNumber}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Accuracy Class:</span>
-                    <span className="font-semibold text-slate-800">
-                      Class I (Special Analytical)
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Verification Date:</span>
-                    <span className="text-slate-800">
-                      {sampleCert.validFrom}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Valid Until:</span>
-                    <span className="font-bold text-emerald-700">
-                      {sampleCert.validUntil}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Stamping Seal & QR Section */}
-                <div className="mt-5 pt-4 border-t border-slate-200 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">
-                      Issuing Officer
-                    </p>
-                    <p className="text-xs font-bold text-slate-900">
-                      {sampleCert.officerName}
-                    </p>
-                    <p className="text-[10px] text-slate-500">
-                      {sampleCert.officerDesignation}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setSelectedCert(sampleCert);
-                      setIsQrModalOpen(true);
-                    }}
-                    className="flex flex-col items-center gap-1 p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors group cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-slate-900 text-[28px] group-hover:scale-110 transition-transform">
-                      qr_code_2
-                    </span>
-                    <span className="text-[9px] font-bold text-slate-600 uppercase">
-                      Scan QR
-                    </span>
-                  </button>
+                <div className="min-h-[220px] flex flex-col items-center justify-center text-center gap-3">
+                  <span className="material-symbols-outlined text-[48px] text-slate-300">qr_code_scanner</span>
+                  <h4 className="text-base font-bold text-slate-900">Verify an official certificate</h4>
+                  <p className="text-xs leading-relaxed text-slate-500 max-w-xs">
+                    Enter a certificate ID above to retrieve its current record from the authority API.
+                  </p>
                 </div>
               </div>
             </div>
@@ -542,14 +473,6 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* QR Modal */}
-      {selectedCert && (
-        <QRCodeModal
-          isOpen={isQrModalOpen}
-          onClose={() => setIsQrModalOpen(false)}
-          certificate={selectedCert}
-        />
-      )}
     </div>
   );
 }

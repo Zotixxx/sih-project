@@ -8,33 +8,24 @@ import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setUserRole } = useMetrixStore();
+  const { authenticate } = useMetrixStore();
   const [activeTab, setActiveTab] = useState("business"); // 'business' | 'authority'
-  const [email, setEmail] = useState("compliance@apexlogistics.in");
-  const [password, setPassword] = useState("••••••••••••");
-  const [officerBadge, setOfficerBadge] = useState("LMO-DEL-104");
+  const [email, setEmail] = useState("BIZ-AJM-001");
+  const [password, setPassword] = useState("");
+  const [officerBadge, setOfficerBadge] = useState("LMO-AJM-021");
+  const [loginError, setLoginError] = useState("");
   const [selectedAuthorityRole, setSelectedAuthorityRole] = useState("lmo"); // 'lmo' | 'admin'
 
-  const [isSignup, setIsSignup] = useState(false);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (activeTab === "business") {
-      setUserRole("business");
-      if (isSignup || email.toLowerCase().includes("business@example.com")) {
-        router.push("/settings");
-      } else {
-        router.push("/dashboard");
-      }
-    } else {
-      setUserRole(selectedAuthorityRole);
-      router.push("/dashboard");
+    setLoginError("");
+    try {
+      const user = await authenticate(activeTab === "business" ? email : officerBadge);
+      router.push(user.role === "BUSINESS" && !user.address ? "/settings" : "/dashboard");
+    } catch (error) {
+      setLoginError(error.message);
     }
-  };
-
-  const handleQuickPersona = (role) => {
-    setUserRole(role);
-    router.push("/dashboard");
   };
 
   return (
@@ -75,7 +66,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => {
                 setActiveTab("business");
-                setEmail("compliance@apexlogistics.in");
+                setEmail("BIZ-AJM-001");
               }}
               className={cn(
                 "py-3.5 px-4 text-center transition-colors flex items-center justify-center gap-2",
@@ -93,7 +84,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => {
                 setActiveTab("authority");
-                setEmail("officer.rajesh@delhi.gov.in");
+                setOfficerBadge("LMO-AJM-021");
               }}
               className={cn(
                 "py-3.5 px-4 text-center transition-colors flex items-center justify-center gap-2",
@@ -121,36 +112,6 @@ export default function LoginPage() {
                   ? "Access your registered instruments, applications, and certificates."
                   : "Secure access for Legal Metrology Officers (LMO) and Administrators."}
               </p>
-            </div>
-
-            {/* Quick Demo Credentials Switcher */}
-            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-              <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">
-                1-Click Demo Logins for Judges &amp; Reviewers:
-              </p>
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => handleQuickPersona("business")}
-                  className="p-2 bg-white border border-slate-200 rounded text-center hover:border-slate-400 hover:bg-slate-50 transition-all font-semibold text-slate-800"
-                >
-                  🏢 Business
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPersona("lmo")}
-                  className="p-2 bg-white border border-slate-200 rounded text-center hover:border-slate-400 hover:bg-slate-50 transition-all font-semibold text-slate-800"
-                >
-                  👮 LMO Field
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickPersona("admin")}
-                  className="p-2 bg-white border border-slate-200 rounded text-center hover:border-slate-400 hover:bg-slate-50 transition-all font-semibold text-slate-800"
-                >
-                  🛠️ Admin
-                </button>
-              </div>
             </div>
 
             {/* Form */}
@@ -250,28 +211,16 @@ export default function LoginPage() {
                 className="w-full mt-2 py-3 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors shadow-2xs flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]">
-                  {isSignup ? "person_add" : "login"}
+                  login
                 </span>
-                {isSignup ? "Register & Setup Profile" : "Sign In to Platform"}
+                Sign In to Platform
               </button>
+              {loginError && <p className="text-xs text-red-600" role="alert">{loginError}</p>}
             </form>
           </div>
 
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500">
-            {activeTab === "business" ? (
-              <p>
-                {isSignup ? "Already registered? " : "New Business? "}
-                <button
-                  type="button"
-                  onClick={() => setIsSignup(!isSignup)}
-                  className="font-bold text-slate-900 hover:underline cursor-pointer"
-                >
-                  {isSignup ? "Sign In" : "Sign Up / Register Business"}
-                </button>
-              </p>
-            ) : (
-              <p>Official Legal Metrology Department Credentials Required.</p>
-            )}
+            <p>Use an account provisioned in the local authority registry.</p>
           </div>
         </div>
       </main>

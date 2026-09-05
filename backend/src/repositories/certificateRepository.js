@@ -45,12 +45,14 @@ export const certificateRepository = {
   },
   create: async (certificateData) => {
     db.certificates.unshift(certificateData);
+    db.persist();
     return certificateData;
   },
   update: async (id, updateData) => {
     const index = db.certificates.findIndex((c) => c.id === id || c.certificateNumber === id);
     if (index === -1) return null;
     db.certificates[index] = { ...db.certificates[index], ...updateData };
+    db.persist();
     return db.certificates[index];
   },
 };

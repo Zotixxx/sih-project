@@ -14,6 +14,9 @@ import reportRoutes from "./routes/report.routes.js";
 import publicRoutes from "./routes/public.routes.js";
 import businessRoutes from "./routes/business.routes.js";
 import instrumentRoutes from "./routes/instrument.routes.js";
+import { authMiddleware } from "./middleware/auth.middleware.js";
+import { requireRole } from "./middleware/role.middleware.js";
+import { ROLES } from "./constants/roles.js";
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -48,7 +51,7 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/public", publicRoutes);
 
 // Database Reset Endpoint (for test suites)
-app.post("/api/reset", (req, res) => {
+app.post("/api/reset", authMiddleware, requireRole(ROLES.SYSTEM_ADMIN), (req, res) => {
   db.reset();
   res.json({
     success: true,

@@ -576,7 +576,7 @@ export default function AssistantControllerPortalPage() {
 
               {filteredCertificates.length === 0 ? (
                 <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-xs text-slate-500">
-                  No certificates found matching "{certSearch}".
+                  No certificates found matching &quot;{certSearch}&quot;.
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -930,7 +930,7 @@ export default function AssistantControllerPortalPage() {
                 LMO Officer Observations
               </span>
               <p className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 italic">
-                "{reviewingSubmission.officerRemarks || reviewingSubmission.remarks}"
+                &quot;{reviewingSubmission.officerRemarks || reviewingSubmission.remarks}&quot;
               </p>
             </div>
 
@@ -992,7 +992,7 @@ export default function AssistantControllerPortalPage() {
                 Immediate Statutory Action
               </span>
               <p className="text-[11px] leading-relaxed">
-                Issuing a rejection will set this instrument to <strong>OUT OF STAMP (EXPIRED)</strong> and dispatch the formal rejection note directly to the merchant's portal so they can recalibrate and file a re-verification application.
+                Issuing a rejection will set this instrument to <strong>OUT OF STAMP (EXPIRED)</strong> and dispatch the formal rejection note directly to the merchant&apos;s portal so they can recalibrate and file a re-verification application.
               </p>
             </div>
 

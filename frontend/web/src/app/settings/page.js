@@ -224,7 +224,7 @@ function BusinessProfileSettings() {
   // Synchronize when businessProfile loads
   React.useEffect(() => {
     if (businessProfile) {
-      setFormData((prev) => ({
+      const syncProfile = setTimeout(() => setFormData((prev) => ({
         ...prev,
         businessName: businessProfile.businessName || businessProfile.name || prev.businessName,
         gstin: businessProfile.gstin || prev.gstin,
@@ -240,10 +240,15 @@ function BusinessProfileSettings() {
         pincode: businessProfile.pincode || prev.pincode,
         turnover: businessProfile.turnover || prev.turnover,
         natureOfBusiness: businessProfile.natureOfBusiness || prev.natureOfBusiness,
-      }));
+      })), 0);
       if (businessProfile.documents && businessProfile.documents.length > 0) {
-        setDocuments(businessProfile.documents);
+        const syncDocuments = setTimeout(() => setDocuments(businessProfile.documents), 0);
+        return () => {
+          clearTimeout(syncProfile);
+          clearTimeout(syncDocuments);
+        };
       }
+      return () => clearTimeout(syncProfile);
     }
   }, [businessProfile]);
 

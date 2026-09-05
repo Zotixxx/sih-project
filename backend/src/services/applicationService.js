@@ -229,7 +229,10 @@ export const applicationService = {
       const dIndex = db.drafts.findIndex(
         (d) => d.businessId === (user.business_id || user.id)
       );
-      if (dIndex !== -1) db.drafts.splice(dIndex, 1);
+      if (dIndex !== -1) {
+        db.drafts.splice(dIndex, 1);
+        db.persist();
+      }
     }
 
     return saved;
@@ -254,6 +257,7 @@ export const applicationService = {
     } else {
       db.drafts.push(draft);
     }
+    db.persist();
 
     return draft;
   },
@@ -268,6 +272,7 @@ export const applicationService = {
     const businessId = user.business_id || user.id;
     if (!db.drafts) return true;
     db.drafts = db.drafts.filter((d) => d.businessId !== businessId);
+    db.persist();
     return true;
   },
 

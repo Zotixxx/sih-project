@@ -94,6 +94,7 @@ body {
   0% {
     transform: translate3d(0, 0, 0);
   }
+
   100% {
     transform: translate3d(-50%, 0, 0);
   }
@@ -123,9 +124,12 @@ body {
   body * {
     visibility: hidden;
   }
-  #printable-certificate, #printable-certificate * {
+
+  #printable-certificate,
+  #printable-certificate * {
     visibility: visible;
   }
+
   #printable-certificate {
     position: absolute;
     left: 0;

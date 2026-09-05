@@ -70,6 +70,15 @@ export const certificateService = {
       throw err;
     }
 
+    const existingCertificate = (await certificateRepository.getAll()).find(
+      (certificate) => certificate.applicationId === application.id
+    );
+    if (existingCertificate) {
+      const err = new Error("A certificate has already been generated for this application.");
+      err.statusCode = 409;
+      throw err;
+    }
+
     // Look up associated inspection
     const inspection =
       (application.inspectionId && (await inspectionRepository.getById(application.inspectionId))) ||
@@ -88,7 +97,7 @@ export const certificateService = {
 
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
     const certNumber = `LM-${application.district_id}-2026-${randomSuffix}`;
-    const certId = `CERT-${application.district_id}-${Date.now().toString().slice(-4)}`;
+    const certId = application.id;
     const qrToken = `VRF-${application.district_id}-2026-${randomSuffix}`;
 
     // Compute cryptographic SHA-256 integrity hash

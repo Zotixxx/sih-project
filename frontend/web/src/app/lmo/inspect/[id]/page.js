@@ -54,7 +54,7 @@ export default function LmoFieldInspectionPage({ params }) {
 
   // Lead wire seal & Location
   const [appliedSealNumber, setAppliedSealNumber] = useState(
-    inspection?.sealNumber || `SEAL-RAJ-${Math.floor(10000 + Math.random() * 90000)}`
+    inspection?.sealNumber || ""
   );
   const [gpsLocation, setGpsLocation] = useState(
     inspection?.gpsCoords || "26.4499° N, 74.6399° E"
@@ -70,8 +70,7 @@ export default function LmoFieldInspectionPage({ params }) {
       setHasStarted(true);
       await refreshData();
     } catch (err) {
-      console.warn("Start inspection API fallback:", err);
-      setHasStarted(true);
+      alert("Error starting inspection: " + err.message);
     }
   };
 
@@ -82,15 +81,15 @@ export default function LmoFieldInspectionPage({ params }) {
     try {
       await metrixApi.submitInspection(inspection.id, {
         sealNumber: appliedSealNumber,
-        gpsCoords: gpsLocation,
-        remarks: inspectorRemarks,
-        measurements: {
-          nominalLoad,
-          indicatedLoad,
-          observedError,
-          mpeAllowable,
-          tolerancePassed,
-        },
+        gpsCoordinates: gpsLocation,
+        officerRemarks: inspectorRemarks,
+        measurements: [{
+          testLoad: nominalLoad,
+          indicatedWeight: indicatedLoad,
+          error: observedError,
+          mpeLimit: mpeAllowable,
+          result: tolerancePassed ? "PASS" : "FAIL",
+        }],
         checklist: {
           visualInspectionPassed,
           levelingZeroPassed,

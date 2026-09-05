@@ -1,6 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'database_helper.dart';
-import '../models/inspection_model.dart';
+
+const apiBaseUrl = String.fromEnvironment(
+  'METRIX_API_BASE_URL',
+  defaultValue: 'http://10.0.2.2:5001/api',
+);
+const officerId = String.fromEnvironment(
+  'METRIX_LMO_ID',
+  defaultValue: 'LMO-AJM-021',
+);
 
 class SyncManager {
   static final SyncManager instance = SyncManager._init();
@@ -29,8 +39,34 @@ class SyncManager {
       onProgress?.call('Syncing ${unsynced.length} offline records with central server...');
 
       for (var insp in unsynced) {
-        // Simulate network upload delay with Express/Supabase backend
-        await Future.delayed(const Duration(milliseconds: 800));
+        final startResponse = await http.post(
+          Uri.parse('$apiBaseUrl/inspections/${insp.id}/start'),
+          headers: {'x-user-id': officerId},
+        );
+        if (startResponse.statusCode != 200 && startResponse.statusCode != 400) {
+          throw Exception('Could not start ${insp.id}: HTTP ${startResponse.statusCode}');
+        }
+
+        final submitResponse = await http.post(
+          Uri.parse('$apiBaseUrl/inspections/${insp.id}/submit'),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': officerId,
+          },
+          body: jsonEncode({
+            'inspectionDate': DateTime.now().toIso8601String().split('T').first,
+            'gpsCoordinates': insp.gpsCoords,
+            'officerRemarks': insp.remarks,
+            'measurements': insp.measurements.map((measurement) => measurement.toMap()).toList(),
+            'checklist': {
+              for (final item in insp.checklistItems) item.id: item.passed ? 'PASS' : 'FAIL',
+            },
+          }),
+        );
+        if (submitResponse.statusCode != 200) {
+          throw Exception('Could not submit ${insp.id}: HTTP ${submitResponse.statusCode}');
+        }
+
         await DatabaseHelper.instance.markAsSynced(insp.id);
         onProgress?.call('Synced ${insp.id} (${insp.instrumentName})');
       }

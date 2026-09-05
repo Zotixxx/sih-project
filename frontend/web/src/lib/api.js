@@ -4,23 +4,49 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
 
 let activeUserId = "AC-AJM-001";
+let authToken = null;
 
 export const setApiUserId = (userId) => {
+  if (activeUserId !== userId) {
+    authToken = null;
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("metrix_auth_token");
+    }
+  }
   activeUserId = userId;
 };
 
 export const getApiUserId = () => activeUserId;
 
+export const setApiAuthToken = (token) => {
+  authToken = token;
+  if (typeof window !== "undefined") {
+    if (token) window.localStorage.setItem("metrix_auth_token", token);
+    else window.localStorage.removeItem("metrix_auth_token");
+  }
+};
+
+const getStoredAuthToken = () => {
+  if (authToken) return authToken;
+  if (typeof window !== "undefined") {
+    authToken = window.localStorage.getItem("metrix_auth_token");
+  }
+  return authToken;
+};
+
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
   try {
+    const authHeaders = getStoredAuthToken()
+      ? { Authorization: `Bearer ${getStoredAuthToken()}` }
+      : { "x-user-id": activeUserId };
     const res = await fetch(url, {
+      ...options,
       headers: {
         "Content-Type": "application/json",
-        "x-user-id": activeUserId,
+        ...authHeaders,
         ...options.headers,
       },
-      ...options,
     });
 
     const body = await res.json().catch(() => ({}));
@@ -41,6 +67,16 @@ async function request(endpoint, options = {}) {
 }
 
 export const metrixApi = {
+  login: async (userId) => {
+    const body = await request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ userId }),
+    });
+    setApiUserId(body.data.user.id);
+    setApiAuthToken(body.data.token);
+    return body.data;
+  },
+  logout: () => setApiAuthToken(null),
   setUserId: setApiUserId,
   getUserId: getApiUserId,
 
