@@ -50,11 +50,25 @@ Supabase Auth is the identity provider. Protected portal URLs use the authentica
 /{userId}/fresh-applications
 /{userId}/verify
 /{userId}/lmos
+/{userId}/assistant-controllers
+/{userId}/audit-logs
 ```
 
 The Next middleware checks the Supabase session, verifies `{userId}` equals the Auth UUID, reads `profiles.role`, and gates the route by role. Legacy unscoped routes redirect into the scoped URL.
 
-Business users may create a new account from `/register/business`. That flow uses Supabase Auth signup, loads configured districts from the Express API, then creates a `BUSINESS` profile and `businesses` domain record. Government users are not self-registered from the public UI.
+Business users may create a new account from `/register/business`. The first step only creates the Supabase Auth email/password account. After email verification and sign-in, the app redirects missing business profiles to `/register/business?complete=1`, loads configured districts from the Express API, then creates the `BUSINESS` profile and `businesses` domain record. Government users are not self-registered from the public UI.
+
+System Admin users are bootstrap-created through Supabase Auth plus a `profiles` row with role `SYSTEM_ADMIN`. After login, the System Admin portal uses:
+
+```text
+/{adminAuthUuid}/dashboard
+/{adminAuthUuid}/assistant-controllers
+/{adminAuthUuid}/lmos
+/{adminAuthUuid}/audit-logs
+/{adminAuthUuid}/settings
+```
+
+System Admin navigation is limited to Dashboard, Assistant Controllers, LMOs, Audit Logs, and Settings. Assistant Controller application workflow pages remain separate.
 
 ## Environment Variables
 
@@ -154,6 +168,26 @@ Protected API requests require `Authorization: Bearer <Supabase access token>`.
 - `GET /api/certificates/search?q=...`: authenticated database search.
 - `GET /api/public/certificates/:id`: anonymous QR verification projection.
 - `POST /api/documents/upload`: private Supabase Storage upload metadata.
+- `GET /api/admin/dashboard`: System Admin counts and health checks.
+- `GET /api/admin/assistant-controllers?search=...&districtId=...`: limited server-side AC search.
+- `POST /api/admin/assistant-controllers`: create an AC district account using the server-side Supabase admin API.
+- `GET /api/admin/assistant-controllers/:id`: fetch one AC district account.
+- `PATCH /api/admin/assistant-controllers/:id`: edit current officer details/status without creating a new Auth account.
+- `GET /api/admin/lmos?search=...&districtId=...`: limited server-side LMO search.
+- `GET /api/admin/lmos/:id`: fetch one LMO administrative profile.
+- `GET /api/admin/audit-logs?...`: paginated read-only audit log search.
+
+## System Admin Portal
+
+The System Admin portal is intentionally simple:
+
+- Dashboard counts come from Supabase-backed API counts for Assistant Controllers, active LMOs, and businesses.
+- Health cards call lightweight checks for Supabase Auth, database, Storage, and the Express API.
+- Assistant Controllers is search-first and does not load the full directory on page open.
+- Creating an Assistant Controller creates a Supabase Auth user, `profiles` row, and `assistant_controllers` row from the backend only.
+- The Assistant Controller account represents a stable district account. Officer details can be edited later without changing the Auth user, district, or account email.
+- LMOs is search-first for System Admin and supports district/status filters.
+- Audit Logs is read-only and paginated.
 
 ## Testing
 
@@ -163,6 +197,7 @@ Static checks:
 cd backend
 find src -name '*.js' -exec node --check {} \;
 node --check test_e2e_scenarios.js
+node --check test_admin_scenarios.js
 ```
 
 ```bash
@@ -191,6 +226,23 @@ npm test
 ```
 
 Use a disposable Supabase project or a clean set of domain IDs for the golden test.
+
+System Admin workflow test:
+
+```bash
+cd backend
+METRIX_API_BASE_URL=http://localhost:5001/api \
+SUPABASE_URL=https://your-project-ref.supabase.co \
+SUPABASE_PUBLISHABLE_KEY=your-publishable-key \
+METRIX_TEST_ADMIN_EMAIL=admin@example.com \
+METRIX_TEST_ADMIN_PASSWORD=... \
+METRIX_ADMIN_TEST_AC_EMAIL=ac.southdelhi@metrix.com \
+METRIX_ADMIN_TEST_AC_PASSWORD=... \
+METRIX_ADMIN_TEST_DISTRICT_ID=DL-SOUTH_DELHI \
+npm run test:admin
+```
+
+Optional negative checks are included if these credentials are also set: `METRIX_TEST_BUSINESS_EMAIL`, `METRIX_TEST_BUSINESS_PASSWORD`, `METRIX_TEST_LMO_EMAIL`, `METRIX_TEST_LMO_PASSWORD`, `METRIX_TEST_AC_EMAIL`, `METRIX_TEST_AC_PASSWORD`.
 
 ## Current Notes
 

@@ -15,6 +15,7 @@ import publicRoutes from "./routes/public.routes.js";
 import businessRoutes from "./routes/business.routes.js";
 import instrumentRoutes from "./routes/instrument.routes.js";
 import documentRoutes from "./routes/document.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 import { rateLimit } from "./middleware/rateLimit.middleware.js";
 
 const app = express();
@@ -51,6 +52,7 @@ app.use("/api/certificates", certificateRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/admin", adminRoutes);
 
 // 404 Handler
 app.use((req, res) => {

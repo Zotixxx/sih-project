@@ -12,7 +12,13 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState("business");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
+  const [loginError, setLoginError] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const error = new URLSearchParams(window.location.search).get("error");
+    if (error === "account-inactive") return "This MetriX account is inactive.";
+    if (error === "profile-required") return "Authenticated user has no MetriX profile.";
+    return "";
+  });
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -101,7 +107,7 @@ export default function LoginPage() {
               <p className="text-xs text-slate-500 mt-1">
                 {activeTab === "business"
                   ? "Access your registered instruments, applications, and certificates."
-                  : "Secure access for Legal Metrology Officers (LMO) and Administrators."}
+                  : "Secure access for Legal Metrology Officers, Assistant Controllers, and System Admins."}
               </p>
             </div>
 

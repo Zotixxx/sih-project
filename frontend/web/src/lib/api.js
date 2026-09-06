@@ -48,16 +48,34 @@ async function request(endpoint, options = {}) {
   }
 }
 
+const toQueryString = (params = {}) => {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      query.set(key, value);
+    }
+  });
+  const serialized = query.toString();
+  return serialized ? `?${serialized}` : "";
+};
+
 export const metrixApi = {
   isSupabaseConfigured,
 
   loginWithSupabase: async (email, password) => {
     const { data, error } = await getSupabaseBrowserClient().auth.signInWithPassword({ email, password });
     if (error || !data.session) throw new Error(error?.message || "Supabase login failed.");
-    const profile = await request("/auth/profile", {
-      headers: { Authorization: `Bearer ${data.session.access_token}` },
-    });
-    return { session: data.session, user: profile.data };
+    try {
+      const profile = await request("/auth/profile", {
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+      });
+      return { session: data.session, user: profile.data };
+    } catch (err) {
+      if (err.code !== "PROFILE_REQUIRED") {
+        await getSupabaseBrowserClient().auth.signOut();
+      }
+      throw err;
+    }
   },
 
   registerBusinessProfile: (data, accessToken) =>
@@ -77,6 +95,24 @@ export const metrixApi = {
   getPublicDistricts: () => request("/public/districts", { auth: false }),
   getDashboardStats: () => request("/dashboard/stats"),
   getProfile: () => request("/auth/profile"),
+
+  getAdminDashboard: () => request("/admin/dashboard"),
+  searchAdminAssistantControllers: (params = {}) =>
+    request(`/admin/assistant-controllers${toQueryString(params)}`),
+  getAdminAssistantController: (id) => request(`/admin/assistant-controllers/${encodeURIComponent(id)}`),
+  createAdminAssistantController: (data) =>
+    request("/admin/assistant-controllers", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateAdminAssistantController: (id, data) =>
+    request(`/admin/assistant-controllers/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  searchAdminLmos: (params = {}) => request(`/admin/lmos${toQueryString(params)}`),
+  getAdminLmo: (id) => request(`/admin/lmos/${encodeURIComponent(id)}`),
+  searchAdminAuditLogs: (params = {}) => request(`/admin/audit-logs${toQueryString(params)}`),
 
   getBusinessProfile: () => request("/business/profile"),
   updateBusinessProfile: (data) =>

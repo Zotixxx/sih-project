@@ -45,6 +45,13 @@ export const supabaseAuthMiddleware = async (req, res, next) => {
     });
   }
 
+  if (user.status && user.status !== "ACTIVE") {
+    return res.status(403).json({
+      success: false,
+      error: { code: "ACCOUNT_INACTIVE", message: "This MetriX account is inactive." },
+    });
+  }
+
   req.user = {
     ...user,
     email: authUser.email || user.email,

@@ -13,6 +13,7 @@ const mapProfile = (profile) => ({
   district_id: profile.district_id,
   email: profile.email,
   phone: profile.phone,
+  status: profile.status || "ACTIVE",
   createdAt: profile.created_at,
   updatedAt: profile.updated_at,
 });
@@ -51,6 +52,10 @@ const mergeLmo = (user, lmo) => {
     badgeNumber: lmo.badge_number || lmo.lmo_id,
     designation: lmo.designation,
     jurisdiction: lmo.jurisdiction,
+    officerId: lmo.lmo_id,
+    phone: lmo.phone || user.phone,
+    email: lmo.email || user.email,
+    status: lmo.status || user.status || "ACTIVE",
     name: lmo.name || user.name,
     district_id: lmo.district_id || user.district_id,
   };
@@ -64,6 +69,12 @@ const mergeAssistantController = (user, ac) => {
     ac_id: ac.ac_id,
     domainId: ac.ac_id,
     designation: ac.designation,
+    jurisdiction: ac.jurisdiction,
+    organization: ac.organization,
+    officerId: ac.ac_id,
+    phone: ac.phone || user.phone,
+    email: ac.email || user.email,
+    status: ac.status || user.status || "ACTIVE",
     name: ac.name || user.name,
     district_id: ac.district_id || user.district_id,
   };
@@ -271,6 +282,7 @@ export const userRepository = {
   getLmosByDistrict: async (district_id) => {
     let query = supabaseAdmin.from("lmos").select("*, profiles:user_id(*)");
     if (district_id && district_id !== "ALL") query = query.eq("district_id", district_id);
+    query = query.eq("status", "ACTIVE");
     const { data, error } = await query.order("name");
     if (error) throw fromSupabaseError(error, "Could not load LMOs.");
     return (data || []).map((row) =>

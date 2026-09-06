@@ -21,6 +21,14 @@ export default function SideNavBar() {
     (application) => application.status === "AWAITING_APPROVAL"
   ).length;
 
+  const systemAdminNav = [
+    { label: "Dashboard", href: scoped("/dashboard"), icon: "dashboard" },
+    { label: "Assistant Controllers", href: scoped("/assistant-controllers"), icon: "admin_panel_settings" },
+    { label: "LMOs", href: scoped("/lmos"), icon: "badge" },
+    { label: "Audit Logs", href: scoped("/audit-logs"), icon: "history" },
+    { label: "Settings", href: scoped("/settings"), icon: "settings" },
+  ];
+
   // 1. Assistant Controller Navigation (Section 58)
   const adminNav = [
     { label: "Dashboard", href: scoped("/dashboard"), icon: "dashboard" },
@@ -81,7 +89,13 @@ export default function SideNavBar() {
   ];
 
   const visibleItems =
-    userRole === "lmo" ? lmoNav : userRole === "business" ? businessNav : adminNav;
+    currentUser?.role === "SYSTEM_ADMIN"
+      ? systemAdminNav
+      : userRole === "lmo"
+      ? lmoNav
+      : userRole === "business"
+      ? businessNav
+      : adminNav;
 
   return (
     <aside className="fixed left-0 top-0 h-full w-[260px] bg-white border-r border-slate-200 flex flex-col z-40 select-none">
@@ -111,11 +125,13 @@ export default function SideNavBar() {
           <span>
             {userRole === "business"
               ? "Merchant Portal"
+              : currentUser?.role === "SYSTEM_ADMIN"
+              ? "System Admin"
               : userRole === "lmo"
               ? "Field Officer Portal"
               : "District Admin Menu"}
           </span>
-          {userRole === "admin" && (
+          {userRole === "admin" && currentUser?.role !== "SYSTEM_ADMIN" && (
             <span className="text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-mono-code font-bold">
               {district?.name || currentUser?.districtName || currentUser?.district_id || "District"}
             </span>
@@ -171,7 +187,7 @@ export default function SideNavBar() {
 
       {/* Quick Action Button */}
       <div className="p-3 border-t border-slate-200 shrink-0">
-        {userRole === "admin" && (
+        {userRole === "admin" && currentUser?.role !== "SYSTEM_ADMIN" && (
           <Link
             href={scoped("/verify")}
             className="w-full bg-slate-900 text-white text-xs font-bold py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors shadow-2xs"
@@ -210,6 +226,8 @@ export default function SideNavBar() {
               className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase ${
                 userRole === "business"
                   ? "bg-blue-100 text-blue-800 border border-blue-200"
+                  : currentUser?.role === "SYSTEM_ADMIN"
+                  ? "bg-slate-200 text-slate-900 border border-slate-300"
                   : userRole === "lmo"
                   ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                   : "bg-purple-100 text-purple-800 border border-purple-200"

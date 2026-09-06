@@ -18,18 +18,7 @@ const ROLE_ROUTES = {
   BUSINESS: ["/dashboard", "/applications", "/certificates", "/instruments", "/notifications", "/settings"],
   LMO: ["/dashboard", "/inspections", "/verification-details", "/inspect", "/notifications", "/settings"],
   ASSISTANT_CONTROLLER: ["/dashboard", "/fresh-applications", "/verify", "/lmos", "/notifications", "/settings"],
-  SYSTEM_ADMIN: [
-    "/dashboard",
-    "/applications",
-    "/certificates",
-    "/instruments",
-    "/inspections",
-    "/fresh-applications",
-    "/verify",
-    "/lmos",
-    "/notifications",
-    "/settings",
-  ],
+  SYSTEM_ADMIN: ["/dashboard", "/assistant-controllers", "/lmos", "/audit-logs", "/settings"],
 };
 
 const isPublic = (pathname) =>
@@ -47,6 +36,12 @@ const legacyTarget = (pathname, userId) => {
   if (pathname === "/admin" || pathname === "/admin/") return `/${userId}/dashboard`;
   if (pathname.startsWith("/admin/fresh-applications")) {
     return pathname.replace("/admin/fresh-applications", `/${userId}/fresh-applications`);
+  }
+  if (pathname.startsWith("/admin/assistant-controllers")) {
+    return pathname.replace("/admin/assistant-controllers", `/${userId}/assistant-controllers`);
+  }
+  if (pathname.startsWith("/admin/audit-logs")) {
+    return pathname.replace("/admin/audit-logs", `/${userId}/audit-logs`);
   }
   if (pathname.startsWith("/admin/verify") || pathname.startsWith("/admin/awaiting-certificates")) {
     return pathname.replace(/^\/admin\/(verify|awaiting-certificates)/, `/${userId}/verify`);
@@ -121,13 +116,31 @@ export async function middleware(request) {
     return NextResponse.redirect(url);
   }
 
-  const { data: profile } = await supabase
+  let profile = null;
+  const profileWithStatus = await supabase
     .from("profiles")
-    .select("role")
+    .select("role,status")
     .eq("user_id", user.id)
     .maybeSingle();
+  profile = profileWithStatus.data;
 
-  if (!profile?.role || !isAllowedForRole(profile.role, subPathFor(pathname))) {
+  if (profileWithStatus.error) {
+    const profileWithoutStatus = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    profile = profileWithoutStatus.data;
+  }
+
+  if (!profile?.role || (profile.status && profile.status !== "ACTIVE")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("error", profile?.status === "INACTIVE" ? "account-inactive" : "profile-required");
+    return NextResponse.redirect(url);
+  }
+
+  if (!isAllowedForRole(profile.role, subPathFor(pathname))) {
     const url = request.nextUrl.clone();
     url.pathname = `/${user.id}/dashboard`;
     url.searchParams.set("denied", "role");

@@ -7,7 +7,9 @@ import { getSupabaseBrowserClient } from "./supabase/browser";
 const MetrixStoreContext = createContext(null);
 
 const portalRole = (role) =>
-  role === "ASSISTANT_CONTROLLER" || role === "SYSTEM_ADMIN"
+  role === "SYSTEM_ADMIN"
+    ? "system-admin"
+    : role === "ASSISTANT_CONTROLLER"
     ? "admin"
     : role === "LMO"
     ? "lmo"
@@ -62,6 +64,22 @@ export function MetrixStoreProvider({ children }) {
 
     refreshInFlightRef.current = true;
     try {
+      if (user.role === "SYSTEM_ADMIN") {
+        const dashboard = await metrixApi.getAdminDashboard();
+        setDashboardStats(dashboard?.data || null);
+        setDistrict({ id: "ALL", name: "All Districts", state: null });
+        setInstruments([]);
+        setApplications([]);
+        setLmos([]);
+        setInspections([]);
+        setCertificates([]);
+        setNotifications([]);
+        setAuditLogs([]);
+        setBusinessProfile(null);
+        setCurrentDraft(null);
+        return;
+      }
+
       const calls = [
         metrixApi.getDashboardStats(),
         metrixApi.getApplications(),
@@ -180,6 +198,14 @@ export function MetrixStoreProvider({ children }) {
     setCurrentUser(user);
     await refreshData(user);
     return user;
+  };
+
+  const completeBusinessRegistration = async (profileData, accessToken) => {
+    const res = await metrixApi.registerBusinessProfile(profileData, accessToken);
+    if (!res?.data) throw new Error("The server did not return the registered business profile.");
+    setCurrentUser(res.data);
+    await refreshData(res.data);
+    return res.data;
   };
 
   const logout = async () => {
@@ -328,6 +354,7 @@ export function MetrixStoreProvider({ children }) {
         auditLogs,
         businessProfile,
         currentDraft,
+        completeBusinessRegistration,
         updateBusinessProfile,
         addInstrument,
         updateInstrument,

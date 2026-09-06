@@ -31,6 +31,117 @@ export default function DashboardPage() {
   const officerId = currentUser?.domainId || currentUser?.badge || currentUser?.id || "OFFICER";
   const href = (path) => portalPath(currentUser, path);
 
+  if (currentUser?.role === "SYSTEM_ADMIN") {
+    const counts = dashboardStats?.counts || {};
+    const health = dashboardStats?.health || {};
+    const healthItems = [
+      ["Authentication", health.authentication],
+      ["Database", health.database],
+      ["Storage", health.storage],
+      ["API", health.api],
+    ];
+    const statusClasses = {
+      Healthy: "bg-emerald-50 text-emerald-800 border-emerald-200",
+      Degraded: "bg-amber-50 text-amber-800 border-amber-200",
+      Unavailable: "bg-rose-50 text-rose-800 border-rose-200",
+    };
+
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex">
+        <SideNavBar />
+
+        <div className="flex-1 ml-[260px] flex flex-col min-w-0">
+          <TopNavBar
+            title="Dashboard"
+            subtitle={`System administration • ${currentUser?.email || currentUser?.name || "MetriX"}`}
+            breadcrumbs={[{ label: "Dashboard" }]}
+          />
+
+          <main className="p-6 sm:p-8 max-w-7xl w-full mx-auto space-y-6">
+            <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-white shrink-0">
+                  <span className="material-symbols-outlined text-[28px]">admin_panel_settings</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    System Admin
+                  </span>
+                  <h1 className="text-lg font-bold text-white tracking-tight mt-1">
+                    MetriX Administrative Control
+                  </h1>
+                  <p className="text-xs text-slate-300">
+                    {currentUser?.name || currentUser?.displayName || "Administrator"} • {currentUser?.email || "No email recorded"}
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                href={href("/assistant-controllers")}
+                className="px-4 py-2 rounded-lg bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs transition-colors shadow-2xs self-start md:self-auto"
+              >
+                Create Assistant Controller
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <MetricCard
+                title="Assistant Controllers"
+                value={counts.assistantControllers ?? "0"}
+                icon="admin_panel_settings"
+                subtitle="District AC accounts"
+              />
+              <MetricCard
+                title="Active LMOs"
+                value={counts.activeLmos ?? "0"}
+                icon="badge"
+                subtitle="Active field officers"
+              />
+              <MetricCard
+                title="Businesses"
+                value={counts.businesses ?? "0"}
+                icon="storefront"
+                subtitle="Registered businesses"
+              />
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-2xs space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-blue-700 text-[18px]">monitor_heart</span>
+                  System Health
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+                {healthItems.map(([label, item]) => {
+                  const status = item?.status || "Unavailable";
+                  return (
+                    <div key={label} className="border border-slate-200 rounded-xl p-4 bg-slate-50">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
+                        {label}
+                      </span>
+                      <span
+                        className={`inline-flex items-center mt-2 px-2 py-1 rounded-full border text-[11px] font-bold ${
+                          statusClasses[status] || statusClasses.Unavailable
+                        }`}
+                      >
+                        {status}
+                      </span>
+                      <p className="text-[11px] text-slate-500 mt-2">
+                        {item?.latencyMs !== undefined ? `${item.latencyMs} ms` : "Not checked"}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   // ==========================================
   // 1. BUSINESS DASHBOARD (Section 4)
   // ==========================================

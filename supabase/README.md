@@ -7,6 +7,7 @@ This directory contains the reproducible database and storage setup for MetriX.
 - `20260905000100_initial_metrix_schema.sql`: tables, enums, constraints, indexes, baseline RLS policies, and private storage buckets.
 - `20260905000200_runtime_supabase_alignment.sql`: runtime columns, `application_drafts`, tighter role/jurisdiction RLS, and extra indexes.
 - `20260905000300_workflow_transactions_and_timestamps.sql`: `updated_at` triggers and the transactional approval RPC `approve_application_and_generate_certificate`.
+- `20260906000100_system_admin_portal.sql`: System Admin support columns, account status fields, AC/LMO/audit search indexes, and admin-aligned RLS policy refresh.
 
 No migration inserts operational application, business, officer, certificate, inspection, notification, or audit data.
 
@@ -46,6 +47,7 @@ Dashboard SQL Editor fallback:
 2. Run `supabase/migrations/20260905000100_initial_metrix_schema.sql`.
 3. Run `supabase/migrations/20260905000200_runtime_supabase_alignment.sql`.
 4. Run `supabase/migrations/20260905000300_workflow_transactions_and_timestamps.sql`.
+5. Run `supabase/migrations/20260906000100_system_admin_portal.sql`.
 
 Do not run a destructive reset against a project that contains meaningful data.
 
@@ -105,9 +107,13 @@ set name = excluded.name,
 
 After creating each Supabase Auth user, copy its `auth.users.id`.
 
-Business accounts can also be created from the web app at `/register/business`. For local testing, either disable Supabase email confirmation temporarily or create the Auth user manually first, sign in, and complete the business profile when redirected.
+Business accounts can also be created from the web app at `/register/business`. The first screen only creates the Supabase Auth email/password account. After email verification and sign-in, users without a MetriX profile are redirected to `/register/business?complete=1` to enter business details and create the `BUSINESS` profile/domain record. For local testing, either keep email confirmation enabled and follow the email link, or temporarily disable confirmation in a disposable project.
 
-Government accounts must not be publicly self-registered. Create Assistant Controller, LMO, and System Admin users through the Supabase Dashboard plus SQL below, or through a future server-side admin invitation endpoint that enforces role and district checks.
+Government accounts must not be publicly self-registered.
+
+Bootstrap the first System Admin through the Supabase Dashboard plus SQL below. After that, create Assistant Controller district accounts from the System Admin portal at `/{adminAuthUuid}/assistant-controllers`; the backend creates the Supabase Auth user and database profile using the server-only key.
+
+LMO accounts remain an Assistant Controller responsibility in the operational workflow. System Admin can search/view LMOs for oversight but does not create them from the admin page.
 
 Business:
 
@@ -184,37 +190,82 @@ set user_id = excluded.user_id,
     jurisdiction = excluded.jurisdiction;
 ```
 
-Assistant Controller:
+Assistant Controller fallback SQL:
+
+Prefer the System Admin portal/API for new Assistant Controller accounts. Use this SQL only when bootstrapping or repairing a test environment after manually creating the Supabase Auth user.
 
 ```sql
-insert into public.profiles (user_id, role, display_name, district_id, email)
-values ('<AC_AUTH_UUID>', 'ASSISTANT_CONTROLLER', 'MetriX Test AC', 'RJ-AJMER', '<ac-email>')
+insert into public.profiles (user_id, role, display_name, district_id, email, status)
+values ('<AC_AUTH_UUID>', 'ASSISTANT_CONTROLLER', 'MetriX Test AC', 'RJ-AJMER', '<ac-email>', 'ACTIVE')
 on conflict (user_id) do update
 set role = excluded.role,
     display_name = excluded.display_name,
     district_id = excluded.district_id,
-    email = excluded.email;
+    email = excluded.email,
+    status = excluded.status;
 
-insert into public.assistant_controllers (ac_id, user_id, district_id, name, designation)
-values ('AC-TEST-001', '<AC_AUTH_UUID>', 'RJ-AJMER', 'MetriX Test AC', 'Assistant Controller')
+insert into public.assistant_controllers (
+  ac_id,
+  user_id,
+  district_id,
+  name,
+  designation,
+  jurisdiction,
+  organization,
+  status
+)
+values (
+  'AC-TEST-001',
+  '<AC_AUTH_UUID>',
+  'RJ-AJMER',
+  'MetriX Test AC',
+  'Assistant Controller',
+  'Ajmer',
+  'Office of the Assistant Controller, Ajmer',
+  'ACTIVE'
+)
 on conflict (ac_id) do update
 set user_id = excluded.user_id,
     district_id = excluded.district_id,
     name = excluded.name,
-    designation = excluded.designation;
+    designation = excluded.designation,
+    jurisdiction = excluded.jurisdiction,
+    organization = excluded.organization,
+    status = excluded.status;
 ```
 
 System Admin:
 
 ```sql
-insert into public.profiles (user_id, role, display_name, district_id, email)
-values ('<ADMIN_AUTH_UUID>', 'SYSTEM_ADMIN', 'MetriX System Admin', 'ALL', '<admin-email>')
+insert into public.profiles (user_id, role, display_name, district_id, email, status)
+values ('<ADMIN_AUTH_UUID>', 'SYSTEM_ADMIN', 'MetriX System Admin', 'ALL', '<admin-email>', 'ACTIVE')
 on conflict (user_id) do update
 set role = excluded.role,
     display_name = excluded.display_name,
     district_id = excluded.district_id,
-    email = excluded.email;
+    email = excluded.email,
+    status = excluded.status;
 ```
+
+## System Admin Account Creation
+
+1. Create the first admin user in Supabase Authentication > Users.
+2. Copy the Auth user UUID.
+3. Insert the `SYSTEM_ADMIN` profile row shown above.
+4. Start backend and frontend with the required environment variables.
+5. Log in through the Authority tab.
+6. Open `/{adminAuthUuid}/assistant-controllers`.
+7. Create district AC accounts with district, account email, current officer name, phone, and a temporary password.
+8. Share the temporary password privately and rotate/reset it through Supabase Auth when needed.
+
+Creating an Assistant Controller from the portal writes:
+
+- one Supabase Auth user
+- one `profiles` row with role `ASSISTANT_CONTROLLER`
+- one `assistant_controllers` district-account row
+- one `audit_logs` entry
+
+Editing the current officer later updates the existing `profiles` and `assistant_controllers` rows. It does not create another Auth user.
 
 ## Domain ID Rules
 
@@ -251,6 +302,7 @@ Expected behavior:
 - LMOs see only assigned applications/inspections and related records.
 - Assistant Controllers see district-scoped applications, inspections, certificates, and LMOs.
 - `SYSTEM_ADMIN` can inspect administrative records.
+- System Admin can use `/api/admin/*`; Business, LMO, and Assistant Controller users must receive `403` from those endpoints.
 - Anonymous users cannot browse protected tables.
 - Anonymous QR verification goes through `GET /api/public/certificates/:id`, not a general table/browser endpoint.
 

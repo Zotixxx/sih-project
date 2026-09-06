@@ -19,12 +19,19 @@ export default function TopNavBar({ title, subtitle, breadcrumbs }) {
   const unreadCount = notifications.filter(
     (n) => n.unread && (!n.role || n.role === userRole)
   ).length;
+  const isSystemAdmin = currentUser?.role === "SYSTEM_ADMIN";
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       const target =
-        userRole === "lmo" ? "/inspections" : userRole === "business" ? "/instruments" : "/fresh-applications";
+        userRole === "system-admin"
+          ? "/assistant-controllers"
+          : userRole === "lmo"
+          ? "/inspections"
+          : userRole === "business"
+          ? "/instruments"
+          : "/fresh-applications";
       router.push(`${scopeHref(target)}?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
@@ -81,20 +88,22 @@ export default function TopNavBar({ title, subtitle, breadcrumbs }) {
         </form>
 
         {/* Notifications Icon Button */}
-        <Link
-          href={scopeHref("/notifications")}
-          className="relative w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-          title="Notifications"
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            notifications
-          </span>
-          {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center border-2 border-white">
-              {unreadCount}
+        {!isSystemAdmin && (
+          <Link
+            href={scopeHref("/notifications")}
+            className="relative w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+            title="Notifications"
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              notifications
             </span>
-          )}
-        </Link>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center border-2 border-white">
+                {unreadCount}
+              </span>
+            )}
+          </Link>
+        )}
 
       </div>
     </header>

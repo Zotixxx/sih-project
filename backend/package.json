@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "dev": "node src/server.js",
     "import:districts": "node scripts/import-districts.mjs",
-    "test": "node test_e2e_scenarios.js"
+    "test": "node test_e2e_scenarios.js",
+    "test:admin": "node test_admin_scenarios.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

@@ -17,9 +17,20 @@ const fileToBase64 = (file) =>
   });
 
 export default function SettingsPage() {
-  const { userRole, district, currentUser, lmos } = useMetrixStore();
+  const { isHydrated, userRole, district, currentUser, lmos } = useMetrixStore();
 
   const districtName = district?.name || currentUser?.districtName || currentUser?.district_id || "District";
+
+  if (!isHydrated || !currentUser) {
+    return (
+      <main className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-2xs px-6 py-5 text-xs text-slate-600 flex items-center gap-3">
+          <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+          Loading account settings...
+        </div>
+      </main>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
@@ -28,14 +39,18 @@ export default function SettingsPage() {
       <div className="flex-1 ml-[260px] flex flex-col min-w-0">
         <TopNavBar
           title={
-            userRole === "admin"
+            currentUser?.role === "SYSTEM_ADMIN"
+              ? "System Admin Settings"
+              : userRole === "admin"
               ? "Official Supervisory Profile & District Authority"
               : userRole === "lmo"
               ? "Legal Metrology Officer (LMO) Credentials"
               : "Business Establishment Profile"
           }
           subtitle={
-            userRole === "admin"
+            currentUser?.role === "SYSTEM_ADMIN"
+              ? "Administrative account and system access details"
+              : userRole === "admin"
               ? `Supervising Officer Profile • Office of the Assistant Controller, ${districtName}`
               : userRole === "lmo"
               ? `${districtName} Field Officer Credentials & Duty Jurisdiction`
@@ -45,7 +60,9 @@ export default function SettingsPage() {
             { label: "MetriX", href: "/dashboard" },
             {
               label:
-                userRole === "admin"
+                currentUser?.role === "SYSTEM_ADMIN"
+                  ? "System Settings"
+                  : userRole === "admin"
                   ? "Official Profile"
                   : userRole === "lmo"
                   ? "Officer Credentials"
@@ -56,9 +73,68 @@ export default function SettingsPage() {
 
         <main className="p-6 sm:p-8 max-w-4xl w-full mx-auto space-y-6">
           {/* =========================================================================
+              SYSTEM ADMIN SETTINGS
+             ========================================================================= */}
+          {currentUser?.role === "SYSTEM_ADMIN" && (
+            <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-2xs space-y-6 text-xs">
+              <div className="border-b border-slate-200 pb-4 flex items-start justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">System Admin Profile</h3>
+                  <p className="text-slate-500 mt-0.5">
+                    Highest-privilege account for district authority provisioning and oversight.
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded bg-slate-900 text-white font-bold text-[11px]">
+                  SYSTEM_ADMIN
+                </span>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <span className="text-slate-400 text-[10px] uppercase font-bold">Name</span>
+                  <p className="font-bold text-slate-900 text-sm">
+                    {currentUser?.name || currentUser?.displayName || "System Administrator"}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-slate-400 text-[10px] uppercase font-bold">Email</span>
+                  <p className="font-medium text-slate-800">{currentUser?.email || "Not recorded"}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-slate-400 text-[10px] uppercase font-bold">Auth User UUID</span>
+                  <p className="font-mono-code font-bold text-slate-900 break-all">{currentUser?.id}</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-slate-400 text-[10px] uppercase font-bold">Access Scope</span>
+                  <p className="font-medium text-slate-800">{currentUser?.district_id || "ALL"}</p>
+                </div>
+              </div>
+
+              <div className="border border-slate-200 rounded-xl p-5 space-y-3">
+                <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Active Administrative Responsibilities
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    "Create district Assistant Controller accounts",
+                    "Edit current officer details for district AC accounts",
+                    "Search Assistant Controllers and LMOs",
+                    "Review read-only audit logs",
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-2 text-slate-700">
+                      <span className="material-symbols-outlined text-[16px] text-emerald-700">check_circle</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* =========================================================================
               DISTRICT ADMIN / ASSISTANT CONTROLLER PROFILE
              ========================================================================= */}
-          {userRole === "admin" && (
+          {userRole === "admin" && currentUser?.role !== "SYSTEM_ADMIN" && (
             <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-2xs space-y-6 text-xs">
               <div className="border-b border-slate-200 pb-4 flex items-start justify-between">
                 <div>
@@ -168,19 +244,19 @@ function BusinessProfileSettings() {
   const [formData, setFormData] = useState({
     businessName: businessProfile?.businessName || businessProfile?.name || currentUser?.name || "",
     businessType: businessProfile?.businessType || "",
-    gstin: businessProfile?.gstin || "",
-    pan: businessProfile?.pan || "",
-    registrationNumber: businessProfile?.registrationNumber || "",
-    ownerName: businessProfile?.ownerName || businessProfile?.contactPerson || "",
+    gstin: businessProfile?.gstin || currentUser?.gstin || "",
+    pan: businessProfile?.pan || currentUser?.pan || "",
+    registrationNumber: businessProfile?.registrationNumber || currentUser?.registrationNumber || "",
+    ownerName: businessProfile?.ownerName || businessProfile?.contactPerson || currentUser?.contactPerson || "",
     phone: businessProfile?.phone || currentUser?.phone || "",
     email: businessProfile?.email || currentUser?.email || "",
-    address: businessProfile?.address || "",
-    city: businessProfile?.city || "",
-    district: businessProfile?.district || businessProfile?.district_id || "",
-    state: businessProfile?.state || "",
-    pincode: businessProfile?.pincode || "",
+    address: businessProfile?.address || currentUser?.address || "",
+    city: businessProfile?.city || currentUser?.city || "",
+    district: businessProfile?.district || businessProfile?.district_id || currentUser?.district_id || "",
+    state: businessProfile?.state || currentUser?.state || "",
+    pincode: businessProfile?.pincode || currentUser?.pincode || "",
     turnover: businessProfile?.turnover || "",
-    natureOfBusiness: businessProfile?.natureOfBusiness || "",
+    natureOfBusiness: businessProfile?.natureOfBusiness || currentUser?.natureOfBusiness || "",
     businessCategory: businessProfile?.businessCategory || "",
   });
 
