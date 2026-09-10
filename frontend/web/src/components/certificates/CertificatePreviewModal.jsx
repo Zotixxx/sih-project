@@ -6,12 +6,65 @@ import { QRCodeSVG } from "qrcode.react";
 import Modal from "@/components/ui/Modal";
 import { formatDate } from "@/lib/utils";
 
+const escapeHtml = (value) =>
+  String(value || "").replace(/[&<>"']/g, (char) => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+    return entities[char];
+  });
+
 export default function CertificatePreviewModal({ certificate, isOpen, onClose }) {
   if (!certificate) return null;
 
   const handlePrint = () => {
     if (typeof window !== "undefined") {
-      window.print();
+      const certificateNode = document.getElementById("printable-certificate");
+      const printWindow = window.open("", "metrix-certificate-print", "width=900,height=1200");
+      if (!certificateNode || !printWindow) {
+        window.print();
+        return;
+      }
+
+      const styles = Array.from(document.head.querySelectorAll("style, link[rel='stylesheet']"))
+        .map((node) => node.outerHTML)
+        .join("");
+
+      printWindow.document.write(`<!doctype html>
+<html>
+  <head>
+    <title>${escapeHtml(certificate.certificateNumber || certificate.id || "Certificate")}</title>
+    <base href="${window.location.origin}" />
+    ${styles}
+    <style>
+      @page { size: A4 portrait; margin: 12mm; }
+      html, body { margin: 0; background: #ffffff; }
+      body { padding: 0; }
+      #printable-certificate {
+        width: 100%;
+        min-height: 260mm;
+        box-sizing: border-box;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+      #printable-certificate * {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+    </style>
+  </head>
+  <body>${certificateNode.outerHTML}</body>
+</html>`);
+      printWindow.document.close();
+      printWindow.focus();
+      window.setTimeout(() => printWindow.print(), 250);
     }
   };
 
@@ -29,6 +82,9 @@ export default function CertificatePreviewModal({ certificate, isOpen, onClose }
       title="Official Government Verification Certificate"
       subtitle={`Legal Metrology Act, 2009 • Sanction ID: ${certificate.certificateNumber || certificate.id}`}
       maxWidth="max-w-3xl"
+      rootClassName="certificate-print-root"
+      containerClassName="certificate-print-modal"
+      bodyClassName="certificate-print-body"
       footer={
         <div className="flex items-center justify-between w-full">
           <Link
@@ -100,7 +156,7 @@ export default function CertificatePreviewModal({ certificate, isOpen, onClose }
             </p>
             <p>
               <span className="text-slate-500">Maker &amp; Model:</span>{" "}
-              <strong className="text-slate-900">{certificate.manufacturer} ({certificate.model || "Standard"})</strong>
+              <strong className="text-slate-900">{certificate.manufacturer || "Not recorded"} ({certificate.model || "Standard"})</strong>
             </p>
             <p>
               <span className="text-slate-500">Serial Number:</span>{" "}
@@ -126,7 +182,7 @@ export default function CertificatePreviewModal({ certificate, isOpen, onClose }
             </p>
             <p>
               <span className="text-slate-500">Statutory Seal Number:</span>{" "}
-              <strong className="font-mono-code text-emerald-900">{certificate.sealNumber}</strong>
+              <strong className="font-mono-code text-emerald-900">{certificate.sealNumber || "Not recorded"}</strong>
             </p>
             <p>
               <span className="text-slate-500">Issuing Authority:</span>{" "}
@@ -167,7 +223,7 @@ export default function CertificatePreviewModal({ certificate, isOpen, onClose }
                 Scan for Public Verification
               </p>
               <p className="font-mono-code text-[9px]">
-                Hash: {certificate.securityHash?.slice(0, 18)}...
+                Hash: {certificate.securityHash ? `${certificate.securityHash.slice(0, 18)}...` : "Not available"}
               </p>
             </div>
           </div>

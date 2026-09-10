@@ -35,6 +35,24 @@ export default function CertificateVerificationResultPage({ params }) {
   }, [certId]);
 
   const certificate = apiCert;
+  const validityPanelClass =
+    certificate?.status === "VALID"
+      ? "bg-emerald-50 border-emerald-200"
+      : certificate?.status === "EXPIRING_SOON"
+      ? "bg-amber-50 border-amber-200"
+      : "bg-rose-50 border-rose-200";
+  const validityLabelClass =
+    certificate?.status === "VALID"
+      ? "text-emerald-800"
+      : certificate?.status === "EXPIRING_SOON"
+      ? "text-amber-800"
+      : "text-rose-800";
+  const validityValueClass =
+    certificate?.status === "VALID"
+      ? "text-emerald-950"
+      : certificate?.status === "EXPIRING_SOON"
+      ? "text-amber-950"
+      : "text-rose-950";
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col justify-between">
@@ -157,20 +175,20 @@ export default function CertificateVerificationResultPage({ params }) {
                 </div>
 
                 {/* Validity Period */}
-                <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                <div className={`grid grid-cols-2 gap-4 p-4 rounded-xl border ${validityPanelClass}`}>
                   <div>
-                    <span className="text-emerald-800 text-xs font-semibold">
+                    <span className={`${validityLabelClass} text-xs font-semibold`}>
                       Verification Date
                     </span>
-                    <p className="font-bold text-emerald-950 mt-0.5">
+                    <p className={`font-bold ${validityValueClass} mt-0.5`}>
                       {formatDate(certificate.validFrom)}
                     </p>
                   </div>
                   <div>
-                    <span className="text-emerald-800 text-xs font-semibold">
+                    <span className={`${validityLabelClass} text-xs font-semibold`}>
                       Valid Until
                     </span>
-                    <p className="font-extrabold text-base text-emerald-950 mt-0.5">
+                    <p className={`font-extrabold text-base ${validityValueClass} mt-0.5`}>
                       {formatDate(certificate.validUntil)}
                     </p>
                   </div>

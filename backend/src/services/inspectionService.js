@@ -9,6 +9,87 @@ import { badRequest, forbidden, notFound } from "../utils/errors.js";
 
 const actorUserId = (user) => user.auth_user_id || user.user_id || user.id;
 
+const UNIT_FACTORS = {
+  mg: 0.001,
+  milligram: 0.001,
+  milligrams: 0.001,
+  g: 1,
+  gm: 1,
+  gram: 1,
+  grams: 1,
+  kg: 1000,
+  kgs: 1000,
+  kilogram: 1000,
+  kilograms: 1000,
+  t: 1000000,
+  ton: 1000000,
+  tons: 1000000,
+  tonne: 1000000,
+  tonnes: 1000000,
+};
+
+const parseQuantity = (value) => {
+  const match = String(value || "")
+    .trim()
+    .replace(/,/g, "")
+    .match(/([-+]?\d*\.?\d+)\s*([a-zA-Z]*)/);
+  if (!match) return null;
+
+  const number = Number.parseFloat(match[1]);
+  if (!Number.isFinite(number)) return null;
+
+  const unit = match[2]?.toLowerCase() || "";
+  return {
+    value: number,
+    unit,
+    factor: unit ? UNIT_FACTORS[unit] : null,
+  };
+};
+
+const toBaseValue = (quantity, fallbackFactor = 1) => {
+  if (!quantity) return null;
+  return quantity.value * (quantity.factor || fallbackFactor || 1);
+};
+
+const formatNumber = (value) => {
+  const rounded = Math.round(value * 1000) / 1000;
+  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+};
+
+const evaluateMeasurement = (measurement, index) => {
+  const testLoad = measurement.testLoad || measurement.nominalLoad;
+  const indicatedWeight = measurement.indicatedWeight || measurement.observed || measurement.indicatedLoad;
+  const mpeLimit = measurement.mpeLimit || measurement.mpe || measurement.mpeAllowable;
+
+  if (!testLoad) throw badRequest(`Measurement ${index + 1} is missing testLoad.`);
+  if (!indicatedWeight) throw badRequest(`Measurement ${index + 1} is missing indicatedWeight.`);
+  if (!mpeLimit) throw badRequest(`Measurement ${index + 1} is missing mpeLimit.`);
+
+  const testQuantity = parseQuantity(testLoad);
+  const indicatedQuantity = parseQuantity(indicatedWeight);
+  const mpeQuantity = parseQuantity(mpeLimit);
+
+  if (!testQuantity || !indicatedQuantity || !mpeQuantity) {
+    throw badRequest(`Measurement ${index + 1} must contain numeric test, indicated, and MPE values.`);
+  }
+
+  const fallbackFactor = testQuantity.factor || indicatedQuantity.factor || mpeQuantity.factor || 1;
+  const testBase = toBaseValue(testQuantity, fallbackFactor);
+  const indicatedBase = toBaseValue(indicatedQuantity, fallbackFactor);
+  const mpeBase = Math.abs(toBaseValue(mpeQuantity, fallbackFactor));
+  const errorBase = indicatedBase - testBase;
+  const displayFactor = testQuantity.factor || indicatedQuantity.factor || fallbackFactor;
+  const displayUnit = testQuantity.unit || indicatedQuantity.unit || "";
+
+  return {
+    testLoad,
+    indicatedWeight,
+    error: `${formatNumber(errorBase / displayFactor)}${displayUnit ? ` ${displayUnit}` : ""}`,
+    mpeLimit,
+    result: Math.abs(errorBase) <= mpeBase ? "PASS" : "FAIL",
+  };
+};
+
 const assertInspectionAccess = (inspection, user) => {
   if (!inspection) throw notFound("Inspection record not found.");
   if (user.role === ROLES.SYSTEM_ADMIN) return;
@@ -35,22 +116,7 @@ const normalizeMeasurements = (measurements) => {
     throw badRequest("At least one measurement/finding is required before submitting verification.");
   }
 
-  return measurements.map((measurement, index) => {
-    const result = String(measurement.result || "").toUpperCase();
-    if (!measurement.testLoad && !measurement.nominalLoad) {
-      throw badRequest(`Measurement ${index + 1} is missing testLoad.`);
-    }
-    if (!["PASS", "FAIL"].includes(result)) {
-      throw badRequest(`Measurement ${index + 1} result must be PASS or FAIL.`);
-    }
-    return {
-      testLoad: measurement.testLoad || measurement.nominalLoad,
-      indicatedWeight: measurement.indicatedWeight || measurement.observed || measurement.indicatedLoad || null,
-      error: measurement.error || measurement.observedError || null,
-      mpeLimit: measurement.mpeLimit || measurement.mpe || measurement.mpeAllowable || null,
-      result,
-    };
-  });
+  return measurements.map(evaluateMeasurement);
 };
 
 const evidenceDocumentIds = (data) =>
@@ -151,16 +217,14 @@ export const inspectionService = {
       throw badRequest(`Inspection must be in progress before submission. Current status: '${inspection.status}'.`);
     }
 
-    if (!data.sealNumber) throw badRequest("sealNumber is required.");
-    if (!data.standardsUsed) throw badRequest("standardsUsed is required.");
     const measurements = normalizeMeasurements(data.measurements || data.findings);
     const inspectionDate = data.inspectionDate || new Date().toISOString().split("T")[0];
 
     const updatedInspection = await inspectionRepository.update(id, {
       status: INSPECTION_STATUS.SUBMITTED,
       inspectionDate,
-      sealNumber: data.sealNumber,
-      standardsUsed: data.standardsUsed,
+      sealNumber: data.sealNumber || null,
+      standardsUsed: data.standardsUsed || null,
       gpsCoordinates: data.gpsCoordinates || data.gpsCoords || null,
       checklist: data.checklist || {},
       officerRemarks: data.officerRemarks || data.remarks || "",
@@ -200,7 +264,7 @@ export const inspectionService = {
       entity_id: inspection.inspection_id || inspection.id,
       metadata: {
         applicationId: inspection.applicationId,
-        sealNumber: data.sealNumber,
+        sealNumber: data.sealNumber || null,
         measurementCount: measurements.length,
       },
     });

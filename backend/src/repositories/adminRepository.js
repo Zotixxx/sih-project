@@ -18,15 +18,6 @@ const AC_SELECT = `
   status,
   created_at,
   updated_at,
-  profiles:user_id (
-    user_id,
-    display_name,
-    email,
-    phone,
-    status,
-    created_at,
-    updated_at
-  ),
   districts:district_id (
     id,
     name,
@@ -48,15 +39,6 @@ const LMO_SELECT = `
   status,
   created_at,
   updated_at,
-  profiles:user_id (
-    user_id,
-    display_name,
-    email,
-    phone,
-    status,
-    created_at,
-    updated_at
-  ),
   districts:district_id (
     id,
     name,
@@ -133,6 +115,35 @@ const mapLmo = (row, assignedAc = null) => {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+};
+
+const loadProfilesByUserId = async (userIds) => {
+  const uniqueIds = Array.from(new Set((userIds || []).filter(Boolean)));
+  if (!uniqueIds.length) return new Map();
+
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("user_id, display_name, email, phone, status, created_at, updated_at")
+    .in("user_id", uniqueIds);
+  if (error) throw fromSupabaseError(error, "Could not load account profiles.");
+
+  return new Map((data || []).map((profile) => [profile.user_id, profile]));
+};
+
+const withProfiles = async (rows) => {
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) return [];
+
+  const profilesByUserId = await loadProfilesByUserId(list.map((row) => row.user_id));
+  return list.map((row) => ({
+    ...row,
+    profiles: profilesByUserId.get(row.user_id) || null,
+  }));
+};
+
+const withProfile = async (row) => {
+  if (!row) return null;
+  return (await withProfiles([row]))[0] || null;
 };
 
 const mapAudit = (row) => ({
@@ -213,7 +224,17 @@ const searchDistrictIds = async ({ search, cap }) => {
   return uniqueBy(results.flat(), (row) => row.id).map((row) => row.id);
 };
 
-const withLimitedSearch = async ({ table, select, filters, search, columns, role, mapper, pagination }) => {
+const withLimitedSearch = async ({
+  table,
+  select,
+  filters,
+  search,
+  columns,
+  role,
+  mapper,
+  pagination,
+  hydrateRows = async (rows) => rows,
+}) => {
   const hasSearch = Boolean(compact(search));
   const hasFilter = Boolean(filters.districtId || filters.status);
   if (!hasSearch && !hasFilter) {
@@ -227,7 +248,8 @@ const withLimitedSearch = async ({ table, select, filters, search, columns, role
       .order("created_at", { ascending: false })
       .range(pagination.from, pagination.to);
     if (error) throw fromSupabaseError(error, `Could not load ${table}.`);
-    return paginatedResponse((data || []).map(mapper), pagination, count || 0);
+    const hydrated = await hydrateRows(data || []);
+    return paginatedResponse(hydrated.map(mapper), pagination, count || 0);
   }
 
   const cap = Math.min(pagination.to + pagination.limit + 1, 100);
@@ -242,9 +264,9 @@ const withLimitedSearch = async ({ table, select, filters, search, columns, role
     ),
   ]);
 
-  const merged = uniqueBy(batches.flat(), (row) => row.id)
-    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-    .map(mapper);
+  const rawMerged = uniqueBy(batches.flat(), (row) => row.id)
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  const merged = (await hydrateRows(rawMerged)).map(mapper);
   const items = merged.slice(pagination.offset, pagination.offset + pagination.limit);
   return {
     ...paginatedResponse(items, pagination, null),
@@ -286,7 +308,7 @@ export const adminRepository = {
       .eq("district_id", districtId)
       .limit(1);
     if (error) throw fromSupabaseError(error, "Could not load Assistant Controller.");
-    return mapAssistantController(data?.[0]);
+    return mapAssistantController(await withProfile(data?.[0]));
   },
 
   getAssistantControllerByRef: async (ref) => {
@@ -305,13 +327,13 @@ export const adminRepository = {
 
     if (/^[0-9a-f-]{36}$/i.test(value)) {
       const byId = await tryQuery("id", value);
-      if (byId) return mapAssistantController(byId);
+      if (byId) return mapAssistantController(await withProfile(byId));
       const byUser = await tryQuery("user_id", value);
-      if (byUser) return mapAssistantController(byUser);
+      if (byUser) return mapAssistantController(await withProfile(byUser));
     }
 
     const byAcId = await tryQuery("ac_id", value.toUpperCase());
-    if (byAcId) return mapAssistantController(byAcId);
+    if (byAcId) return mapAssistantController(await withProfile(byAcId));
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
@@ -322,7 +344,7 @@ export const adminRepository = {
     if (profileError) throw fromSupabaseError(profileError, "Could not resolve Assistant Controller profile.");
     if (profile?.[0]?.user_id) {
       const byProfile = await tryQuery("user_id", profile[0].user_id);
-      return byProfile ? mapAssistantController(byProfile) : null;
+      return byProfile ? mapAssistantController(await withProfile(byProfile)) : null;
     }
 
     return null;
@@ -339,6 +361,7 @@ export const adminRepository = {
       role: "ASSISTANT_CONTROLLER",
       mapper: mapAssistantController,
       pagination,
+      hydrateRows: withProfiles,
     });
   },
 
@@ -358,7 +381,7 @@ export const adminRepository = {
       .select(AC_SELECT)
       .single();
     if (error) throw fromSupabaseError(error, "Could not create Assistant Controller account.");
-    return mapAssistantController(ac);
+    return mapAssistantController(await withProfile(ac));
   },
 
   updateAssistantControllerRecord: async (id, data) => {
@@ -375,7 +398,7 @@ export const adminRepository = {
       .select(AC_SELECT)
       .single();
     if (error) throw fromSupabaseError(error, "Could not update Assistant Controller account.");
-    return mapAssistantController(updated);
+    return mapAssistantController(await withProfile(updated));
   },
 
   createProfile: async (profile) => {
@@ -422,16 +445,41 @@ export const adminRepository = {
 
     if (/^[0-9a-f-]{36}$/i.test(value)) {
       const byId = await tryQuery("id", value);
-      if (byId) return mapLmo(byId, await adminRepository.getAssistantControllerByDistrict(byId.district_id));
+      if (byId) {
+        const [lmo, assignedAc] = await Promise.all([
+          withProfile(byId),
+          adminRepository.getAssistantControllerByDistrict(byId.district_id),
+        ]);
+        return mapLmo(lmo, assignedAc);
+      }
+
       const byUser = await tryQuery("user_id", value);
-      if (byUser) return mapLmo(byUser, await adminRepository.getAssistantControllerByDistrict(byUser.district_id));
+      if (byUser) {
+        const [lmo, assignedAc] = await Promise.all([
+          withProfile(byUser),
+          adminRepository.getAssistantControllerByDistrict(byUser.district_id),
+        ]);
+        return mapLmo(lmo, assignedAc);
+      }
     }
 
     const byLmoId = await tryQuery("lmo_id", value.toUpperCase());
-    if (byLmoId) return mapLmo(byLmoId, await adminRepository.getAssistantControllerByDistrict(byLmoId.district_id));
+    if (byLmoId) {
+      const [lmo, assignedAc] = await Promise.all([
+        withProfile(byLmoId),
+        adminRepository.getAssistantControllerByDistrict(byLmoId.district_id),
+      ]);
+      return mapLmo(lmo, assignedAc);
+    }
 
     const byBadge = await tryQuery("badge_number", value);
-    if (byBadge) return mapLmo(byBadge, await adminRepository.getAssistantControllerByDistrict(byBadge.district_id));
+    if (byBadge) {
+      const [lmo, assignedAc] = await Promise.all([
+        withProfile(byBadge),
+        adminRepository.getAssistantControllerByDistrict(byBadge.district_id),
+      ]);
+      return mapLmo(lmo, assignedAc);
+    }
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
@@ -442,7 +490,12 @@ export const adminRepository = {
     if (profileError) throw fromSupabaseError(profileError, "Could not resolve LMO profile.");
     if (profile?.[0]?.user_id) {
       const byProfile = await tryQuery("user_id", profile[0].user_id);
-      return byProfile ? mapLmo(byProfile, await adminRepository.getAssistantControllerByDistrict(byProfile.district_id)) : null;
+      if (!byProfile) return null;
+      const [lmo, assignedAc] = await Promise.all([
+        withProfile(byProfile),
+        adminRepository.getAssistantControllerByDistrict(byProfile.district_id),
+      ]);
+      return mapLmo(lmo, assignedAc);
     }
 
     return null;
@@ -459,6 +512,7 @@ export const adminRepository = {
       role: "LMO",
       mapper: (row) => mapLmo(row),
       pagination,
+      hydrateRows: withProfiles,
     });
 
     const districtIds = uniqueBy(result.items, (item) => item.districtId).map((item) => item.districtId);

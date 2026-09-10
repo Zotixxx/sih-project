@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "../config/supabase.js";
+import { CERTIFICATE_STATUS } from "../constants/status.js";
 import { fromSupabaseError } from "../utils/errors.js";
 
 const certificateSelect = `
@@ -33,6 +34,23 @@ const certificateSelect = `
     )
   )
 `;
+
+const localDateKey = (date = new Date()) => {
+  const value = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(value.getTime())) return null;
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const effectiveCertificateStatus = (row) => {
+  if (row.status !== CERTIFICATE_STATUS.VALID || !row.valid_until) return row.status;
+
+  const today = localDateKey();
+  const validUntil = String(row.valid_until).split("T")[0];
+  return today && validUntil && today > validUntil ? CERTIFICATE_STATUS.EXPIRED : row.status;
+};
 
 const mapCertificate = (row) => {
   if (!row) return null;
@@ -85,7 +103,7 @@ const mapCertificate = (row) => {
     sealNumber: snapshot.sealNumber || inspection.seal_number,
     securityHash: row.security_hash,
     qrVerificationToken: row.qr_verification_token,
-    status: row.status,
+    status: effectiveCertificateStatus(row),
     remarks: snapshot.remarks,
     createdTimestamp: row.created_at,
     createdAt: row.created_at,

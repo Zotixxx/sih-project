@@ -34,6 +34,16 @@ const normalizeStatus = (value) => {
   return status;
 };
 
+const normalizeOptionalDomainId = (value, label) => {
+  const normalized = text(value, 64);
+  if (!normalized) return null;
+  try {
+    return assertDomainId(normalized, label);
+  } catch {
+    throw badRequest(`${label} must be 2-64 characters and use only letters, numbers, hyphen, or underscore.`);
+  }
+};
+
 const requireSystemAdmin = (user) => {
   if (user?.role !== ROLES.SYSTEM_ADMIN) {
     throw forbidden("Only System Admin users can access this operation.");
@@ -157,9 +167,9 @@ export const adminService = {
     if (password.length < 8) throw badRequest("Temporary password must be at least 8 characters.");
 
     const status = normalizeStatus(input.status);
-    const acId = input.acId || input.ac_id
-      ? assertDomainId(String(input.acId || input.ac_id), "Assistant Controller ID")
-      : generateDomainId("AC", districtId);
+    const acId =
+      normalizeOptionalDomainId(input.acId ?? input.ac_id, "Assistant Controller ID") ||
+      generateDomainId("AC", districtId);
 
     let createdAuthUserId = null;
     let createdAc = null;

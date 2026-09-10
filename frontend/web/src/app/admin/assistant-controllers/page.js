@@ -16,7 +16,6 @@ const emptyCreateForm = {
   designation: "Assistant Controller",
   jurisdiction: "",
   organization: "",
-  acId: "",
   temporaryPassword: "",
   status: "ACTIVE",
 };
@@ -148,10 +147,15 @@ export default function AssistantControllersAdminPage() {
     setNotice("");
     try {
       const res = await metrixApi.createAdminAssistantController({
-        ...createForm,
-        acId: createForm.acId || undefined,
-        jurisdiction: createForm.jurisdiction || undefined,
-        organization: createForm.organization || undefined,
+        districtId: createForm.districtId,
+        email: createForm.email.trim(),
+        officerName: createForm.officerName.trim(),
+        phone: createForm.phone.trim(),
+        designation: createForm.designation.trim(),
+        temporaryPassword: createForm.temporaryPassword,
+        status: createForm.status,
+        jurisdiction: createForm.jurisdiction.trim() || undefined,
+        organization: createForm.organization.trim() || undefined,
       });
       const created = res.data;
       setCreateOpen(false);
@@ -226,7 +230,12 @@ export default function AssistantControllersAdminPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setCreateOpen(true)}
+                onClick={() => {
+                  setError("");
+                  setNotice("");
+                  setCreateForm(emptyCreateForm);
+                  setCreateOpen(true);
+                }}
                 className="px-4 py-2.5 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]">add_moderator</span>
@@ -439,15 +448,6 @@ export default function AssistantControllersAdminPage() {
               <input
                 value={createForm.designation}
                 onChange={(event) => setCreateForm((prev) => ({ ...prev, designation: event.target.value }))}
-                className="w-full px-3 py-2.5 rounded-lg border border-slate-300"
-              />
-            </div>
-            <div>
-              <label className="font-semibold text-slate-700 block mb-1.5">Account Identifier</label>
-              <input
-                value={createForm.acId}
-                onChange={(event) => setCreateForm((prev) => ({ ...prev, acId: event.target.value }))}
-                placeholder="Optional"
                 className="w-full px-3 py-2.5 rounded-lg border border-slate-300"
               />
             </div>

@@ -9,6 +9,9 @@ export default function Modal({
   children,
   maxWidth = "max-w-2xl",
   footer,
+  rootClassName,
+  containerClassName,
+  bodyClassName,
 }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -23,7 +26,7 @@ export default function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className={cn("fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto", rootClassName)}>
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
@@ -34,7 +37,8 @@ export default function Modal({
       <div
         className={cn(
           "relative w-full bg-white rounded-lg shadow-xl border border-slate-200 z-10 overflow-hidden flex flex-col my-8",
-          maxWidth
+          maxWidth,
+          containerClassName
         )}
       >
         {/* Header */}
@@ -56,7 +60,7 @@ export default function Modal({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5 max-h-[75vh] overflow-y-auto">{children}</div>
+        <div className={cn("px-6 py-5 max-h-[75vh] overflow-y-auto", bodyClassName)}>{children}</div>
 
         {/* Footer */}
         {footer && (

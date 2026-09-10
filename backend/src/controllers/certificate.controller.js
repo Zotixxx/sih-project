@@ -66,7 +66,7 @@ export const certificateController = {
           sealNumber: certificate.sealNumber,
           securityHash: certificate.securityHash,
           status: certificate.status,
-          verificationResult: "VERIFIED",
+          verificationResult: certificate.status === "VALID" ? "VERIFIED" : certificate.status,
         },
       });
     } catch (error) {

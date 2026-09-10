@@ -67,7 +67,7 @@ const buildPublicSnapshot = ({ application, inspection, district, user, today, v
   issuingAuthority: district?.state
     ? `Directorate of Legal Metrology, Government of ${district.state}`
     : "Directorate of Legal Metrology",
-  sealNumber: inspection.sealNumber,
+  sealNumber: inspection.sealNumber || "Not recorded",
   remarks: remarks || "Statutory verification approved and digital certificate issued.",
 });
 
@@ -137,6 +137,9 @@ export const certificateService = {
     }
     if (!inspection.measurements?.length) {
       throw badRequest("Inspection measurements are required before certificate approval.");
+    }
+    if (inspection.measurements.some((measurement) => String(measurement.result || "").toUpperCase() === "FAIL")) {
+      throw badRequest("Cannot sanction certificate while one or more inspection measurements failed.");
     }
 
     const district = await districtRepository.getById(application.district_id);

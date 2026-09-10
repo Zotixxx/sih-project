@@ -172,6 +172,11 @@ export const metrixApi = {
     }),
 
   getLmos: () => request("/lmos"),
+  createLmo: (data) =>
+    request("/lmos", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   getLmoById: (id) => request(`/lmos/${id}`),
 
   getInspections: (params = {}) => {

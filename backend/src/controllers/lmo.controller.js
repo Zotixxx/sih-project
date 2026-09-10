@@ -1,7 +1,21 @@
 import { userRepository } from "../repositories/userRepository.js";
 import { ROLES } from "../constants/roles.js";
+import { lmoService } from "../services/lmoService.js";
 
 export const lmoController = {
+  createLmo: async (req, res, next) => {
+    try {
+      const lmo = await lmoService.createLmo(req.user, req.body);
+      return res.status(201).json({
+        success: true,
+        data: lmo,
+        message: "LMO account created.",
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+
   getLmos: async (req, res) => {
     try {
       if (req.user.role !== ROLES.SYSTEM_ADMIN && !req.user.district_id) {

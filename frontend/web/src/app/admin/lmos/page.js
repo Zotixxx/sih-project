@@ -13,6 +13,16 @@ const statusClass = (status) =>
     ? "bg-rose-50 text-rose-700 border-rose-200"
     : "bg-emerald-50 text-emerald-700 border-emerald-200";
 
+const emptyCreateLmoForm = {
+  officerName: "",
+  email: "",
+  temporaryPassword: "",
+  phone: "",
+  badgeNumber: "",
+  designation: "Legal Metrology Officer",
+  jurisdiction: "",
+};
+
 const DetailRow = ({ label, value, mono = false }) => (
   <div className="space-y-1">
     <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">{label}</span>
@@ -315,9 +325,14 @@ function SystemAdminLmoDirectory() {
 }
 
 function AssistantControllerLmoDirectory() {
-  const { lmos, currentUser, district } = useMetrixStore();
+  const { lmos, currentUser, district, createLmo } = useMetrixStore();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState(emptyCreateLmoForm);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const districtLabel = district?.name || currentUser?.districtName || currentUser?.district_id || "District";
 
   const filtered = useMemo(() => {
@@ -329,6 +344,41 @@ function AssistantControllerLmoDirectory() {
         .some((value) => String(value).toLowerCase().includes(q));
     });
   }, [lmos, search]);
+
+  const openCreate = () => {
+    setError("");
+    setNotice("");
+    setCreateForm(emptyCreateLmoForm);
+    setCreateOpen(true);
+  };
+
+  const handleCreate = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const created = await createLmo({
+        officerName: createForm.officerName.trim(),
+        email: createForm.email.trim(),
+        temporaryPassword: createForm.temporaryPassword,
+        phone: createForm.phone.trim(),
+        badgeNumber: createForm.badgeNumber.trim() || undefined,
+        designation: createForm.designation.trim() || "Legal Metrology Officer",
+        jurisdiction: createForm.jurisdiction.trim() || undefined,
+      });
+      if (!created) throw new Error("The server did not return the created LMO account.");
+      setCreateOpen(false);
+      setCreateForm(emptyCreateLmoForm);
+      setSelected(created);
+      setNotice(`LMO account created for ${created?.name || created?.officerName || "the officer"}.`);
+    } catch (err) {
+      setError(err.message || "LMO account could not be created.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex">
@@ -350,19 +400,41 @@ function AssistantControllerLmoDirectory() {
               <h2 className="text-base font-bold text-slate-900">District Officers</h2>
               <p className="text-xs text-slate-500">{filtered.length} matching officers in {districtLabel}</p>
             </div>
-            <div className="relative w-full sm:w-80">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
-                search
-              </span>
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search LMO"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
-              />
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={openCreate}
+                className="px-4 py-2 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[17px]">person_add</span>
+                Create LMO
+              </button>
+              <div className="relative w-full sm:w-80">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">
+                  search
+                </span>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search LMO"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900"
+                />
+              </div>
             </div>
           </div>
+
+          {error && (
+            <div className="border border-rose-200 bg-rose-50 text-rose-700 rounded-lg px-4 py-3 text-xs font-semibold">
+              {error}
+            </div>
+          )}
+
+          {notice && (
+            <div className="border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-lg px-4 py-3 text-xs font-semibold">
+              {notice}
+            </div>
+          )}
 
           {filtered.length === 0 ? (
             <div className="bg-white border border-slate-200 rounded-xl p-12 text-center text-xs text-slate-500 shadow-2xs">
@@ -407,6 +479,102 @@ function AssistantControllerLmoDirectory() {
           )}
         </main>
       </div>
+
+      <Modal
+        isOpen={createOpen}
+        onClose={() => {
+          if (!saving) setCreateOpen(false);
+        }}
+        title="Create LMO"
+        subtitle={districtLabel}
+        maxWidth="max-w-2xl"
+      >
+        <form onSubmit={handleCreate} className="space-y-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1.5">Officer Name</label>
+              <input
+                value={createForm.officerName}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, officerName: event.target.value }))}
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-300"
+                required
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1.5">Account Email</label>
+              <input
+                type="email"
+                value={createForm.email}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, email: event.target.value }))}
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-300"
+                required
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1.5">Temporary Password</label>
+              <input
+                type="password"
+                value={createForm.temporaryPassword}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, temporaryPassword: event.target.value }))}
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-300"
+                required
+                minLength={8}
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1.5">Phone</label>
+              <input
+                value={createForm.phone}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, phone: event.target.value }))}
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-300"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1.5">Badge Number</label>
+              <input
+                value={createForm.badgeNumber}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, badgeNumber: event.target.value }))}
+                placeholder="Optional"
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-300"
+              />
+            </div>
+            <div>
+              <label className="font-semibold text-slate-700 block mb-1.5">Designation</label>
+              <input
+                value={createForm.designation}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, designation: event.target.value }))}
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-300"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="font-semibold text-slate-700 block mb-1.5">Jurisdiction</label>
+              <input
+                value={createForm.jurisdiction}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, jurisdiction: event.target.value }))}
+                placeholder="Optional"
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-300"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setCreateOpen(false)}
+              disabled={saving}
+              className="px-4 py-2 rounded-lg border border-slate-300 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 rounded-lg bg-slate-900 text-white font-bold hover:bg-slate-800 disabled:opacity-60"
+            >
+              {saving ? "Creating..." : "Create LMO"}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal
         isOpen={Boolean(selected)}

@@ -119,6 +119,28 @@ const hydrateRoleRecord = async (profile) => {
   };
 };
 
+const loadProfilesByUserId = async (userIds, fallbackMessage = "Could not load account profiles.") => {
+  const uniqueIds = Array.from(new Set((userIds || []).filter(Boolean)));
+  if (!uniqueIds.length) return new Map();
+
+  const { data, error } = await supabaseAdmin.from("profiles").select("*").in("user_id", uniqueIds);
+  if (error) throw fromSupabaseError(error, fallbackMessage);
+
+  return new Map((data || []).map((profile) => [profile.user_id, profile]));
+};
+
+const fallbackOfficerProfile = (row, role) => ({
+  user_id: row.user_id,
+  role,
+  display_name: row.name,
+  district_id: row.district_id,
+  email: row.email,
+  phone: row.phone,
+  status: row.status || "ACTIVE",
+  created_at: row.created_at,
+  updated_at: row.updated_at,
+});
+
 const normalizeBusinessRegistration = (authUser, input = {}) => {
   const businessName = String(input.businessName || input.name || "").trim();
   const ownerName = String(input.ownerName || input.contactPerson || "").trim();
@@ -280,29 +302,39 @@ export const userRepository = {
     return Promise.all((data || []).map(hydrateRoleRecord));
   },
   getLmosByDistrict: async (district_id) => {
-    let query = supabaseAdmin.from("lmos").select("*, profiles:user_id(*)");
+    let query = supabaseAdmin.from("lmos").select("*");
     if (district_id && district_id !== "ALL") query = query.eq("district_id", district_id);
     query = query.eq("status", "ACTIVE");
     const { data, error } = await query.order("name");
     if (error) throw fromSupabaseError(error, "Could not load LMOs.");
-    return (data || []).map((row) =>
-      mergeLmo(mapProfile(row.profiles || {
-        user_id: row.user_id,
-        role: ROLES.LMO,
-        display_name: row.name,
-        district_id: row.district_id,
-      }), row)
+
+    const rows = data || [];
+    const profilesByUserId = await loadProfilesByUserId(
+      rows.map((row) => row.user_id),
+      "Could not load LMO profiles."
+    );
+
+    return rows.map((row) =>
+      mergeLmo(mapProfile(profilesByUserId.get(row.user_id) || fallbackOfficerProfile(row, ROLES.LMO)), row)
     );
   },
   getAssistantControllerByDistrict: async (district_id) => {
     const { data, error } = await supabaseAdmin
       .from("assistant_controllers")
-      .select("*, profiles:user_id(*)")
+      .select("*")
       .eq("district_id", district_id)
       .limit(1)
       .maybeSingle();
     if (error) throw fromSupabaseError(error, "Could not load Assistant Controller.");
     if (!data) return null;
-    return mergeAssistantController(mapProfile(data.profiles), data);
+
+    const profilesByUserId = await loadProfilesByUserId(
+      [data.user_id],
+      "Could not load Assistant Controller profile."
+    );
+    return mergeAssistantController(
+      mapProfile(profilesByUserId.get(data.user_id) || fallbackOfficerProfile(data, ROLES.ASSISTANT_CONTROLLER)),
+      data
+    );
   },
 };

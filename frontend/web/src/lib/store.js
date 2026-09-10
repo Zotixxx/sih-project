@@ -243,6 +243,20 @@ export function MetrixStoreProvider({ children }) {
     return null;
   };
 
+  const createLmo = async (lmoData) => {
+    const res = await metrixApi.createLmo(lmoData);
+    if (res?.data) {
+      const createdId = res.data.lmo_uuid || res.data.id;
+      setLmos((prev) => [
+        res.data,
+        ...prev.filter((lmo) => (lmo.lmo_uuid || lmo.id) !== createdId),
+      ]);
+      await refreshData(currentUserRef.current);
+      return res.data;
+    }
+    return null;
+  };
+
   const approveInspection = async ({ applicationId, remarks }) => {
     const res = await metrixApi.approveInspection(applicationId, remarks);
     if (res?.data) {
@@ -364,6 +378,7 @@ export function MetrixStoreProvider({ children }) {
         acceptApplication,
         rejectApplication,
         assignLmo,
+        createLmo,
         approveInspection,
         returnInspection,
         issueNotice,
