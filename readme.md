@@ -1,74 +1,260 @@
 # MetriX
 
-Legal Metrology Digital Verification and Certification Platform for SIH 2026.
+Digital Legal Metrology Verification and Certification Platform
 
-MetriX is now structured as one Supabase-backed system:
+MetriX is a Smart India Hackathon prototype for digitizing the verification, re-verification, inspection, certification, and public validation lifecycle of weighing and measuring instruments under the Legal Metrology Act, 2009 and the Legal Metrology (General) Rules, 2011.
+
+The prototype replaces a manual, paper-heavy workflow with a secure web platform where businesses submit verification applications, Assistant Controllers review and assign inspections, Legal Metrology Officers record field results, and the final certificate can be verified publicly through a QR code.
+
+## Live Prototype
+
+Frontend:
 
 ```text
-Next.js web portal
-  -> Express REST API
-  -> services and repositories
-  -> Supabase PostgreSQL
-
-Supabase also provides Auth, private Storage, and RLS.
+https://sih-project-theta-ashy.vercel.app
 ```
 
-The runtime source of truth is Supabase PostgreSQL. The web UI must not use local mock arrays, local user roles, or seeded demo records for operational workflows.
-District reference data comes from `backend/src/db/india_states_districts.csv` and can be imported with `cd backend && npm run import:districts`.
+Backend health check:
 
-## Applications
+```text
+https://sih-project-bpyq.onrender.com/api/health
+```
 
-- `frontend/web`: Next.js, JavaScript, Tailwind CSS, shadcn-style local UI components.
-- `backend`: Node.js and Express API layer.
-- `supabase/migrations`: reproducible PostgreSQL schema, RLS, storage buckets, triggers, and workflow RPCs.
-- `mobile`: Flutter field-app prototype. The production web/API migration does not depend on it.
+Demo account credentials are intentionally not committed to the repository. They should be shared only through the official demo channel.
+
+## SIH Problem Fit
+
+MetriX addresses the core SIH requirement for a unified online verification and digital certification system for Legal Metrology.
+
+Implemented in the current web prototype:
+
+- Online registration and profile completion for business users.
+- Government role-based login for Legal Metrology Officers, Assistant Controllers, and System Admins.
+- Business instrument registration with purchase bill upload.
+- Verification and re-verification application submission.
+- Assistant Controller review, acceptance, rejection, and LMO assignment.
+- LMO inspection workspace with digital measurement entry, evidence upload, and result submission.
+- Assistant Controller final review and approval/return workflow.
+- Digital certificate generation after successful approval.
+- QR-enabled public certificate verification through `/verify/[id]`.
+- Certificate expiry status based on authoritative `valid_until` data.
+- Dashboards and role-specific protected portals.
+- Supabase-backed Auth, PostgreSQL, Storage, RLS, and audit-ready data model.
+
+Intentionally out of scope for this SIH web prototype:
+
+- GATC workflow.
+- Production Flutter/mobile deployment.
+- External SMS/email notification services.
+- Government SSO.
+- Full statutory Legal Metrology rules engine.
+- Advanced analytics and reporting beyond prototype dashboards.
+
+## Architecture
+
+```text
+Browser
+  -> Vercel: Next.js web portal
+  -> Render: Express REST API
+  -> Supabase: PostgreSQL, Auth, private Storage, RLS
+```
+
+The runtime source of truth is Supabase PostgreSQL. The frontend does not act as a trusted authority for role, district, ownership, or certificate status decisions.
+
+## Tech Stack
+
+Frontend:
+
+- Next.js 16
+- JavaScript
+- Tailwind CSS
+- shadcn-style local UI components
+- Supabase browser and SSR auth clients
+- QR rendering with `qrcode.react`
+
+Backend:
+
+- Node.js
+- Express.js
+- REST APIs
+- Supabase server client
+- Server-side authorization services
+
+Database, Auth, and Storage:
+
+- Supabase PostgreSQL
+- Supabase Auth
+- Supabase Storage
+- Row Level Security policies
+- SQL migrations under `supabase/migrations`
+
+Deployment:
+
+- Vercel for the frontend
+- Render for the backend
+- Supabase for managed database, auth, and storage
+- GitHub as source repository
+
+## Repository Structure
+
+```text
+.
+├── backend/                 Express API, services, repositories, tests
+├── frontend/web/            Next.js web application
+├── mobile/                  Flutter field-app prototype, not part of deployment
+├── supabase/migrations/     PostgreSQL schema, RLS, storage, triggers, RPCs
+├── PRD/                     Product requirement documents
+└── readme.md                Project overview
+```
 
 ## Roles
 
-The system supports exactly:
-
-- `BUSINESS`
-- `LMO`
-- `ASSISTANT_CONTROLLER`
-- `SYSTEM_ADMIN`
-
-Roles are resolved from `profiles.role` after Supabase Auth verifies the user. The frontend never supplies a trusted role.
-
-## Auth And Routing
-
-Supabase Auth is the identity provider. Protected portal URLs use the authenticated Auth UUID:
+MetriX supports four active web roles:
 
 ```text
-/{userId}/dashboard
-/{userId}/applications
-/{userId}/certificates
-/{userId}/instruments
-/{userId}/notifications
-/{userId}/settings
-/{userId}/inspections
-/{userId}/verification-details
-/{userId}/fresh-applications
-/{userId}/verify
-/{userId}/lmos
-/{userId}/assistant-controllers
-/{userId}/audit-logs
+BUSINESS
+LMO
+ASSISTANT_CONTROLLER
+SYSTEM_ADMIN
 ```
 
-The Next middleware checks the Supabase session, verifies `{userId}` equals the Auth UUID, reads `profiles.role`, and gates the route by role. Legacy unscoped routes redirect into the scoped URL.
+Role trust model:
 
-Business users may create a new account from `/register/business`. The first step only creates the Supabase Auth email/password account. After email verification and sign-in, the app redirects missing business profiles to `/register/business?complete=1`, loads configured districts from the Express API, then creates the `BUSINESS` profile and `businesses` domain record. Government users are not self-registered from the public UI.
+- Supabase Auth verifies identity.
+- The backend reads role and account status from `profiles`.
+- The frontend route middleware also checks authenticated user, role, and scoped route access.
+- Protected backend APIs require a Supabase bearer token.
+- Server-side services enforce ownership, role, district, and assignment constraints.
 
-System Admin users are bootstrap-created through Supabase Auth plus a `profiles` row with role `SYSTEM_ADMIN`. After login, the System Admin portal uses:
+## Core Workflow
 
 ```text
-/{adminAuthUuid}/dashboard
-/{adminAuthUuid}/assistant-controllers
-/{adminAuthUuid}/lmos
-/{adminAuthUuid}/audit-logs
-/{adminAuthUuid}/settings
+Business registers/logs in
+Business completes profile
+Business adds instrument
+Business uploads purchase bill
+Business creates verification or re-verification application
+Business submits application
+
+Assistant Controller reviews fresh applications
+Assistant Controller accepts or rejects
+Assistant Controller assigns an LMO
+
+LMO opens assigned inspection
+LMO records measurement values and observations
+LMO uploads evidence
+LMO submits verification
+
+Assistant Controller reviews submitted verification
+Assistant Controller approves or returns
+
+Approval creates digital certificate
+Certificate QR opens public verification page
+Public user sees VALID or EXPIRED status
 ```
 
-System Admin navigation is limited to Dashboard, Assistant Controllers, LMOs, Audit Logs, and Settings. Assistant Controller application workflow pages remain separate.
+Certificates are not generated during application submission or initial acceptance. They are generated only after the inspection passes and the Assistant Controller grants final approval.
+
+## Certificate and QR Verification
+
+Certificate behavior in the current prototype:
+
+- Certificate ID is tied to the approved application.
+- Duplicate certificate generation is blocked.
+- Certificate status is evaluated against `valid_until`.
+- Public verification is available without login.
+- QR codes point to the deployed web origin and open `/verify/[certificateId]`.
+- Expired certificates show expired status when opened after validity ends.
+
+## Security Model
+
+Security controls implemented for the prototype:
+
+- Supabase Auth for identity.
+- Server-side Express authorization for role-sensitive APIs.
+- Supabase RLS policies for database-level protection.
+- Private Supabase Storage buckets for uploaded documents and evidence.
+- District scoping for Assistant Controller and LMO workflows.
+- Business ownership checks for instruments, applications, and certificates.
+- System Admin-only APIs for administrative account management.
+- Public access limited to certificate verification and district reference data.
+
+Important security rule:
+
+```text
+Never expose SUPABASE_SECRET_KEY in frontend or NEXT_PUBLIC_* variables.
+```
+
+## API Overview
+
+All protected API calls use:
+
+```http
+Authorization: Bearer <Supabase access token>
+```
+
+Important backend routes:
+
+```text
+GET  /api/health
+GET  /api/auth/profile
+POST /api/auth/register-business
+GET  /api/public/districts
+GET  /api/dashboard/stats
+GET  /api/business/profile
+PUT  /api/business/profile
+GET  /api/instruments
+POST /api/instruments
+GET  /api/applications
+POST /api/applications
+POST /api/applications/:id/accept
+POST /api/applications/:id/reject
+POST /api/applications/:id/assign
+GET  /api/inspections
+POST /api/inspections/:id/start
+POST /api/inspections/:id/submit
+GET  /api/approvals/awaiting
+POST /api/approvals/approve
+POST /api/approvals/return
+GET  /api/certificates
+GET  /api/public/certificates/:id
+POST /api/documents/upload
+GET  /api/admin/dashboard
+GET  /api/admin/assistant-controllers
+POST /api/admin/assistant-controllers
+GET  /api/admin/lmos
+GET  /api/admin/audit-logs
+```
+
+## Local Development
+
+Backend:
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+Frontend:
+
+```bash
+cd frontend/web
+npm install
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+Backend health:
+
+```text
+http://localhost:5001/api/health
+```
 
 ## Environment Variables
 
@@ -77,9 +263,10 @@ Backend `.env`:
 ```env
 PORT=5001
 SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_SECRET_KEY=your-server-only-service-role-key
+SUPABASE_SECRET_KEY=your-server-only-secret-key
 SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 CORS_ORIGIN=http://localhost:3000
+FRONTEND_URL=http://localhost:3000
 ```
 
 Frontend `frontend/web/.env.local`:
@@ -90,115 +277,110 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
 
-Never put `SUPABASE_SECRET_KEY` in frontend code. Do not commit real `.env` files.
+Production frontend example:
 
-## Local Setup
-
-Install dependencies:
-
-```bash
-cd backend
-npm install
-cd ../frontend/web
-npm install
+```env
+NEXT_PUBLIC_API_URL=https://sih-project-bpyq.onrender.com/api
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
 
-Apply Supabase migrations first, then run:
+Production backend example:
+
+```env
+NODE_ENV=production
+NODE_VERSION=22
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SECRET_KEY=your-server-only-secret-key
+SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+CORS_ORIGIN=https://sih-project-theta-ashy.vercel.app
+FRONTEND_URL=https://sih-project-theta-ashy.vercel.app
+```
+
+Do not commit real `.env` files.
+
+## Supabase Setup
+
+Apply migrations:
+
+```bash
+supabase login
+supabase link --project-ref <PROJECT_REF>
+supabase db push
+```
+
+Import Indian state and district reference data:
 
 ```bash
 cd backend
 npm run import:districts
 ```
 
-```bash
-cd backend
-npm run dev
-```
+The migrations define:
 
-```bash
-cd frontend/web
-npm run dev
-```
+- Application and certificate workflow tables.
+- Profiles and role-specific records.
+- RLS policies.
+- Storage buckets.
+- Triggers and workflow RPCs.
+- System Admin portal support.
 
-Open `http://localhost:3000`.
+Create the first System Admin manually through Supabase Auth and a matching `profiles` row. Do not commit admin credentials.
 
-## Workflow
+## Deployment
 
-The intended production flow is:
+Render backend:
 
 ```text
-Business completes profile
-Business registers instrument with purchase bill
-Business selects verification State/District and submits application
-Application is stored under the selected district jurisdiction
-Assistant Controller for that district reviews fresh applications
-Assistant Controller accepts and assigns an LMO
-LMO sees assigned inspection
-LMO records measurements/findings/evidence
-LMO submits verification
-Assistant Controller performs final review
-Assistant Controller approves
-Backend transaction creates certificate
-Certificate ID = Application ID
-Business sees certificate
-Certificate QR opens /verify/{certificateId}
+Service type: Web Service
+Root Directory: backend
+Build Command: npm install
+Start Command: npm start
+Health Check Path: /api/health
+Node Version: 22
 ```
 
-Certificates are never generated at submission or initial acceptance. Duplicate certificate generation is blocked by database uniqueness and the approval RPC.
+Vercel frontend:
 
-## API Structure
+```text
+Framework Preset: Next.js
+Root Directory: frontend/web
+Build Command: npm run build
+Output Directory: default
+Install Command: default or npm install
+```
 
-Protected API requests require `Authorization: Bearer <Supabase access token>`.
+After changing any `NEXT_PUBLIC_*` variable in Vercel, redeploy the frontend because those values are compiled into the browser bundle.
 
-- `GET /api/auth/profile`: authenticated profile and role record.
-- `POST /api/auth/register-business`: authenticated Supabase user completes a BUSINESS profile.
-- `GET /api/public/districts`: public state/district reference list for registration.
-- `GET /api/dashboard/stats`: role-scoped dashboard counts.
-- `GET/PUT /api/business/profile`: business profile.
-- `GET/POST/PUT /api/instruments`: business instruments and purchase bill association.
-- `GET/POST /api/applications`: application list and submission.
-- `POST /api/applications/:id/accept`: AC initial acceptance.
-- `POST /api/applications/:id/reject`: AC rejection with reason.
-- `POST /api/applications/:id/assign`: AC accept-and-assign workflow.
-- `GET/POST /api/inspections`: LMO/AC inspection workflow.
-- `GET /api/approvals/awaiting`: AC final review queue.
-- `POST /api/approvals/approve`: transactional final approval and certificate generation.
-- `POST /api/approvals/return`: AC return to LMO with reason.
-- `GET /api/certificates`: role-scoped certificate list.
-- `GET /api/certificates/search?q=...`: authenticated database search.
-- `GET /api/public/certificates/:id`: anonymous QR verification projection.
-- `POST /api/documents/upload`: private Supabase Storage upload metadata.
-- `GET /api/admin/dashboard`: System Admin counts and health checks.
-- `GET /api/admin/assistant-controllers?search=...&districtId=...`: limited server-side AC search.
-- `POST /api/admin/assistant-controllers`: create an AC district account using the server-side Supabase admin API.
-- `GET /api/admin/assistant-controllers/:id`: fetch one AC district account.
-- `PATCH /api/admin/assistant-controllers/:id`: edit current officer details/status without creating a new Auth account.
-- `GET /api/admin/lmos?search=...&districtId=...`: limited server-side LMO search.
-- `GET /api/admin/lmos/:id`: fetch one LMO administrative profile.
-- `GET /api/admin/audit-logs?...`: paginated read-only audit log search.
+## Verification Checklist
 
-## System Admin Portal
+Before demo:
 
-The System Admin portal is intentionally simple:
-
-- Dashboard counts come from Supabase-backed API counts for Assistant Controllers, active LMOs, and businesses.
-- Health cards call lightweight checks for Supabase Auth, database, Storage, and the Express API.
-- Assistant Controllers is search-first and does not load the full directory on page open.
-- Creating an Assistant Controller creates a Supabase Auth user, `profiles` row, and `assistant_controllers` row from the backend only.
-- The Assistant Controller account represents a stable district account. Officer details can be edited later without changing the Auth user, district, or account email.
-- LMOs is search-first for System Admin and supports district/status filters.
-- Audit Logs is read-only and paginated.
+- Backend `/api/health` returns `HEALTHY`.
+- Vercel `/`, `/login`, and `/verify` routes open.
+- Business registration and login work.
+- Business can complete profile, add instrument, upload purchase bill, and submit application.
+- Assistant Controller can see fresh application, accept/reject, and assign LMO.
+- LMO can see assigned inspection, enter multiple measurements, upload evidence, and submit.
+- Assistant Controller can approve final verification.
+- Certificate is generated once.
+- QR opens public verification page.
+- Valid certificate shows valid status.
+- Expired certificate shows expired status.
+- Certificate print view renders correctly.
+- Unauthorized API calls return `401`.
+- Cross-role and cross-district actions are blocked.
 
 ## Testing
 
-Static checks:
+Backend syntax check:
 
 ```bash
 cd backend
 find src -name '*.js' -exec node --check {} \;
-node --check test_e2e_scenarios.js
-node --check test_admin_scenarios.js
 ```
+
+Frontend checks:
 
 ```bash
 cd frontend/web
@@ -206,44 +388,41 @@ npm run lint
 npm run build
 ```
 
-Golden Supabase workflow test:
+Optional backend workflow tests are available in:
 
-```bash
-cd backend
-METRIX_API_BASE_URL=http://localhost:5001/api \
-SUPABASE_URL=https://your-project-ref.supabase.co \
-SUPABASE_PUBLISHABLE_KEY=your-publishable-key \
-METRIX_TEST_BUSINESS_EMAIL=business@example.com \
-METRIX_TEST_BUSINESS_PASSWORD=... \
-METRIX_TEST_AC_EMAIL=ac@example.com \
-METRIX_TEST_AC_PASSWORD=... \
-METRIX_TEST_LMO_EMAIL=lmo@example.com \
-METRIX_TEST_LMO_PASSWORD=... \
-METRIX_TEST_INSTRUMENT_ID=INS-TEST-001 \
-METRIX_TEST_APPLICATION_ID=APP-TEST-001 \
-METRIX_TEST_LMO_ID=LMO-TEST-001 \
-npm test
+```text
+backend/test_e2e_scenarios.js
+backend/test_admin_scenarios.js
 ```
 
-Use a disposable Supabase project or a clean set of domain IDs for the golden test.
+Run them only against a disposable Supabase project or a clean demo dataset.
 
-System Admin workflow test:
+## Documentation
 
-```bash
-cd backend
-METRIX_API_BASE_URL=http://localhost:5001/api \
-SUPABASE_URL=https://your-project-ref.supabase.co \
-SUPABASE_PUBLISHABLE_KEY=your-publishable-key \
-METRIX_TEST_ADMIN_EMAIL=admin@example.com \
-METRIX_TEST_ADMIN_PASSWORD=... \
-METRIX_ADMIN_TEST_AC_EMAIL=ac.southdelhi@metrix.com \
-METRIX_ADMIN_TEST_AC_PASSWORD=... \
-METRIX_ADMIN_TEST_DISTRICT_ID=DL-SOUTH_DELHI \
-npm run test:admin
+Final PRD:
+
+```text
+PRD/MetriX_Final_PRD.md
 ```
 
-Optional negative checks are included if these credentials are also set: `METRIX_TEST_BUSINESS_EMAIL`, `METRIX_TEST_BUSINESS_PASSWORD`, `METRIX_TEST_LMO_EMAIL`, `METRIX_TEST_LMO_PASSWORD`, `METRIX_TEST_AC_EMAIL`, `METRIX_TEST_AC_PASSWORD`.
+Additional project documents:
 
-## Current Notes
+```text
+PRD/MetriX_PRD_v1.0.md
+PRD/web_Frontend.md
+supabase/README.md
+frontend/web/README.md
+mobile/README.md
+```
 
-The previous SQLite runtime and seeded user files have been removed from source. Three ignored SQLite binary files may remain under `backend/src/data` if a local process holds them open; they are not imported by the backend and are ignored by `.gitignore`.
+## Project Status
+
+MetriX is ready as a deployable SIH web prototype for the current intended scope:
+
+- Web-based stakeholder portals.
+- Supabase-backed identity, database, and storage.
+- Express-based workflow and authorization engine.
+- QR-enabled digital certificate verification.
+- Practical deployment on Vercel, Render, and Supabase.
+
+The prototype focuses on demonstrating a complete, auditable Legal Metrology verification lifecycle without overextending into GATC, full mobile production, government SSO, or advanced rule-engine complexity.
