@@ -22,6 +22,10 @@ https://sih-project-bpyq.onrender.com/api/health
 
 Demo account credentials are intentionally not committed to the repository. They should be shared only through the official demo channel.
 
+## Project Preview
+
+![MetriX web landing page](docs/assets/metrix-landing-page.png)
+
 ## SIH Problem Fit
 
 MetriX addresses the core SIH requirement for a unified online verification and digital certification system for Legal Metrology.
