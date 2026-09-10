@@ -68,10 +68,8 @@ export default function CertificatePreviewModal({ certificate, isOpen, onClose }
     }
   };
 
-  const verificationUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/verify/${certificate.id || certificate.certificateNumber}`
-      : `http://localhost:3000/verify/${certificate.id || certificate.certificateNumber}`;
+  const verificationPath = `/verify/${certificate.id || certificate.certificateNumber}`;
+  const verificationUrl = typeof window !== "undefined" ? `${window.location.origin}${verificationPath}` : verificationPath;
   const districtLabel = certificate.district || certificate.district_id || "District";
   const issuingAuthority = certificate.issuingAuthority || "Directorate of Legal Metrology";
 

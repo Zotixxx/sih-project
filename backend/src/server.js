@@ -20,10 +20,13 @@ import { rateLimit } from "./middleware/rateLimit.middleware.js";
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
+const corsOrigins = (process.env.CORS_ORIGIN || process.env.FRONTEND_URL || "http://localhost:3000")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 // Middleware
-app.use(cors({ origin: corsOrigin, credentials: true }));
+app.use(cors({ origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins, credentials: true }));
 app.use(express.json({ limit: "12mb" }));
 app.use(morgan("dev"));
 app.use("/api/public", rateLimit({ windowMs: 60_000, max: 60, keyPrefix: "public" }));

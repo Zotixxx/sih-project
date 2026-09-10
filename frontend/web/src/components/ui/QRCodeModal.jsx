@@ -11,9 +11,8 @@ export default function QRCodeModal({ isOpen, onClose, certificate }) {
 
   if (!certificate) return null;
 
-  const verifyUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/verify/${certificate.id}`
-    : `https://metrix.gov.in/verify/${certificate.id}`;
+  const verifyPath = `/verify/${certificate.id}`;
+  const verifyUrl = typeof window !== "undefined" ? `${window.location.origin}${verifyPath}` : verifyPath;
 
   const copyVerificationLink = () => {
     if (typeof navigator !== "undefined") {
