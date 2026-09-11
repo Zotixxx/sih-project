@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_theme.dart';
 
 class StatusBadge extends StatelessWidget {
@@ -6,52 +7,69 @@ class StatusBadge extends StatelessWidget {
   final bool isSmall;
 
   const StatusBadge({
-    Key? key,
+    super.key,
     required this.status,
     this.isSmall = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    Color bg;
-    Color fg;
-    String label;
-    IconData icon;
+    final normalized = status.toUpperCase();
+    late final Color bg;
+    late final Color fg;
+    late final String label;
+    late final IconData icon;
 
-    switch (status.toUpperCase()) {
+    switch (normalized) {
+      case 'APPROVED':
+      case 'CERTIFIED':
       case 'COMPLETED':
-      case 'PASSED':
       case 'VALID':
         bg = AppTheme.emeraldLight;
         fg = AppTheme.emeraldGreen;
-        label = 'VERIFIED (PASS)';
+        label = normalized == 'VALID' ? 'VALID' : 'APPROVED';
         icon = Icons.verified_outlined;
         break;
-      case 'SCHEDULED':
-      case 'IN_PROGRESS':
-        bg = AppTheme.amberLight;
-        fg = AppTheme.amberWarning;
-        label = status == 'IN_PROGRESS' ? 'IN PROGRESS' : 'SCHEDULED';
-        icon = Icons.schedule_outlined;
+      case 'SUBMITTED':
+      case 'SUBMITTED_FOR_APPROVAL':
+        bg = AppTheme.emeraldLight;
+        fg = AppTheme.emeraldGreen;
+        label = 'SUBMITTED';
+        icon = Icons.task_alt;
         break;
-      case 'UNSYNCED':
-      case 'SYNC_PENDING':
+      case 'IN_PROGRESS':
+      case 'UNDER_VERIFICATION':
         bg = AppTheme.blueLight;
         fg = AppTheme.blueInfo;
-        label = 'OFFLINE CACHED';
-        icon = Icons.cloud_off_outlined;
+        label = 'IN PROGRESS';
+        icon = Icons.edit_note;
+        break;
+      case 'ASSIGNED':
+      case 'SCHEDULED':
+        bg = AppTheme.amberLight;
+        fg = AppTheme.amberWarning;
+        label = 'ASSIGNED';
+        icon = Icons.schedule_outlined;
+        break;
+      case 'RETURNED':
+        bg = AppTheme.amberLight;
+        fg = AppTheme.amberWarning;
+        label = 'RETURNED';
+        icon = Icons.assignment_return_outlined;
         break;
       case 'REJECTED':
+      case 'FAILED':
+      case 'FAIL':
       case 'EXPIRED':
         bg = AppTheme.roseLight;
         fg = AppTheme.roseError;
-        label = 'FAILED';
+        label = normalized == 'EXPIRED' ? 'EXPIRED' : 'FAILED';
         icon = Icons.error_outline;
         break;
       default:
         bg = AppTheme.slate100;
         fg = AppTheme.slate700;
-        label = status;
+        label = normalized.isEmpty ? 'UNKNOWN' : normalized;
         icon = Icons.info_outline;
     }
 
@@ -63,20 +81,23 @@ class StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: fg.withOpacity(0.3), width: 1),
+        border: Border.all(color: fg.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: isSmall ? 12 : 14, color: fg),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: fg,
-              fontSize: isSmall ? 10 : 11,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.2,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: fg,
+                fontSize: isSmall ? 10 : 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.2,
+              ),
             ),
           ),
         ],

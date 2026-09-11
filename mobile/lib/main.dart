@@ -7,7 +7,7 @@ import 'screens/auth/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -20,7 +20,7 @@ void main() async {
 }
 
 class MetrixLmoApp extends StatelessWidget {
-  const MetrixLmoApp({Key? key}) : super(key: key);
+  const MetrixLmoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +29,7 @@ class MetrixLmoApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppState()),
       ],
       child: MaterialApp(
-        title: 'MetriX LMO Field Unit',
+        title: 'MetriX LMO',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const LoginScreen(),

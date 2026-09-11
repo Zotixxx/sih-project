@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../models/inspection_model.dart';
 import '../../providers/app_state.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/status_badge.dart';
 import '../inspection/inspection_detail_screen.dart';
-import '../sync/sync_queue_screen.dart';
 import '../profile/officer_profile_screen.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
-  const HomeDashboardScreen({Key? key}) : super(key: key);
+  const HomeDashboardScreen({super.key});
 
   @override
   State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
@@ -20,8 +21,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppState>().init();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await context.read<AppState>().refreshData();
+      } catch (_) {
+        // The provider exposes the error message in the UI.
+      }
     });
   }
 
@@ -36,95 +41,66 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           children: [
             Text(state.officer.name),
             Text(
-              '${state.officer.badgeId} • ${state.officer.zone}',
+              '${state.officer.badgeId} | ${state.officer.zone.isEmpty ? state.officer.districtId : state.officer.zone}',
               style: const TextStyle(fontSize: 10, color: AppTheme.slate300),
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
         actions: [
-          // Local connectivity state for offline queue handling.
           IconButton(
-            tooltip: state.isOnline ? 'Online Mode' : 'Offline Mode',
-            icon: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: state.isOnline ? AppTheme.emeraldGreen : AppTheme.roseError,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  state.isOnline ? 'ONLINE' : 'OFFLINE',
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 8),
-              ],
-            ),
-            onPressed: () => state.toggleOnlineOffline(),
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh),
+            onPressed: state.isLoading
+                ? null
+                : () async {
+                    try {
+                      await context.read<AppState>().refreshData();
+                    } catch (_) {}
+                  },
           ),
           IconButton(
-            icon: const Icon(Icons.sync_outlined),
-            tooltip: 'Sync Center',
+            tooltip: 'Profile',
+            icon: const Icon(Icons.person_outline),
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SyncQueueScreen()),
+                MaterialPageRoute(builder: (_) => const OfficerProfileScreen()),
               );
             },
           ),
         ],
       ),
-      body: _buildBody(state),
+      body: _currentTab == 0
+          ? _buildInspectionQueue(state)
+          : _buildSubmittedRecords(state),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentTab,
         selectedItemColor: AppTheme.primaryNavy,
         unselectedItemColor: AppTheme.slate500,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+        selectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         onTap: (index) {
-          if (index == 1) {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SyncQueueScreen()),
-            );
-          } else if (index == 2) {
+          if (index == 2) {
             Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const OfficerProfileScreen()),
             );
-          } else {
-            setState(() => _currentTab = index);
+            return;
           }
+          setState(() => _currentTab = index);
         },
-        items: [
-          const BottomNavigationBarItem(
+        items: const [
+          BottomNavigationBarItem(
             icon: Icon(Icons.assignment_outlined),
             activeIcon: Icon(Icons.assignment),
             label: 'Inspections',
           ),
           BottomNavigationBarItem(
-            icon: Stack(
-              children: [
-                const Icon(Icons.cloud_sync_outlined),
-                if (state.unsyncedCount > 0)
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: AppTheme.roseError,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(minWidth: 12, minHeight: 12),
-                    ),
-                  ),
-              ],
-            ),
-            label: 'Offline Sync',
+            icon: Icon(Icons.fact_check_outlined),
+            activeIcon: Icon(Icons.fact_check),
+            label: 'Submitted',
           ),
-          const BottomNavigationBarItem(
+          BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
             label: 'Profile',
@@ -134,129 +110,30 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
-  Widget _buildBody(AppState state) {
-    if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
+  Widget _buildInspectionQueue(AppState state) {
     final inspections = state.filteredInspections;
 
     return RefreshIndicator(
-      onRefresh: () => state.init(),
+      onRefresh: () async {
+        try {
+          await state.refreshData();
+        } catch (_) {}
+      },
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Metric Summary Cards
-          Row(
-            children: [
-              Expanded(
-                child: _buildMetricCard(
-                  title: 'Assigned',
-                  count: state.scheduledCount.toString(),
-                  color: AppTheme.amberWarning,
-                  icon: Icons.schedule,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildMetricCard(
-                  title: 'Completed',
-                  count: state.completedCount.toString(),
-                  color: AppTheme.emeraldGreen,
-                  icon: Icons.verified,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildMetricCard(
-                  title: 'Unsynced',
-                  count: state.unsyncedCount.toString(),
-                  color: AppTheme.blueInfo,
-                  icon: Icons.cloud_off,
-                ),
-              ),
-            ],
-          ),
+          _buildHeader(state),
           const SizedBox(height: 16),
-
-          // Unsynced Alert Banner
-          if (state.unsyncedCount > 0)
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.blueLight,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.blueInfo.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.cloud_upload_outlined, color: AppTheme.blueInfo, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '${state.unsyncedCount} inspection record(s) pending cloud synchronization.',
-                      style: const TextStyle(color: AppTheme.blueInfo, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SyncQueueScreen()),
-                      );
-                    },
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text('SYNC NOW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            ),
-
-          // Search Box
-          TextField(
-            onChanged: (val) => state.setSearchQuery(val),
-            decoration: InputDecoration(
-              hintText: 'Search by instrument, owner, ID...',
-              hintStyle: const TextStyle(fontSize: 12),
-              prefixIcon: const Icon(Icons.search, size: 20),
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-              ),
-            ),
-          ),
+          if (state.errorMessage != null) _buildErrorBanner(state),
+          _buildSearchBox(state),
           const SizedBox(height: 12),
-
-          // Filter Chips
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildFilterChip(state, 'ALL', 'All Inspections'),
-                const SizedBox(width: 8),
-                _buildFilterChip(state, 'SCHEDULED', 'Scheduled (${state.scheduledCount})'),
-                const SizedBox(width: 8),
-                _buildFilterChip(state, 'COMPLETED', 'Completed (${state.completedCount})'),
-                const SizedBox(width: 8),
-                _buildFilterChip(state, 'UNSYNCED', 'Unsynced (${state.unsyncedCount})'),
-              ],
-            ),
-          ),
+          _buildFilterChips(state),
           const SizedBox(height: 16),
-
-          // Section Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Today\'s Field Itinerary',
+                'Assigned Field Work',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -270,21 +147,133 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             ],
           ),
           const SizedBox(height: 8),
-
-          // Inspections List
-          if (inspections.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(32),
-              alignment: Alignment.center,
-              child: const Text(
-                'No inspection records found in this view.',
-                style: TextStyle(fontSize: 12, color: AppTheme.slate500),
-              ),
+          if (state.isLoading && inspections.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(40),
+              child: Center(child: CircularProgressIndicator()),
             )
+          else if (inspections.isEmpty)
+            _buildEmptyState('No assigned inspections found.')
           else
-            ...inspections.map((insp) => _buildInspectionCard(insp)),
+            ...inspections.map(_buildInspectionCard),
         ],
       ),
+    );
+  }
+
+  Widget _buildSubmittedRecords(AppState state) {
+    final records = state.inspections
+        .where((inspection) => inspection.isSubmitted)
+        .toList();
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        try {
+          await state.refreshData();
+        } catch (_) {}
+      },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _buildHeader(state),
+          const SizedBox(height: 16),
+          const Text(
+            'Submitted Verification Records',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryNavy,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (records.isEmpty)
+            _buildEmptyState('No submitted verification records yet.')
+          else
+            ...records.map(_buildInspectionCard),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(AppState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryNavy,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.badge_outlined, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'LMO Field Dashboard',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${state.officer.designation} | ${state.officer.districtId}',
+                      style: const TextStyle(
+                          color: AppTheme.slate300, fontSize: 11),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Assigned',
+                count: state.assignedCount.toString(),
+                color: AppTheme.amberWarning,
+                icon: Icons.schedule,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'In Progress',
+                count: state.inProgressCount.toString(),
+                color: AppTheme.blueInfo,
+                icon: Icons.edit_note,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Submitted',
+                count: state.submittedCount.toString(),
+                color: AppTheme.emeraldGreen,
+                icon: Icons.verified,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -301,34 +290,86 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 8),
+          Text(
+            count,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryNavy,
+            ),
+          ),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 10, color: AppTheme.slate500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorBanner(AppState state) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.roseLight,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.roseError.withValues(alpha: 0.25)),
+      ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
+          const Icon(Icons.error_outline, color: AppTheme.roseError, size: 18),
           const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                count,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryNavy,
-                ),
-              ),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 10, color: AppTheme.slate500),
-              ),
-            ],
+          Expanded(
+            child: Text(
+              state.errorMessage!,
+              style: const TextStyle(color: AppTheme.roseError, fontSize: 12),
+            ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBox(AppState state) {
+    return TextField(
+      onChanged: state.setSearchQuery,
+      decoration: InputDecoration(
+        hintText: 'Search inspection, business, instrument, serial...',
+        hintStyle: const TextStyle(fontSize: 12),
+        prefixIcon: const Icon(Icons.search, size: 20),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(AppState state) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildFilterChip(state, 'ALL', 'All'),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+              state, 'ASSIGNED', 'Assigned (${state.assignedCount})'),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+              state, 'IN_PROGRESS', 'In Progress (${state.inProgressCount})'),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+              state, 'SUBMITTED', 'Submitted (${state.submittedCount})'),
         ],
       ),
     );
@@ -353,7 +394,19 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
-  Widget _buildInspectionCard(insp) {
+  Widget _buildEmptyState(String message) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      alignment: Alignment.center,
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 12, color: AppTheme.slate500),
+      ),
+    );
+  }
+
+  Widget _buildInspectionCard(InspectionModel inspection) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -361,7 +414,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => InspectionDetailScreen(inspectionId: insp.id),
+              builder: (_) =>
+                  InspectionDetailScreen(inspectionId: inspection.id),
             ),
           );
         },
@@ -373,48 +427,47 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Text(
-                        insp.id,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.slate500,
-                          fontFamily: 'Courier',
-                        ),
+                  Expanded(
+                    child: Text(
+                      inspection.id,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.slate500,
+                        fontFamily: 'Courier',
                       ),
-                      const SizedBox(width: 6),
-                      if (!insp.isSynced)
-                        const Icon(Icons.cloud_off, size: 14, color: AppTheme.blueInfo),
-                    ],
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  StatusBadge(status: insp.status, isSmall: true),
+                  const SizedBox(width: 8),
+                  StatusBadge(status: inspection.status, isSmall: true),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Text(
-                insp.instrumentName,
+                inspection.instrumentName,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.primaryNavy,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
-                'S/N: ${insp.serialNumber} • ${insp.category}',
+                'S/N: ${inspection.serialNumber.isEmpty ? 'Not recorded' : inspection.serialNumber} | ${inspection.category}',
                 style: const TextStyle(fontSize: 11, color: AppTheme.slate700),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.business_outlined, size: 13, color: AppTheme.slate500),
-                  const SizedBox(width: 4),
+                  const Icon(Icons.business_outlined,
+                      size: 14, color: AppTheme.slate500),
+                  const SizedBox(width: 5),
                   Expanded(
                     child: Text(
-                      insp.ownerName,
-                      style: const TextStyle(fontSize: 11, color: AppTheme.slate700),
+                      inspection.ownerName,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.slate700),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -423,12 +476,16 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Icon(Icons.location_on_outlined, size: 13, color: AppTheme.slate500),
-                  const SizedBox(width: 4),
+                  const Icon(Icons.location_on_outlined,
+                      size: 14, color: AppTheme.slate500),
+                  const SizedBox(width: 5),
                   Expanded(
                     child: Text(
-                      insp.location,
-                      style: const TextStyle(fontSize: 10, color: AppTheme.slate500),
+                      inspection.location.isEmpty
+                          ? 'Verification location not recorded'
+                          : inspection.location,
+                      style: const TextStyle(
+                          fontSize: 11, color: AppTheme.slate500),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -440,19 +497,19 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today_outlined, size: 12, color: AppTheme.slate500),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${insp.scheduledDate} (${insp.scheduledTime})',
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.slate700),
-                      ),
-                    ],
-                  ),
                   Text(
-                    insp.status == 'SCHEDULED' ? 'Start Inspection →' : 'View Details →',
+                    inspection.scheduledDate.isEmpty
+                        ? 'No scheduled date'
+                        : 'Scheduled: ${inspection.scheduledDate}',
                     style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.slate700,
+                    ),
+                  ),
+                  const Text(
+                    'Open',
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primaryNavy,

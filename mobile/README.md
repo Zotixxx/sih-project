@@ -1,36 +1,107 @@
-# MetriX Mobile — LMO Field Verification Android & iOS App
+# MetriX Mobile
 
-**Domain:** Legal Metrology Enforcement & Verification  
-**Platform:** Flutter + Dart (Android & iOS)  
-**Target User:** Legal Metrology Officers (LMO) in the Field  
-**Core Features:** Offline-First SQLite, MPE Calculation Engine, Camera & GPS Geotagging, Sync Manager.
+LMO mobile and tablet application for the MetriX Legal Metrology verification workflow.
 
----
+This app is intentionally scoped to the Legal Metrology Officer workflow. It does not include GPS-based tracking, GATC workflow, public certificate verification, Business portal features, or Assistant Controller final approval.
 
-## 📱 Features
+## Current Scope
 
-1. **LMO Authentication & Profile:** Secure departmental badge login with PIN authentication.
-2. **Assigned Inspections Itinerary:** View and search daily assigned inspections across assigned districts (South Delhi, Central Delhi, etc.).
-3. **Statutory 5-Tab Inspection Workspace:**
-   * **Tab 1 — Specs:** Technical instrument specifications (S/N, capacity, interval $e$, accuracy class, registered owner).
-   * **Tab 2 — Checklist:** Statutory verification checklist under Legal Metrology Rules 2011 (plaque check, repeatability, zero return, eccentricity).
-   * **Tab 3 — Test Loads:** Enter standard mass loads and observed scale readings with automated MPE tolerance checking ($\pm 5\text{ g}$, $\pm 10\text{ kg}$).
-   * **Tab 4 — Photos & GPS:** Camera photo evidence capture of serial plates and lead seals + live GPS geotag stamp.
-   * **Tab 5 — Certification:** Approval action that generates a digital certificate, SHA-256 integrity checksum, and SVG QR code.
-4. **Offline SQLite Database:** Local database using `sqflite` allowing LMOs to perform inspections in remote basements, fuel stations, or rural warehouses without network coverage.
-5. **Sync Manager:** Background/manual synchronization queue syncing offline records with central MetriX backend when network is restored.
+Implemented:
 
----
+- LMO email/password sign-in through Supabase Auth.
+- LMO-only access guard after backend profile lookup.
+- Mobile dashboard with assigned, in-progress, and submitted inspections.
+- Pull-to-refresh inspection queue.
+- Search and status filters.
+- Inspection detail view with business, instrument, serial number, capacity, schedule, district, and location.
+- Start assigned inspections.
+- Add multiple measurement rows.
+- Local MPE pass/fail calculation matching the backend unit parsing approach.
+- Physical verification checklist.
+- Optional camera/gallery evidence upload to the existing `inspection-evidence` Supabase Storage bucket through the Express API.
+- Submit inspection findings to the existing backend.
+- Read-only submitted/closed inspection records.
+- LMO profile and logout.
 
-## 🚀 Getting Started
+Not implemented in this mobile scope:
 
-### Prerequisites
-* Flutter SDK (3.0.0 or higher)
-* Android SDK (API level 21+) / Android Studio or VS Code
+- GPS tracking or GPS stamping.
+- Offline SQLite queue.
+- Background sync.
+- Certificate approval or certificate generation.
+- Assistant Controller or Business workflows.
+- GATC workflow.
 
-### Run on Device or Emulator:
+## Architecture
+
+```text
+Flutter Android app
+  -> Supabase Auth REST API
+  -> Render Express API
+  -> Supabase PostgreSQL and Storage
+```
+
+The app uses the same backend authorization model as the web portal:
+
+- Supabase Auth verifies the officer identity.
+- The mobile app sends the Supabase access token to the Express API.
+- The Express API loads the authenticated profile and enforces the LMO role.
+- LMO inspection access is scoped to inspections assigned to that LMO.
+
+## Required Runtime Configuration
+
+Pass configuration with Flutter dart defines:
+
+```bash
+flutter run \
+  --dart-define=METRIX_API_BASE_URL=https://sih-project-bpyq.onrender.com/api \
+  --dart-define=METRIX_SUPABASE_URL=https://your-project-ref.supabase.co \
+  --dart-define=METRIX_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+For Android emulator against a local backend:
+
+```bash
+flutter run \
+  --dart-define=METRIX_API_BASE_URL=http://10.0.2.2:5001/api \
+  --dart-define=METRIX_SUPABASE_URL=https://your-project-ref.supabase.co \
+  --dart-define=METRIX_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+Do not put the Supabase server secret/service-role key in the mobile app.
+
+## Install and Run
+
 ```bash
 cd mobile
 flutter pub get
 flutter run
 ```
+
+If using the deployed backend, include the dart defines shown above.
+
+## Android Permissions
+
+The Android manifest requests:
+
+- Internet access.
+- Network state access.
+- Camera/storage access for optional evidence image upload.
+
+It does not request location permissions.
+
+## LMO Workflow
+
+```text
+LMO signs in
+LMO dashboard loads assigned inspections
+LMO opens an inspection
+LMO starts the inspection
+LMO enters one or more measurement rows
+LMO records checklist values
+LMO optionally uploads evidence photos
+LMO submits verification
+Backend moves application to Assistant Controller final review
+```
+
+Certificate generation remains controlled by the Assistant Controller approval workflow in the web/backend system.
