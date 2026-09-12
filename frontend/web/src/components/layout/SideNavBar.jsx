@@ -129,7 +129,7 @@ export default function SideNavBar() {
               ? "System Admin"
               : userRole === "lmo"
               ? "Field Officer Portal"
-              : "District Admin Menu"}
+              : "Assistant Controller Menu"}
           </span>
           {userRole === "admin" && currentUser?.role !== "SYSTEM_ADMIN" && (
             <span className="text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-mono-code font-bold">

@@ -32,46 +32,22 @@ export default function NotificationsPage() {
   const [isSubmittingNotice, setIsSubmittingNotice] = useState(false);
   const [noticeSuccessMsg, setNoticeSuccessMsg] = useState("");
 
-  // Filter by user role and recipient
-  const roleNotifs = notifications.filter((n) => {
-    // If AC / Admin:
-    if (userRole === "admin") {
-      return (
-        n.role === "admin" ||
-        n.targetRole === "ASSISTANT_CONTROLLER" ||
-        n.targetRole === "ADMIN" ||
-        n.senderId === currentUser?.id ||
-        (n.type === "OFFICIAL_DIRECTIVE" && n.senderId === currentUser?.id)
-      );
-    }
-    // If LMO:
-    if (userRole === "lmo") {
-      if (n.role !== "lmo" && n.targetRole !== "LMO") return false;
-      // If targeted to a specific LMO, only show if it matches this LMO
-      if (n.targetUserId && n.targetUserId !== "ALL") {
-        return (
-          n.targetUserId.toLowerCase() === currentUser?.id?.toLowerCase() ||
-          (currentUser?.badgeNumber &&
-            n.targetUserId.toLowerCase() === currentUser.badgeNumber.toLowerCase()) ||
-          (currentUser?.badge &&
-            n.targetUserId.toLowerCase() === currentUser.badge.toLowerCase())
-        );
-      }
-      return true;
-    }
-    // If Business:
-    return !n.role || n.role === "business" || n.targetRole === "BUSINESS";
-  });
+  const roleNotifs = notifications || [];
 
   const filteredNotifications = roleNotifs.filter((n) => {
     if (filter === "ALL") return true;
     if (filter === "UNREAD") return n.unread;
     if (filter === "ASSIGNMENTS")
-      return n.category === "INSPECTION_ASSIGNED" || n.category === "SCHEDULE_UPDATE";
+      return ["LMO_ASSIGNED", "INSPECTION_ASSIGNED", "INSPECTION_SCHEDULED", "SCHEDULE_UPDATE"].includes(
+        n.category
+      );
     if (filter === "DIRECTIVES")
       return n.type === "OFFICIAL_DIRECTIVE" || n.category === "OFFICIAL_DIRECTIVE";
     if (filter === "ISSUED")
-      return n.type === "OFFICIAL_DIRECTIVE" && n.senderId === currentUser?.id;
+      return (
+        n.type === "OFFICIAL_DIRECTIVE" &&
+        (n.senderId === currentUser?.id || n.senderId === currentUser?.auth_user_id)
+      );
     if (filter === "EXPIRY") return n.category === "EXPIRY_WARNING";
     if (filter === "ALLOCATION") return n.category === "ALLOCATION_REQUIRED";
     return true;
@@ -80,8 +56,11 @@ export default function NotificationsPage() {
   const unreadRoleCount = roleNotifs.filter((n) => n.unread).length;
 
   const handleSelectNotif = (notif) => {
-    markNotificationAsRead(notif.id);
-    setSelectedNotif(notif);
+    const readNotif = { ...notif, unread: false, read: true };
+    setSelectedNotif(readNotif);
+    if (notif.unread) {
+      void markNotificationAsRead(notif.id);
+    }
   };
 
   const handleCreateNotice = async (e) => {
@@ -120,18 +99,27 @@ export default function NotificationsPage() {
       return "campaign";
     }
     switch (category) {
+      case "LMO_ASSIGNED":
       case "INSPECTION_ASSIGNED":
+      case "INSPECTION_SCHEDULED":
         return "assignment_ind";
       case "SCHEDULE_UPDATE":
         return "event_available";
+      case "VERIFICATION_SUBMITTED":
+        return "fact_check";
       case "POLICY_ADVISORY":
         return "policy";
       case "SYNC_COMPLETE":
         return "cloud_done";
       case "EXPIRY_WARNING":
         return "warning";
+      case "CERTIFICATE_GENERATED":
       case "CERTIFICATE_ISSUED":
         return "verified";
+      case "APPLICATION_SUBMITTED":
+      case "APPLICATION_ACCEPTED":
+      case "APPLICATION_REJECTED":
+        return "description";
       case "ALLOCATION_REQUIRED":
         return "person_add";
       case "COMPLIANCE_MILESTONE":
@@ -146,16 +134,21 @@ export default function NotificationsPage() {
       return "bg-amber-100 text-amber-900 border-amber-300";
     }
     switch (category) {
+      case "LMO_ASSIGNED":
       case "INSPECTION_ASSIGNED":
+      case "INSPECTION_SCHEDULED":
         return "bg-blue-100 text-blue-800 border-blue-200";
       case "SCHEDULE_UPDATE":
         return "bg-amber-100 text-amber-800 border-amber-200";
+      case "VERIFICATION_SUBMITTED":
+        return "bg-indigo-100 text-indigo-800 border-indigo-200";
       case "POLICY_ADVISORY":
         return "bg-purple-100 text-purple-800 border-purple-200";
       case "SYNC_COMPLETE":
         return "bg-emerald-100 text-emerald-800 border-emerald-200";
       case "EXPIRY_WARNING":
         return "bg-rose-100 text-rose-800 border-rose-200";
+      case "CERTIFICATE_GENERATED":
       case "CERTIFICATE_ISSUED":
         return "bg-emerald-100 text-emerald-800 border-emerald-200";
       default:
@@ -317,6 +310,7 @@ export default function NotificationsPage() {
               filteredNotifications.map((notif) => {
                 const isDirective =
                   notif.type === "OFFICIAL_DIRECTIVE" || notif.category === "OFFICIAL_DIRECTIVE";
+                const actionHref = notif.actionUrl || notif.link;
 
                 return (
                   <div
@@ -409,10 +403,13 @@ export default function NotificationsPage() {
                         <span className="px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 font-bold text-xs hover:bg-amber-100 transition-colors flex items-center gap-1">
                           View Directive →
                         </span>
-                      ) : notif.actionUrl ? (
+                      ) : actionHref ? (
                         <Link
-                          href={notif.actionUrl}
-                          onClick={(e) => e.stopPropagation()}
+                          href={actionHref}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (notif.unread) void markNotificationAsRead(notif.id);
+                          }}
                           className="px-3.5 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors"
                         >
                           {notif.actionText || "View Action"} →
@@ -519,23 +516,13 @@ export default function NotificationsPage() {
               {/* Message Description */}
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                 <span className="text-slate-500 font-bold uppercase text-[10px] block">
-                  Directive Instructions
+                  {selectedNotif.type === "OFFICIAL_DIRECTIVE" ||
+                  selectedNotif.category === "OFFICIAL_DIRECTIVE"
+                    ? "Directive Instructions"
+                    : "Message"}
                 </span>
                 <p className="text-xs text-slate-800 leading-relaxed whitespace-pre-line">
                   {selectedNotif.message}
-                </p>
-              </div>
-
-              {/* Regulatory Notice */}
-              <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-200 space-y-1 text-[11px] text-blue-950">
-                <span className="font-bold flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">verified_user</span>
-                  Official Legal Metrology Communication
-                </span>
-                <p className="leading-relaxed">
-                  Directives issued through this platform carry statutory authority under the Legal
-                  Metrology Act, 2009. Field officers are bound to execute duties in compliance
-                  with these instructions.
                 </p>
               </div>
             </div>

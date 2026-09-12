@@ -6,19 +6,30 @@ const mapNotification = (row) => ({
   id: row.id,
   recipientUserId: row.recipient_user_id,
   category: row.category,
+  type: row.metadata?.type || row.category,
   title: row.title,
   message: row.message,
   relatedApplicationId: row.related_application_id,
   read: Boolean(row.read_at),
   unread: !row.read_at,
+  readAt: row.read_at,
   createdAt: row.created_at,
   timestamp: row.created_at,
   metadata: row.metadata || {},
   targetRole: row.metadata?.targetRole,
   targetUserId: row.metadata?.targetUserId,
+  targetLmoName: row.metadata?.targetLmoName,
   priority: row.metadata?.priority,
   link: row.metadata?.link,
+  actionUrl: row.metadata?.link,
+  senderId: row.metadata?.senderId,
+  senderName: row.metadata?.senderName,
+  senderDesignation: row.metadata?.senderDesignation,
+  senderOffice: row.metadata?.senderOffice,
+  statutoryRef: row.metadata?.statutoryRef,
 });
+
+const isUuid = (value) => /^[0-9a-f-]{36}$/i.test(String(value || ""));
 
 export const notificationRepository = {
   getAll: async () => {
@@ -41,41 +52,39 @@ export const notificationRepository = {
     return (data || []).map(mapNotification);
   },
   getByDistrictAndRole: async (district_id, role) => {
-    let query = supabaseAdmin.from("profiles").select("user_id, role, district_id");
+    let query = supabaseAdmin.from("profiles").select("user_id, role, district_id, status");
     if (role) query = query.eq("role", role);
     if (district_id && district_id !== "ALL") query = query.eq("district_id", district_id);
     const { data, error } = await query;
     if (error) throw fromSupabaseError(error, "Could not load notification recipients.");
-    return data || [];
+    return (data || []).filter((profile) => !profile.status || profile.status === "ACTIVE");
   },
   create: async (notificationData) => {
     let recipientIds = [];
+    const targetRole = notificationData.targetRole || notificationData.recipient_role;
 
     if (notificationData.recipient_user_id || notificationData.recipientUserId) {
       recipientIds = [notificationData.recipient_user_id || notificationData.recipientUserId];
     } else if (notificationData.recipient_id || notificationData.recipientId) {
       const domainId = notificationData.recipient_id || notificationData.recipientId;
       const table =
-        notificationData.targetRole === ROLES.LMO || notificationData.recipient_role === ROLES.LMO
+        targetRole === ROLES.LMO
           ? "lmos"
-          : notificationData.targetRole === ROLES.ASSISTANT_CONTROLLER ||
-            notificationData.recipient_role === ROLES.ASSISTANT_CONTROLLER
+          : targetRole === ROLES.ASSISTANT_CONTROLLER
           ? "assistant_controllers"
           : "businesses";
       const domainColumn = table === "lmos" ? "lmo_id" : table === "assistant_controllers" ? "ac_id" : "business_id";
-      const { data, error } = await supabaseAdmin
-        .from(table)
-        .select("user_id")
-        .eq(domainColumn, domainId)
-        .maybeSingle();
+      let query = supabaseAdmin.from(table).select("user_id");
+      query = isUuid(domainId) ? query.eq("user_id", domainId) : query.eq(domainColumn, domainId);
+      const { data, error } = await query.maybeSingle();
       if (error) throw fromSupabaseError(error, "Could not resolve notification recipient.");
       if (data?.user_id) recipientIds = [data.user_id];
-    } else if (notificationData.targetRole || notificationData.recipient_role) {
-      const targetRole = notificationData.targetRole || notificationData.recipient_role;
+    } else if (targetRole) {
       const recipients = await notificationRepository.getByDistrictAndRole(notificationData.district_id, targetRole);
       recipientIds = recipients.map((recipient) => recipient.user_id);
     }
 
+    recipientIds = Array.from(new Set(recipientIds.filter(Boolean)));
     if (!recipientIds.length) return null;
 
     const rows = recipientIds.map((recipientUserId) => ({
@@ -83,15 +92,21 @@ export const notificationRepository = {
       category: notificationData.category || "GENERAL",
       title: notificationData.title,
       message: notificationData.message,
-      related_application_id: notificationData.related_application_uuid || null,
+      related_application_id:
+        notificationData.related_application_uuid || notificationData.relatedApplicationId || null,
       metadata: {
+        ...(notificationData.metadata || {}),
+        type: notificationData.type || notificationData.category,
         district_id: notificationData.district_id,
-        targetRole: notificationData.targetRole || notificationData.recipient_role,
+        targetRole,
         targetUserId: notificationData.targetUserId,
+        targetLmoName: notificationData.targetLmoName,
         priority: notificationData.priority,
         link: notificationData.link,
         senderId: notificationData.senderId,
         senderName: notificationData.senderName,
+        senderDesignation: notificationData.senderDesignation,
+        senderOffice: notificationData.senderOffice,
         statutoryRef: notificationData.statutoryRef,
       },
     }));
@@ -111,5 +126,15 @@ export const notificationRepository = {
       .single();
     if (error) throw fromSupabaseError(error, "Could not update notification.");
     return mapNotification(data);
+  },
+  markAllRead: async (user) => {
+    const { data, error } = await supabaseAdmin
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("recipient_user_id", user.auth_user_id || user.id)
+      .is("read_at", null)
+      .select("*");
+    if (error) throw fromSupabaseError(error, "Could not update notifications.");
+    return (data || []).map(mapNotification);
   },
 };

@@ -42,7 +42,7 @@ export default function CertificatesPage() {
         <div className="flex-1 ml-[260px] flex flex-col min-w-0">
           <TopNavBar
             title="Certificates"
-            subtitle="Access Restricted • Reserved for Registered Businesses and District Administration."
+            subtitle="Access Restricted • Reserved for Registered Businesses and Assistant Controllers."
             breadcrumbs={[
               { label: "Dashboard", href: "/dashboard" },
               { label: "Certificates" },

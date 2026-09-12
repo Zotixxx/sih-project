@@ -40,7 +40,7 @@ export default function PublicHeader() {
             href="/login"
             className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-2xs"
           >
-            Portal Login
+            Login
           </Link>
         </div>
       </div>

@@ -142,6 +142,18 @@ export const assignmentService = {
       link: `/${actorUserId(lmo)}/inspections`,
     });
 
+    if (application.businessUserId) {
+      await notificationRepository.create({
+        district_id: application.district_id,
+        recipient_user_id: application.businessUserId,
+        related_application_uuid: application.uuid,
+        title: "Inspection Scheduled",
+        message: `Application ${application.applicationId || application.id} has been assigned to an LMO for field verification.`,
+        category: "INSPECTION_SCHEDULED",
+        link: `/${application.businessUserId}/applications/${application.applicationId || application.id}`,
+      });
+    }
+
     return { application: updatedApplication, inspection };
   },
 };

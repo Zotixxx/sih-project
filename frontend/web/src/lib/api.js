@@ -15,10 +15,17 @@ const getAuthHeaders = async () => {
   return { Authorization: `Bearer ${data.session.access_token}` };
 };
 
+const emitRequestActivity = (eventName) => {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(eventName));
+  }
+};
+
 async function request(endpoint, options = {}) {
   const { auth = true, headers, ...fetchOptions } = options;
   const url = `${API_BASE}${endpoint}`;
 
+  emitRequestActivity("metrix:request-start");
   try {
     const authHeaders = auth ? await getAuthHeaders() : {};
     const res = await fetch(url, {
@@ -45,6 +52,8 @@ async function request(endpoint, options = {}) {
       console.error(`API Request Error [${endpoint}]:`, err);
     }
     throw err;
+  } finally {
+    emitRequestActivity("metrix:request-end");
   }
 }
 
@@ -214,6 +223,8 @@ export const metrixApi = {
   getReportsSummary: () => request("/reports/summary"),
   getAuditLogs: () => request("/reports/audit-logs"),
   getNotifications: () => request("/reports/notifications"),
+  markNotificationRead: (id) => request(`/reports/notifications/${id}/read`, { method: "PATCH" }),
+  markAllNotificationsRead: () => request("/reports/notifications/read-all", { method: "POST" }),
   createNotice: (data) =>
     request("/reports/notifications/notice", {
       method: "POST",

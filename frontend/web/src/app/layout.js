@@ -1,5 +1,6 @@
 import "./globals.css";
 import { MetrixStoreProvider } from "@/lib/store";
+import GlobalLoadingOverlay from "@/components/layout/GlobalLoadingOverlay";
 
 export const metadata = {
   title: "MetriX — Legal Metrology Digital Verification & Certification Platform",
@@ -19,6 +20,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className="min-h-full flex flex-col antialiased bg-[#f8fafc] text-[#1b1b1d]">
         <MetrixStoreProvider>
+          <GlobalLoadingOverlay />
           {children}
         </MetrixStoreProvider>
       </body>
