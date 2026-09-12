@@ -127,7 +127,10 @@ export default function BusinessRegistrationPage() {
 
     try {
       if (!completeExisting) {
-        const emailRedirectTo = typeof window === "undefined" ? undefined : `${window.location.origin}/login`;
+        const emailRedirectTo =
+          typeof window === "undefined"
+            ? undefined
+            : `${window.location.origin}/register/business?complete=1`;
         const { data, error: signUpError } = await getSupabaseBrowserClient().auth.signUp({
           email: form.email.trim(),
           password: form.password,
@@ -147,7 +150,7 @@ export default function BusinessRegistrationPage() {
           return;
         }
 
-        setMessage("Account created. Check your email to verify the account, then sign in to complete the business profile.");
+        setMessage("Account created. Check your email to verify the account, then continue with the business profile form.");
         return;
       }
 
@@ -210,7 +213,7 @@ export default function BusinessRegistrationPage() {
             <p className="text-xs text-slate-500 mt-1">
               {completeExisting
                 ? "Add establishment details after Supabase authentication."
-                : "Create the login first. After email verification, sign in to complete business registration."}
+                : "Create the login first. After email verification, continue to the business details form."}
             </p>
           </div>
 

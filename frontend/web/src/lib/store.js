@@ -331,21 +331,50 @@ export function MetrixStoreProvider({ children }) {
   const issueNotice = async (noticeData) => {
     const res = await metrixApi.createNotice(noticeData);
     if (res?.data) {
-      setNotifications((prev) => [res.data, ...prev]);
+      const created = Array.isArray(res.data) ? res.data : [res.data];
+      const currentUserId = currentUserRef.current?.id || currentUserRef.current?.auth_user_id;
+      const ownNotifications = created.filter(
+        (notification) => notification?.recipientUserId === currentUserId
+      );
+      if (ownNotifications.length) {
+        setNotifications((prev) => [
+          ...ownNotifications,
+          ...prev.filter(
+            (notification) => !ownNotifications.some((createdNotification) => createdNotification.id === notification.id)
+          ),
+        ]);
+      }
       await refreshData(currentUserRef.current);
       return res.data;
     }
     return null;
   };
 
-  const markNotificationAsRead = (id) => {
+  const markNotificationAsRead = async (id) => {
     setNotifications((prev) =>
       prev.map((notification) => (notification.id === id ? { ...notification, unread: false, read: true } : notification))
     );
+    try {
+      const res = await metrixApi.markNotificationRead(id);
+      if (res?.data) {
+        setNotifications((prev) =>
+          prev.map((notification) => (notification.id === id ? res.data : notification))
+        );
+      }
+      return res?.data || null;
+    } catch (error) {
+      console.error("Could not mark notification as read:", error);
+      return null;
+    }
   };
 
-  const markAllNotificationsAsRead = () => {
+  const markAllNotificationsAsRead = async () => {
     setNotifications((prev) => prev.map((notification) => ({ ...notification, unread: false, read: true })));
+    try {
+      await metrixApi.markAllNotificationsRead();
+    } catch (error) {
+      console.error("Could not mark notifications as read:", error);
+    }
   };
 
   return (

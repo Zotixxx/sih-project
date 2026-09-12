@@ -232,7 +232,7 @@ export default function CertificateVerificationResultPage({ params }) {
                   href="/login"
                   className="px-5 py-2 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors"
                 >
-                  Portal Login
+                  Login
                 </Link>
               </div>
             </div>

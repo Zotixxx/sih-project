@@ -239,8 +239,9 @@ export const inspectionService = {
       await inspectionRepository.addEvidence(updatedInspection.uuid, documentId);
     }
 
+    let application = null;
     if (inspection.applicationId) {
-      const application = await applicationRepository.getById(inspection.applicationId);
+      application = await applicationRepository.getById(inspection.applicationId);
       if (application) {
         await applicationRepository.update(application.id, {
           status: APPLICATION_STATUS.AWAITING_APPROVAL,
@@ -269,14 +270,17 @@ export const inspectionService = {
       },
     });
 
-    await notificationRepository.create({
-      district_id: inspection.district_id,
-      targetRole: ROLES.ASSISTANT_CONTROLLER,
-      title: "Verification Submitted",
-      message: `Application ${inspection.applicationId} is ready for final review.`,
-      category: "VERIFICATION_SUBMITTED",
-      link: "/verify",
-    });
+    if (application?.businessUserId) {
+      await notificationRepository.create({
+        district_id: inspection.district_id,
+        recipient_user_id: application.businessUserId,
+        related_application_uuid: application.uuid,
+        title: "Verification Submitted",
+        message: `Application ${inspection.applicationId} has been submitted after field verification and is awaiting final sanction.`,
+        category: "VERIFICATION_SUBMITTED",
+        link: `/${application.businessUserId}/applications/${inspection.applicationId}`,
+      });
+    }
 
     return inspectionRepository.getById(updatedInspection.id);
   },

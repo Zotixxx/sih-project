@@ -7,6 +7,8 @@ import { ROLES } from "../constants/roles.js";
 import { forbidden } from "../utils/errors.js";
 import { userRepository } from "../repositories/userRepository.js";
 
+const actorUserId = (user) => user.auth_user_id || user.user_id || user.id;
+
 const resolveDistrictScope = (user) => {
   if (user.role === ROLES.SYSTEM_ADMIN) return user.district_id || "ALL";
   if (!user.district_id) throw forbidden("District scope is not configured.");
@@ -65,6 +67,30 @@ export const notificationController = {
     }
   },
 
+  markRead: async (req, res) => {
+    try {
+      const notification = await notificationRepository.markRead(req.params.id, req.user);
+      return res.json({ success: true, data: notification });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        error: { code: "NOTIFICATION_READ_ERROR", message: error.message },
+      });
+    }
+  },
+
+  markAllRead: async (req, res) => {
+    try {
+      const notifications = await notificationRepository.markAllRead(req.user);
+      return res.json({ success: true, data: notifications });
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({
+        success: false,
+        error: { code: "NOTIFICATIONS_READ_ERROR", message: error.message },
+      });
+    }
+  },
+
   createNotice: async (req, res) => {
     try {
       const { title, message, priority, targetLmoId, statutoryRef } = req.body;
@@ -98,6 +124,8 @@ export const notificationController = {
       }
 
       let targetLmoName = "All District Legal Metrology Officers";
+      let targetLmoUserId = null;
+      let targetUserId = "ALL";
       if (targetLmoId && targetLmoId !== "ALL") {
         const targetUser = await userRepository.getById(targetLmoId);
         if (
@@ -114,6 +142,8 @@ export const notificationController = {
           });
         }
         targetLmoName = `${targetUser.name} (${targetUser.lmo_id || targetUser.domainId})`;
+        targetLmoUserId = actorUserId(targetUser);
+        targetUserId = targetUser.lmo_id || targetUser.domainId || targetLmoUserId;
       }
 
       const notice = await notificationRepository.create({
@@ -123,13 +153,13 @@ export const notificationController = {
         message: message.trim(),
         priority: priority || "DIRECTIVE",
         statutoryRef: statutoryRef?.trim() || "Legal Metrology Act, 2009",
-        senderId: req.user.id,
+        senderId: actorUserId(req.user),
         senderName: req.user.name,
         senderDesignation: req.user.designation || "Assistant Controller of Legal Metrology",
         senderOffice: req.user.office || `Office of the Assistant Controller, ${req.user.district_id}`,
         targetRole: ROLES.LMO,
-        targetUserId: targetLmoId || "ALL",
-        recipient_id: targetLmoId && targetLmoId !== "ALL" ? targetLmoId : undefined,
+        targetUserId,
+        recipient_user_id: targetLmoUserId || undefined,
         targetLmoName,
         district_id: req.user.district_id,
         unread: true,
@@ -147,7 +177,7 @@ export const notificationController = {
 
       // Audit trail entry
       await auditRepository.create({
-        actor_user_id: req.user.auth_user_id || req.user.id,
+        actor_user_id: actorUserId(req.user),
         actor_role: req.user.role,
         entityId: notice.id,
         entityType: "OFFICIAL_NOTICE",

@@ -132,7 +132,7 @@ export default function SettingsPage() {
           )}
 
           {/* =========================================================================
-              DISTRICT ADMIN / ASSISTANT CONTROLLER PROFILE
+              ASSISTANT CONTROLLER PROFILE
              ========================================================================= */}
           {userRole === "admin" && currentUser?.role !== "SYSTEM_ADMIN" && (
             <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-2xs space-y-6 text-xs">
@@ -146,7 +146,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <span className="px-2.5 py-1 rounded bg-purple-100 text-purple-900 font-bold text-[11px]">
-                  District Admin
+                  Assistant Controller
                 </span>
               </div>
 

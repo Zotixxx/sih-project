@@ -11,6 +11,8 @@ router.use(authMiddleware);
 router.get("/summary", requireRole(ROLES.ASSISTANT_CONTROLLER), reportController.getSummary);
 router.get("/audit-logs", requireRole(ROLES.ASSISTANT_CONTROLLER), reportController.getAuditLogs);
 router.get("/notifications", notificationController.getNotifications);
+router.post("/notifications/read-all", notificationController.markAllRead);
+router.patch("/notifications/:id/read", notificationController.markRead);
 router.post("/notifications/notice", notificationController.createNotice);
 
 export default router;

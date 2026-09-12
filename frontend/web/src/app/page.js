@@ -44,18 +44,9 @@ export default function LandingPage() {
                   className="px-5 py-2.5 rounded-lg bg-slate-900 text-white text-xs sm:text-sm font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm"
                 >
                   <span className="material-symbols-outlined text-[18px]">
-                    dashboard
+                    login
                   </span>
-                  Portal Login
-                </Link>
-                <Link
-                  href="/login"
-                  className="px-5 py-2.5 rounded-lg border border-slate-300 text-slate-700 bg-white text-xs sm:text-sm font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2"
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    lock
-                  </span>
-                  Authority Portal Login
+                  Login
                 </Link>
               </div>
 

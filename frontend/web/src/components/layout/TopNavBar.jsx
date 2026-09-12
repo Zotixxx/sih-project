@@ -16,9 +16,7 @@ export default function TopNavBar({ title, subtitle, breadcrumbs }) {
     return `${basePath}${href}`;
   };
 
-  const unreadCount = notifications.filter(
-    (n) => n.unread && (!n.role || n.role === userRole)
-  ).length;
+  const unreadCount = (notifications || []).filter((n) => n.unread).length;
   const isSystemAdmin = currentUser?.role === "SYSTEM_ADMIN";
 
   const handleSearchSubmit = (e) => {

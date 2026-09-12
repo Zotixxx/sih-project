@@ -276,16 +276,6 @@ export const applicationService = {
       link: `/${actorUserId(user)}/applications/${created.applicationId}`,
     });
 
-    await notificationRepository.create({
-      district_id: created.district_id,
-      targetRole: ROLES.ASSISTANT_CONTROLLER,
-      related_application_uuid: created.uuid,
-      title: "Fresh Application Received",
-      message: `Application ${created.applicationId} is awaiting initial review.`,
-      category: "ALLOCATION_REQUIRED",
-      link: "/fresh-applications",
-    });
-
     await applicationRepository.deleteDraft(business.uuid);
     return created;
   },

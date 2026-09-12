@@ -175,6 +175,18 @@ export const certificateService = {
       remarks,
     });
 
+    if (application.assignedLmoUserId) {
+      await notificationRepository.create({
+        district_id: application.district_id,
+        recipient_user_id: application.assignedLmoUserId,
+        related_application_uuid: application.uuid,
+        title: "Certificate Generated",
+        message: `Certificate ${savedCertificate.certificateNumber || certificateId} has been generated for application ${application.applicationId}.`,
+        category: "CERTIFICATE_GENERATED",
+        link: `/${application.assignedLmoUserId}/verification-details`,
+      });
+    }
+
     return savedCertificate;
   },
 
