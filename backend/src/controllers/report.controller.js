@@ -8,6 +8,10 @@ import { forbidden } from "../utils/errors.js";
 import { userRepository } from "../repositories/userRepository.js";
 
 const actorUserId = (user) => user.auth_user_id || user.user_id || user.id;
+const ASSISTANT_CONTROLLER_HIDDEN_NOTIFICATION_CATEGORIES = new Set([
+  "ALLOCATION_REQUIRED",
+  "VERIFICATION_SUBMITTED",
+]);
 
 const resolveDistrictScope = (user) => {
   if (user.role === ROLES.SYSTEM_ADMIN) return user.district_id || "ALL";
@@ -57,7 +61,12 @@ export const reportController = {
 export const notificationController = {
   getNotifications: async (req, res) => {
     try {
-      const notifs = await notificationRepository.getByUser(req.user);
+      let notifs = await notificationRepository.getByUser(req.user);
+      if (req.user.role === ROLES.ASSISTANT_CONTROLLER) {
+        notifs = notifs.filter(
+          (notification) => !ASSISTANT_CONTROLLER_HIDDEN_NOTIFICATION_CATEGORIES.has(notification.category)
+        );
+      }
       return res.json({ success: true, data: notifs });
     } catch (error) {
       return res.status(500).json({
